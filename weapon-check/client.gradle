@@ -32,7 +32,7 @@ gradle.beforeProject { project ->
                 jvmArgument('-Duwu.check.evidence=' + project.file('build/weapon-check/evidence/' + role).absolutePath)
                 jvmArgument('-Duwu.check.control=' + project.file('build/weapon-check/control').absolutePath)
                 programArgument('--username')
-                programArgument(role == 'host' ? 'UwUWeaponHost' : 'UwUWeaponObserver')
+                programArgument(role == 'host' ? 'UwUWeaponHost' : 'UwUObserver')
             }
         }
     }
