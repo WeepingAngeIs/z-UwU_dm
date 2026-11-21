@@ -27,7 +27,7 @@ import net.neoforged.neoforge.event.RegisterCommandsEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.server.ServerStoppedEvent;
 
-/** Private, opt-in chat conversations with eligible Sakura Reach residents. */
+/** Opt-in conversations: nearby spoken lines, with private choices and session controls. */
 @EventBusSubscriber(modid = "uwudimension")
 public final class SakuraAmbientDialogue {
     private static final int SESSION_TICKS = 600;
@@ -102,7 +102,7 @@ public final class SakuraAmbientDialogue {
         var session = new Session(ticket, resident.getUUID(), player.serverLevel().dimension(), sceneId,
                 source.getServer().getTickCount(), Set.copyOf(choices));
         sessions(source.getServer()).put(player.getUUID(), session);
-        player.sendSystemMessage(scene.opening().component());
+        KeeperSpeech.say((Keeper) resident, scene.opening().component());
         player.sendSystemMessage(Component.literal("Choose a response, or leave the conversation."));
         for (var choice : scene.choices()) {
             if (!choices.contains(choice.id())) continue;
@@ -133,7 +133,7 @@ public final class SakuraAmbientDialogue {
         for (var choice : scene.choices()) {
             if (!choice.id().equals(topic)) continue;
             if (choice.needsCrow() && !AmbientResidents.hasCrow(player, resident)) return stale(player);
-            player.sendSystemMessage(choice.reply().component());
+            KeeperSpeech.say((Keeper) resident, choice.reply().component());
             return 1;
         }
         return stale(player);

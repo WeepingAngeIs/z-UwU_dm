@@ -463,7 +463,7 @@ public final class Keeper extends Villager {
         setTarget(null);
         setTradingPlayer(player);
         openTradingScreen(player, getDisplayName(), getVillagerData().getLevel());
-        player.displayClientMessage(Component.literal(KeeperCraft.of(this).greeting), true);
+        KeeperSpeech.say(this, getDisplayName().copy().append(": ").append(KeeperCraft.of(this).greeting));
         return InteractionResult.CONSUME;
     }
 

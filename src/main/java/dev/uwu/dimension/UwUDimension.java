@@ -73,6 +73,7 @@ public final class UwUDimension {
         BellHammer.register(bus);
         CounterArsenal.register(bus);
         People.register(bus);
+        KeeperSpeech.register(bus);
         RealmResidents.register();
         GolemSwap.register();
         GuardianCommands.register();

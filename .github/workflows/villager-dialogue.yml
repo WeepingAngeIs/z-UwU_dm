@@ -1,0 +1,93 @@
+name: UwU built-in villager dialogue
+on:
+  push:
+    branches: ['codex/villager-dialogue-20261121']
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: uwu-villager-dialogue-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  verify:
+    if: github.repository == 'WeepingAngeIs/z-UwU_dm' && github.event.repository.private == false
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      VERSION: '1.5.0-beta.13-combined-rc.2-playtest.9-integrated.1-dialogue.1'
+      UWU_JAR: build/dialogue-candidate/UwU-Dimension-1.21.1-1.5.0-beta.13-combined-rc.2-playtest.9-integrated.1-dialogue.1.jar
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Bootstrap pinned build transport
+        run: bash integration-check/bootstrap.sh
+      - name: Recover the exact passing integrated Playtest 9 JAR
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash dialogue-ci/recover-baseline.sh
+      - name: Build once and freeze the dialogue candidate
+        run: |
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          git merge-base --is-ancestor 1f489c5308b686a30672ec19b671a64534eb28a4 HEAD
+          bash ./gradlew --no-daemon --no-build-cache --max-workers=2 jar
+          mkdir -p build/dialogue-candidate build/dialogue-ci
+          cp "build/libs/UwU-Dimension-1.21.1-$VERSION.jar" "$UWU_JAR"
+          sha256sum "$UWU_JAR" > build/dialogue-ci/candidate.sha256
+          echo "UWU_EXPECTED_JAR_SHA256=$(cut -d' ' -f1 build/dialogue-ci/candidate.sha256)" >> "$GITHUB_ENV"
+      - name: Verify unchanged worldgen, assets and integrated work
+        run: python3 dialogue-ci/verify.py "$UWU_JAR" "$RUNNER_TEMP/uwu-integrated-playtest9.jar"
+      - name: Prepare disposable hosted display
+        run: |
+          if ! command -v xvfb-run >/dev/null || ! command -v xauth >/dev/null || ! dpkg-query -W libgl1-mesa-dri libopenal1 >/dev/null 2>&1; then
+            sudo apt-get update -qq
+            sudo apt-get install -y xvfb xauth libgl1-mesa-dri libopenal1
+          fi
+      - name: Check native NPC bubbles, local chat and boundaries without Chat Bubbles
+        run: |
+          sha256sum --check build/dialogue-ci/candidate.sha256
+          bash dialogue-check/run-client.sh without-reference
+          sha256sum --check build/dialogue-ci/candidate.sha256
+      - name: Check the same candidate with the exact reference JAR present
+        run: |
+          sha256sum --check build/dialogue-ci/candidate.sha256
+          bash dialogue-check/run-client.sh with-reference
+          sha256sum --check build/dialogue-ci/candidate.sha256
+      - name: Record passing source, captures and artifact provenance
+        id: packet
+        run: |
+          python3 dialogue-ci/verify.py "$UWU_JAR" "$RUNNER_TEMP/uwu-integrated-playtest9.jar"
+          python3 dialogue-ci/provenance.py
+          echo "sha=$UWU_EXPECTED_JAR_SHA256" >> "$GITHUB_OUTPUT"
+      - name: Return the exact passing dialogue JAR
+        id: deliver
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          path: ${{ env.UWU_JAR }}
+          archive: false
+          retention-days: 7
+          if-no-files-found: error
+      - name: Verify uploaded artifact digest
+        env:
+          EXPECTED_SHA: ${{ steps.packet.outputs.sha }}
+          UPLOADED_SHA: ${{ steps.deliver.outputs.artifact-digest }}
+        run: test "$EXPECTED_SHA" = "${UPLOADED_SHA#sha256:}"
+      - name: Preserve dialogue evidence and actual in-game captures
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: uwu-villager-dialogue-evidence-${{ github.sha }}
+          path: |
+            build/dialogue-ci/
+            build/dialogue-evidence/
+            build/dialogue-without-reference.log
+            build/dialogue-with-reference.log
+            build/dialogue-*/crash-reports/
+          retention-days: 7
+          if-no-files-found: warn
