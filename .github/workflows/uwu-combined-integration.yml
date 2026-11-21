@@ -39,7 +39,9 @@ jobs:
           bash ./gradlew --no-daemon --no-build-cache --max-workers=2 jar
           mkdir -p build/combined-candidate build/integration-check
           cp "build/libs/UwU-Dimension-1.21.1-$VERSION.jar" "$UWU_JAR"
-          chmod 444 "$UWU_JAR"
+          # Native fixtures replace disposable copies between candidate/baseline stages.
+          # Preserve their writable-copy contract; pin the candidate bytes by SHA-256.
+          chmod 644 "$UWU_JAR"
           sha256sum "$UWU_JAR" > build/integration-check/candidate.sha256
           echo "UWU_EXPECTED_JAR_SHA256=$(cut -d' ' -f1 build/integration-check/candidate.sha256)" >> "$GITHUB_ENV"
       - name: Verify both complete deltas and preserved packaged content
