@@ -143,7 +143,7 @@ jobs:
           distribution: temurin
           java-version: '21'
       - name: Bootstrap the pinned hosted build tools
-        run: bash integration-check/bootstrap.sh
+        run: bash weapon-release/bootstrap.sh
       - name: Recover the exact integrated Playtest 9 JAR
         env:
           GH_TOKEN: ${{ github.token }}

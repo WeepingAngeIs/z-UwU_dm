@@ -1,0 +1,39 @@
+import org.gradle.api.artifacts.repositories.MavenArtifactRepository
+
+// Disposable hosted-runner transport only. Google documents this public Central
+// mirror at https://docs.cloud.google.com/docs/buildpacks/java. Coordinates and
+// dependency versions are unchanged; the bootstrap records verified Gson bytes.
+if (System.getenv('GITHUB_ACTIONS') != 'true' || System.getenv('GITHUB_REPOSITORY') != 'WeepingAngeIs/z-UwU_dm') {
+    throw new org.gradle.api.GradleException('The UwU Central mirror is restricted to its public hosted CI job')
+}
+
+def centralMirror = new URI('https://maven-central.storage-download.googleapis.com/maven2/')
+def mirrorCentral = { repositories ->
+    repositories.withType(MavenArtifactRepository).all { repository ->
+        def address = repository.url
+        if (address?.scheme == 'https'
+                && address.host in ['repo.maven.apache.org', 'repo1.maven.org']
+                && address.path in ['/maven2', '/maven2/']) {
+            repository.url = centralMirror
+        }
+    }
+}
+def addMirrorBeforePlugins = { repositories ->
+    repositories.maven {
+        name = 'UwUHostedCentralMirror'
+        url = centralMirror
+    }
+    mirrorCentral(repositories)
+}
+
+// Settings plugins resolve before settingsEvaluated. Put the mirror before the
+// Plugin Portal so its Central redirects cannot fail first with HTTP 429.
+gradle.beforeSettings { settings ->
+    addMirrorBeforePlugins(settings.pluginManagement.repositories)
+    addMirrorBeforePlugins(settings.buildscript.repositories)
+    mirrorCentral(settings.dependencyResolutionManagement.repositories)
+}
+gradle.beforeProject { project ->
+    addMirrorBeforePlugins(project.buildscript.repositories)
+    mirrorCentral(project.repositories)
+}
