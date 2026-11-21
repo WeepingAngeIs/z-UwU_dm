@@ -1,7 +1,7 @@
 name: UwU combined Playtest 9 integration
 on:
   push:
-    branches: ['codex/integration/playtest9-combined-805cfd']
+    branches: ['codex/integration/playtest9-combined-805cfd', 'codex/weapons/playtest9-side-chakram-805cfd']
   workflow_dispatch:
 permissions:
   contents: read
@@ -11,7 +11,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   verify:
-    if: github.repository == 'WeepingAngeIs/z-UwU_dm' && github.event.repository.private == false
+    if: github.repository == 'WeepingAngeIs/z-UwU_dm' && github.event.repository.private == false && github.ref_name != 'codex/weapons/playtest9-side-chakram-805cfd'
     runs-on: ubuntu-24.04
     timeout-minutes: 70
     env:
@@ -123,5 +123,57 @@ jobs:
             build/dusk-check/*.json
             build/shrine-check/*.log
             build/waterfall-check/*.log
+          retention-days: 7
+          if-no-files-found: warn
+  weapons:
+    if: github.repository == 'WeepingAngeIs/z-UwU_dm' && github.event.repository.private == false && github.ref_name == 'codex/weapons/playtest9-side-chakram-805cfd'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    env:
+      UWU_WEAPON_BASELINE: 'true'
+      UWU_JAR: build/weapon-baseline.jar
+      UWU_EXPECTED_JAR_SHA256: 0e865bbe4cf695144b70889138d82ad36ed8288a019bcb0e6b8b4851a6f1a04f
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Bootstrap the pinned hosted build tools
+        run: bash integration-check/bootstrap.sh
+      - name: Recover the exact integrated Playtest 9 JAR
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash weapon-release/recover-baseline.sh
+      - name: Verify unchanged baseline production and packaged identity
+        run: python3 weapon-release/verify.py
+      - name: Prepare the disposable hosted displays
+        run: |
+          free -m
+          if ! command -v xvfb-run >/dev/null || ! command -v xauth >/dev/null || ! dpkg-query -W libgl1-mesa-dri libopenal1 >/dev/null 2>&1; then
+            sudo apt-get update -qq
+            sudo apt-get install -y xvfb xauth libgl1-mesa-dri libopenal1
+          fi
+      - name: Capture every weapon and reproduce chakram motion with two real clients
+        run: |
+          printf '%s  %s\n' "$UWU_EXPECTED_JAR_SHA256" "$UWU_JAR" | sha256sum --check
+          bash weapon-check/run.sh
+          printf '%s  %s\n' "$UWU_EXPECTED_JAR_SHA256" "$UWU_JAR" | sha256sum --check
+          python3 weapon-release/verify.py
+      - name: Preserve actual baseline frames, network observations and logs
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: uwu-weapon-baseline-evidence
+          path: |
+            build/weapon-release/
+            build/weapon-check/evidence/
+            build/weapon-check/*.log
+            build/weapon-check/host/crash-reports/
+            build/weapon-check/observer/crash-reports/
+            build/weapon-deps/dependencies.sha256
           retention-days: 7
           if-no-files-found: warn
