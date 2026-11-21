@@ -26,6 +26,8 @@ jobs:
         with:
           distribution: temurin
           java-version: '21'
+      - name: Bootstrap the pinned Gradle distribution and official Maven fallback
+        run: bash integration-check/bootstrap.sh
       - name: Recover the verified Playtest 9 baseline
         env:
           GH_TOKEN: ${{ github.token }}

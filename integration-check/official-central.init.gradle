@@ -1,0 +1,38 @@
+import org.gradle.api.artifacts.repositories.MavenArtifactRepository
+
+// Installed only in the disposable hosted runner's GRADLE_USER_HOME/init.d.
+// repo1.maven.org is Maven Central's canonical HTTPS endpoint, not a third-party mirror.
+// https://central.sonatype.org/consume/consume-gradle/
+if (System.getenv('GITHUB_ACTIONS') != 'true' || System.getenv('GITHUB_REPOSITORY') != 'WeepingAngeIs/z-UwU_dm') {
+    throw new org.gradle.api.GradleException('The UwU repository transport fallback is restricted to its hosted CI job')
+}
+
+def officialCentral = new URI('https://repo1.maven.org/maven2/')
+def useCentralAlias = { repositories ->
+    repositories.withType(MavenArtifactRepository).all { repository ->
+        def address = repository.url
+        if (address?.scheme == 'https' && address.host == 'repo.maven.apache.org'
+                && address.path in ['/maven2', '/maven2/']) {
+            repository.url = officialCentral
+        }
+    }
+}
+def addCentralBeforePlugins = { repositories ->
+    repositories.maven {
+        name = 'UwUOfficialCentralFallback'
+        url = officialCentral
+    }
+    useCentralAlias(repositories)
+}
+
+// Foojay is a settings plugin: settingsEvaluated would be too late to redirect
+// its Gson dependency. The committed settings subsequently add the Plugin Portal.
+gradle.beforeSettings { settings ->
+    addCentralBeforePlugins(settings.pluginManagement.repositories)
+    addCentralBeforePlugins(settings.buildscript.repositories)
+    useCentralAlias(settings.dependencyResolutionManagement.repositories)
+}
+gradle.beforeProject { project ->
+    addCentralBeforePlugins(project.buildscript.repositories)
+    useCentralAlias(project.repositories)
+}

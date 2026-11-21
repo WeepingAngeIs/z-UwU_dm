@@ -30,6 +30,9 @@ bow mesh/core checks, and compares all packaged content outside that scope with 
 
 Only `.github/workflows/uwu-combined-integration.yml` is used for this candidate. It runs on the public
 repository's standard GitHub-hosted Ubuntu runner, builds once, freezes the JAR and records its hash.
+The hosted bootstrap seeds the unmodified Gradle wrapper from Gradle's official download endpoint,
+using the repository's pinned distribution checksum, and adds an official Maven Central endpoint
+before settings-plugin resolution. Product dependencies and their versions remain unchanged.
 Every suite checks that same file's hash before and after execution:
 
 1. Actual ripe tip/body berry harvest, regrowth, light, edible item, Jade captions, cave palette and vanilla controls.
