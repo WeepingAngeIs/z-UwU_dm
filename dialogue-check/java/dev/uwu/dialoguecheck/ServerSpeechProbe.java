@@ -145,7 +145,7 @@ final class ServerSpeechProbe {
                 var cue = peer.wire.cues.getFirst();
                 require(!chat.overlay() && chat.content().equals(expected), "Speech was not exact regular chat for " + peer.name);
                 require(cue.line().equals(chat.content()) && cue.entityId() == speaker.getId()
-                        && cue.speaker().equals(speaker.getUUID()) && cue.dusk() == speaker.dusk()
+                        && cue.speaker().equals(speaker.getUUID()) && cue.dusk() == (speaker.getType() == People.DUSK_KEEPER.get())
                         && cue.dimension().equals(reach.dimension().location()), "Chat and bubble identity/content differ");
             }
             Map<String, Object> row = new LinkedHashMap<>();

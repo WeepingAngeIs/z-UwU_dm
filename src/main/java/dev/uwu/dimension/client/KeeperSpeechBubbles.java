@@ -4,6 +4,7 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import dev.uwu.dimension.Keeper;
 import dev.uwu.dimension.KeeperSpeech;
+import dev.uwu.dimension.People;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -53,7 +54,7 @@ public final class KeeperSpeechBubbles {
 
     private static boolean matches(Keeper keeper, KeeperSpeech.Cue cue) {
         return !keeper.isRemoved() && keeper.isAlive() && keeper.getUUID().equals(cue.speaker())
-                && keeper.dusk() == cue.dusk() && keeper.level() == level;
+                && (keeper.getType() == People.DUSK_KEEPER.get()) == cue.dusk() && keeper.level() == level;
     }
 
     @SubscribeEvent
