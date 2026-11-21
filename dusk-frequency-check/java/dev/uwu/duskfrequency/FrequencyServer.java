@@ -54,6 +54,7 @@ final class FrequencyServer {
     private CompoundTag saved;
     private int phase,index;
     private long started;
+    private long nextSurveyNanos,totalSurveyNanos,longestSurveyNanos,idleSurveyTicks,lastSurveyEndNanos,totalSurveyQuietNanos;
     private int usable,assignedDusk,viable32,viable256,accepted75,petalCount;
 
     FrequencyServer(){NeoForge.EVENT_BUS.addListener(this::onChunkLoad);}
@@ -98,6 +99,12 @@ final class FrequencyServer {
         boolean candidate=stage.equals("survey-candidate");
         int side=RADIUS*2+1,total=side*side;
         if(index<total){
+            // These deliberately dense CPU surveys are not ordinary exploration.
+            // Give the native server real wall time to run its catch-up ticks;
+            // another heavy cell on every catch-up tick accumulates watchdog debt.
+            if(System.nanoTime()<nextSurveyNanos){idleSurveyTicks++;return false;}
+            long cellStarted=System.nanoTime();
+            if(lastSurveyEndNanos!=0)totalSurveyQuietNanos+=cellStarted-lastSurveyEndNanos;
             int dx=index/side-RADIUS,dz=index%side-RADIUS;++index;
             int stride=Math.ceilDiv(SettlementLayout.minimum(level)+600,GroveSites.SPACING);
             var site=GroveSites.site(level,origin.gx()+dx*stride,origin.gz()+dz*stride);
@@ -134,7 +141,12 @@ final class FrequencyServer {
                 }
             }
             rows.add(row);
-            if(index%50==0)System.out.println("DUSK SURVEY PROGRESS stage="+stage+" seed="+level.getSeed()+" cells="+index+"/"+total);
+            long elapsed=System.nanoTime()-cellStarted;
+            totalSurveyNanos+=elapsed;longestSurveyNanos=Math.max(longestSurveyNanos,elapsed);
+            lastSurveyEndNanos=System.nanoTime();
+            nextSurveyNanos=lastSurveyEndNanos+Math.max(250_000_000L,elapsed/2);
+            if(index%50==0)System.out.println("DUSK SURVEY PROGRESS stage="+stage+" seed="+level.getSeed()+" cells="+index+"/"+total
+                    +" idleTicks="+idleSurveyTicks+" sampleCallWallMs="+totalSurveyNanos/1_000_000+" maxCellMs="+longestSurveyNanos/1_000_000);
             return false;
         }
         var report=metadata(stage,level);report.addProperty("originGx",origin.gx());report.addProperty("originGz",origin.gz());
@@ -145,6 +157,11 @@ final class FrequencyServer {
         report.addProperty("viableOriginal32",viable32);report.addProperty("viableExpanded256",candidate?viable256:viable32);
         report.addProperty("accepted75",candidate?accepted75:0);report.addProperty("petalPlans",petalCount);
         report.addProperty("previewGeneratedChunks",fresh.size());report.addProperty("actualNativePlacementsInThisSurvey",0);
+        report.addProperty("surveyMinimumCooldownMillis",250);report.addProperty("surveyCooldownShareOfPreviousCall",0.5);
+        report.addProperty("ordinaryServerTicksBetweenCells",idleSurveyTicks);report.addProperty("ordinaryServerIntervalWallMillis",totalSurveyQuietNanos/1_000_000);
+        report.addProperty("sampleCallWallMillis",totalSurveyNanos/1_000_000);report.addProperty("maxCellCallWallMillis",longestSurveyNanos/1_000_000);
+        report.addProperty("timingMeaning","Synthetic fixed-window survey cost on this hosted runner; not gameplay FPS or chunk generation latency");
+        require(idleSurveyTicks>=rows.size()-1,"Dense survey did not yield ordinary server ticks between cells");
         int velvetOriginal=0,velvetExpanded=0,velvetAccepted=0;
         for(var entry:rows){var row=entry.getAsJsonObject();
             if(row.has("originalPlazaBiome")&&row.get("originalPlazaBiome").getAsString().equals("uwudimension:velvet_highlands"))velvetOriginal++;

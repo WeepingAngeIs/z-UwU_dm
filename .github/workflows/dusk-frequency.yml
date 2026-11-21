@@ -46,13 +46,13 @@ jobs:
           echo "UWU_EXPECTED_JAR_SHA256=$(cut -d' ' -f1 build/dusk-frequency-ci/candidate.sha256)" >> "$GITHUB_ENV"
       - name: Verify the bounded Dusk generation scope
         run: python3 dusk-frequency-ci/verify.py "$UWU_JAR" "$UWU_BASELINE_JAR"
+      - name: Build the explicit companion patch from pinned public Unyielding source
+        run: bash dusk-frequency-ci/build-companion.sh
       - name: Check fresh seed frequency, native placement and preservation
         run: |
           sha256sum --check build/dusk-frequency-ci/candidate.sha256
           bash dusk-frequency-check/run-server.sh "$UWU_JAR" "$UWU_BASELINE_JAR"
           sha256sum --check build/dusk-frequency-ci/candidate.sha256
-      - name: Build the explicit companion patch from pinned public Unyielding source
-        run: bash dusk-frequency-ci/build-companion.sh
       - name: Prepare a disposable hosted display
         run: |
           if ! command -v xvfb-run >/dev/null || ! command -v xauth >/dev/null || ! dpkg-query -W libgl1-mesa-dri libopenal1 >/dev/null 2>&1; then

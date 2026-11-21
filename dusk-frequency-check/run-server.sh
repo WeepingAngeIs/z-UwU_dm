@@ -11,6 +11,16 @@ baseline_sha=$(sha256sum "$baseline" | cut -d' ' -f1)
 bash ./gradlew --no-daemon --no-build-cache --max-workers=2 -I dusk-frequency-check/probe.gradle duskFrequencyProbeJar
 mkdir -p build/dusk-frequency-evidence build/dusk-frequency-check
 server=$(mktemp -d "${RUNNER_TEMP:?}/uwu-dusk-frequency.XXXXXXXX")
+active_stage=setup
+preserve_crashes() {
+    local result=$?
+    trap - EXIT
+    if test -d "$server/crash-reports"; then
+        cp -R "$server/crash-reports" "$root/build/dusk-frequency-check/crash-reports-$active_stage" || true
+    fi
+    exit "$result"
+}
+trap preserve_crashes EXIT
 cd "$server"
 mkdir mods
 cp "$root/build/dusk-frequency-check/dusk-frequency-probe.jar" mods/
@@ -25,6 +35,7 @@ timeout --kill-after=15s 6m java -Xmx1G -jar installer.jar --installServer
 printf 'eula=true\n' >eula.txt
 run_stage() {
     local stage=$1 jar=$2 hash=$3 world=$4 seed=$5 marker=$6
+    active_stage="$stage-$seed"
     local log="$root/build/dusk-frequency-check/$stage-$seed.log"
     cp "$jar" mods/uwu-dimension.jar
     printf '%s  %s\n' "$hash" mods/uwu-dimension.jar | sha256sum --check
@@ -37,7 +48,6 @@ run_stage() {
     if grep -Ei 'OutOfMemoryError|DUSK FREQUENCY CHECK FAILED|single server tick has taken' "$log"; then exit 1; fi
     grep -F 'UWU PACKAGED CANDIDATE PASS' "$log"
     grep -F "$marker" "$log"
-    if test -d crash-reports; then cp -r crash-reports "$root/build/dusk-frequency-check/"; fi
 }
 for seed in 152045 20261121 8675309; do
     run_stage survey-baseline "$baseline" "$baseline_sha" "baseline-survey-$seed" "$seed" 'DUSK FREQUENCY SURVEY PASS stage=survey-baseline'
