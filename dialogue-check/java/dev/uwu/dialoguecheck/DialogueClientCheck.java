@@ -3,6 +3,7 @@ package dev.uwu.dialoguecheck;
 import com.google.gson.GsonBuilder;
 import com.mojang.blaze3d.platform.NativeImage;
 import dev.uwu.dimension.Keeper;
+import dev.uwu.dimension.KeeperRenderer;
 import dev.uwu.dimension.KeeperSpeech;
 import dev.uwu.dimension.ReefLife;
 import dev.uwu.dimension.client.KeeperSpeechBubbles;
@@ -10,6 +11,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -32,6 +34,7 @@ import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LevelSettings;
 import net.minecraft.world.level.WorldDataConfiguration;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.levelgen.WorldOptions;
 import net.minecraft.world.level.levelgen.presets.WorldPresets;
 import net.neoforged.fml.ModList;
@@ -40,6 +43,7 @@ import net.neoforged.neoforge.attachment.AttachmentType;
 import net.neoforged.neoforge.client.event.ClientChatReceivedEvent;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.client.event.RenderFrameEvent;
+import net.neoforged.neoforge.client.event.RenderLivingEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import org.lwjgl.glfw.GLFW;
 
@@ -58,6 +62,8 @@ public final class DialogueClientCheck {
     private static final List<Chat> CHAT = new ArrayList<>();
     private static final List<KeeperSpeech.Cue> CUES = new ArrayList<>();
     private static final Map<UUID, Integer> FRAME_DRAWS = new HashMap<>();
+    private static final Map<UUID, Integer> NATIVE_FRAME_DRAWS = new HashMap<>();
+    private static final Map<UUID, Integer> NATIVE_FRAME_STREAK = new HashMap<>();
     private static final Map<String, Object> FRAMES = new LinkedHashMap<>();
     private static final Map<UUID, Integer> DRAWN_FRAMES = new HashMap<>();
     private static Stage stage = Stage.LOAD;
@@ -76,6 +82,7 @@ public final class DialogueClientCheck {
         require(ModList.get().isLoaded("chatbubbles") == REFERENCE, "Reference-mod mode does not match actual loaded mods");
         NeoForge.EVENT_BUS.addListener(DialogueClientCheck::tick);
         NeoForge.EVENT_BUS.addListener(DialogueClientCheck::frame);
+        NeoForge.EVENT_BUS.addListener(DialogueClientCheck::nativeKeeper);
         NeoForge.EVENT_BUS.addListener(DialogueClientCheck::chat);
     }
 
@@ -112,7 +119,8 @@ public final class DialogueClientCheck {
                 }
                 case READY -> {
                     if (!positioned(client) || !(client.level.getEntity(SERVER.petalId) instanceof Keeper)
-                            || !(client.level.getEntity(SERVER.duskId) instanceof Keeper)) return;
+                            || !(client.level.getEntity(SERVER.duskId) instanceof Keeper)
+                            || !sceneReady(client, SERVER.petalUuid)) return;
                     begin(SERVER.petalGreeting, SERVER.petalUuid);
                     action(client, owner -> SERVER.interact(owner, false)); next(Stage.PETAL);
                 }
@@ -127,7 +135,7 @@ public final class DialogueClientCheck {
                     action(client, SERVER::positionDusk); next(Stage.DUSK_READY);
                 }
                 case DUSK_READY -> {
-                    if (!positioned(client)) return;
+                    if (!positioned(client) || !sceneReady(client, SERVER.duskUuid)) return;
                     begin(SERVER.duskGreeting, SERVER.duskUuid);
                     action(client, owner -> SERVER.interact(owner, true)); next(Stage.DUSK);
                 }
@@ -142,7 +150,7 @@ public final class DialogueClientCheck {
                     action(client, SERVER::positionForConversation); next(Stage.TALK_READY);
                 }
                 case TALK_READY -> {
-                    if (!positioned(client)) return;
+                    if (!positioned(client) || !sceneReady(client, SERVER.duskUuid)) return;
                     begin(SERVER.opening, SERVER.duskUuid);
                     action(client, owner -> SERVER.conversation(owner, "sakuraambient talk", false)); next(Stage.TALK);
                 }
@@ -158,7 +166,7 @@ public final class DialogueClientCheck {
                     action(client, SERVER::positionForConversation); next(Stage.REPLY_READY);
                 }
                 case REPLY_READY -> {
-                    if (!positioned(client)) return;
+                    if (!positioned(client) || !sceneReady(client, SERVER.duskUuid)) return;
                     begin(SERVER.reply, SERVER.duskUuid);
                     action(client, owner -> SERVER.conversation(owner, choice.substring(1), true)); next(Stage.REPLY);
                 }
@@ -206,7 +214,7 @@ public final class DialogueClientCheck {
                 }
                 case CLEANUP -> {
                     writeReport(client);
-                    System.out.println("KEEPER SPEECH RENDER PASS native overhead draw observed once per speaker per frame; five actual screenshots mode=" + MODE);
+                    System.out.println("KEEPER SPEECH RENDER PASS native Keeper model and overhead bubble observed together; five actual screenshots mode=" + MODE);
                     next(Stage.DONE);
                 }
                 default -> { }
@@ -239,8 +247,16 @@ public final class DialogueClientCheck {
     }
 
     private static boolean readyToCapture(Minecraft client) throws Exception {
-        return positioned(client) && client.screen == null && speech().containsKey(speaking)
+        return positioned(client) && sceneReady(client, speaking) && speech().containsKey(speaking)
                 && DRAWN_FRAMES.getOrDefault(speaking, 0) >= 4;
+    }
+
+    private static boolean sceneReady(Minecraft client, UUID speaker) {
+        if (client.screen != null || NATIVE_FRAME_STREAK.getOrDefault(speaker, 0) < 4) return false;
+        int id = speaker.equals(SERVER.petalUuid) ? SERVER.petalId : SERVER.duskId;
+        return client.level.getEntity(id) instanceof Keeper keeper && keeper.getUUID().equals(speaker)
+                && client.level.getBlockState(keeper.blockPosition().below()).is(Blocks.SMOOTH_QUARTZ)
+                && client.level.getBlockState(client.player.blockPosition().below()).is(Blocks.SMOOTH_QUARTZ);
     }
 
     private static void closeMenu(Minecraft client) {
@@ -268,6 +284,14 @@ public final class DialogueClientCheck {
     public static void receivedCue(KeeperSpeech.Cue cue) { CUES.add(cue); }
     public static void drawn(KeeperSpeech.Cue cue) { FRAME_DRAWS.merge(cue.speaker(), 1, Integer::sum); }
 
+    private static void nativeKeeper(RenderLivingEvent.Post<?, ?> event) {
+        // Tracked entities and speech cues can arrive before their terrain section
+        // has compiled. Observe the real native renderer before starting the TTL.
+        if (event.getEntity() instanceof Keeper keeper && event.getRenderer() instanceof KeeperRenderer
+                && (keeper.getUUID().equals(SERVER.petalUuid) || keeper.getUUID().equals(SERVER.duskUuid)))
+            NATIVE_FRAME_DRAWS.merge(keeper.getUUID(), 1, Integer::sum);
+    }
+
     private static void frame(RenderFrameEvent.Post event) {
         try {
             if (failed || stage == Stage.DONE) return;
@@ -275,12 +299,22 @@ public final class DialogueClientCheck {
                 require(entry.getValue() == 1, "Duplicate built-in bubble draw in one frame: " + entry);
                 DRAWN_FRAMES.merge(entry.getKey(), 1, Integer::sum);
             }
+            var observed = new HashSet<>(NATIVE_FRAME_STREAK.keySet());
+            observed.addAll(NATIVE_FRAME_DRAWS.keySet());
+            for (UUID uuid : observed) {
+                int draws = NATIVE_FRAME_DRAWS.getOrDefault(uuid, 0);
+                require(draws <= 1, "Duplicate native Keeper draw in one frame: " + uuid);
+                if (draws == 1) NATIVE_FRAME_STREAK.merge(uuid, 1, Integer::sum);
+                else NATIVE_FRAME_STREAK.remove(uuid);
+            }
             if (capture == null) return;
             Minecraft client = Minecraft.getInstance();
             if (client.player == null || client.screen != null) return;
             boolean expired = capture.equals("expired");
             require(expired ? FRAME_DRAWS.getOrDefault(speaking, 0) == 0 : FRAME_DRAWS.getOrDefault(speaking, 0) == 1,
                     "Evidence frame has the wrong bubble count for " + capture);
+            require(sceneReady(client, speaking) && NATIVE_FRAME_DRAWS.getOrDefault(speaking, 0) == 1,
+                    "Evidence frame does not show the native speaking Keeper and loaded platform: " + capture);
             Files.createDirectories(OUTPUT);
             try (NativeImage pixels = Screenshot.takeScreenshot(client.getMainRenderTarget())) {
                 require(pixels.getWidth() >= 800 && pixels.getHeight() >= 450, "Evidence resolution is too small");
@@ -290,6 +324,10 @@ public final class DialogueClientCheck {
                 entry.put("dimension", client.level.dimension().location().toString());
                 entry.put("line", expected.getString()); entry.put("speaker", speaking.toString());
                 entry.put("bubble_draws", FRAME_DRAWS.getOrDefault(speaking, 0));
+                entry.put("native_keeper_draws", NATIVE_FRAME_DRAWS.getOrDefault(speaking, 0));
+                entry.put("native_keeper_consecutive_frames", NATIVE_FRAME_STREAK.getOrDefault(speaking, 0));
+                entry.put("native_renderer", KeeperRenderer.class.getName());
+                entry.put("client_platform_present", true);
                 entry.put("gui_scale", client.getWindow().getGuiScale());
                 entry.put("camera", client.gameRenderer.getMainCamera().getPosition().toString());
                 entry.put("wrapped_lines", client.font.split(expected, 220).size());
@@ -297,7 +335,7 @@ public final class DialogueClientCheck {
             }
             capture = null;
         } catch (Throwable failure) { renderFailure = failure; }
-        finally { FRAME_DRAWS.clear(); }
+        finally { FRAME_DRAWS.clear(); NATIVE_FRAME_DRAWS.clear(); }
     }
 
     @SuppressWarnings("unchecked")

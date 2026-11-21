@@ -19,7 +19,7 @@ if [[ "$UWU_DIALOGUE_MODE" == with-reference ]]; then
 else
     test ! -e "$deps/chatbubbles.jar"
 fi
-printf 'version:3955\nonboardAccessibility:false\ntutorialStep:none\nrenderDistance:3\nsimulationDistance:3\nmaxFps:60\nenableVsync:false\npauseOnLostFocus:false\nguiScale:2\nchatVisibility:0\nchatOpacity:1.0\nchatScale:1.0\n' > "$game_dir/options.txt"
+printf 'version:3955\nonboardAccessibility:false\ntutorialStep:none\nrenderDistance:3\nsimulationDistance:5\nmaxFps:60\nenableVsync:false\npauseOnLostFocus:false\nguiScale:2\nchatVisibility:0\nchatOpacity:1.0\nchatScale:1.0\n' > "$game_dir/options.txt"
 printf 'earlyWindowControl = false\n' > "$game_dir/config/fml.toml"
 export LIBGL_ALWAYS_SOFTWARE=1 ALSOFT_DRIVERS=null
 timeout --kill-after=20s 12m xvfb-run -a -s '-screen 0 1280x720x24' bash gradlew --no-daemon --max-workers=2 -I dialogue-check/client.gradle runDialogueClient 2>&1 | tee "$log"
