@@ -1,0 +1,447 @@
+{
+  "schema": 1,
+  "purpose": "Existing successful baseline observations; not candidate validation.",
+  "repository": "WeepingAngeIs/z-UwU_dm",
+  "branch": "codex/weapons/playtest9-side-chakram-805cfd",
+  "run_id": 44957916244,
+  "run_url": "https://github.com/WeepingAngeIs/z-UwU_dm/actions/runs/44957916244",
+  "artifact_id": 14728756840,
+  "artifact_zip_sha256": "585dc418acedc9985a694bb1cdd523fc5d9c6b07bac454667e509475838f216a",
+  "fixture_source_sha": "def4e4fb9169b7771c4044c949608b16f9a4d188",
+  "production_source_sha": "1f489c5308b686a30672ec19b671a64534eb28a4",
+  "jar_sha256": "0e865bbe4cf695144b70889138d82ad36ed8288a019bcb0e6b8b4851a6f1a04f",
+  "production_changes": [],
+  "network": {
+    "remote": "localhost/127.0.0.1:25591",
+    "observer": "ab1ffa52-62b1-3fa3-a855-aa26f57bedbf",
+    "memory_connection": false,
+    "owner": "90f8a1c7-becc-3ecd-a0af-8cbcece844b4"
+  },
+  "profiles": {
+    "baseline": true,
+    "roster_chakrams": 20,
+    "native_profiles": 15,
+    "vanilla_profiles_preserved": 5,
+    "unconditional_throw_clips": 10,
+    "unconditional_hand_only_clips": 30,
+    "conditional_controls": 2
+  },
+  "observations": {
+    "host": {
+      "wrong_generic_slash": {
+        "trials": 24,
+        "trial_indices": [
+          0,
+          1,
+          4,
+          5,
+          8,
+          9,
+          12,
+          13,
+          16,
+          17,
+          20,
+          21,
+          24,
+          25,
+          28,
+          29,
+          32,
+          33,
+          36,
+          37,
+          40,
+          41,
+          44,
+          45
+        ],
+        "items": [
+          "counter_diamond_katana",
+          "counter_diamond_twinblade",
+          "counter_gold_katana",
+          "counter_gold_twinblade",
+          "counter_iron_katana",
+          "counter_iron_twinblade",
+          "counter_netherite_katana",
+          "counter_netherite_twinblade",
+          "counter_runic_katana",
+          "counter_runic_twinblade"
+        ],
+        "clips": [
+          "bettercombat:two_handed_slash_horizontal_right"
+        ],
+        "maximum_draw_displacement_range": [
+          1.2154834270477295,
+          1.5225820541381836
+        ],
+        "largest_final_draw_displacement": 0.0
+      },
+      "native_chakram_throw": {
+        "trials": 12,
+        "trial_indices": [
+          2,
+          3,
+          10,
+          11,
+          18,
+          19,
+          26,
+          27,
+          34,
+          35,
+          42,
+          43
+        ],
+        "items": [
+          "counter_diamond_rapier",
+          "counter_gold_rapier",
+          "counter_iron_rapier",
+          "counter_netherite_rapier",
+          "counter_runic_rapier"
+        ],
+        "clips": [
+          "simplyswords:one_handed_chakram_throw_left"
+        ],
+        "maximum_draw_displacement_range": [
+          2.883120059967041,
+          3.4055795669555664
+        ],
+        "largest_final_draw_displacement": 0.041115716
+      },
+      "vanilla_swing": {
+        "trials": 12,
+        "trial_indices": [
+          6,
+          7,
+          14,
+          15,
+          22,
+          23,
+          30,
+          31,
+          38,
+          39,
+          46,
+          47
+        ],
+        "items": [
+          "counter_diamond_sai",
+          "counter_gold_sai",
+          "counter_iron_sai",
+          "counter_netherite_sai",
+          "counter_runic_sai"
+        ],
+        "clips": [],
+        "maximum_draw_displacement_range": [
+          0.7316282987594604,
+          0.9714877009391785
+        ],
+        "largest_final_draw_displacement": 0.038149808
+      },
+      "physical_right_click": {
+        "trials": 16,
+        "trial_indices": [
+          48,
+          49,
+          50,
+          51,
+          52,
+          53,
+          54,
+          55,
+          56,
+          57,
+          58,
+          59,
+          60,
+          61,
+          62,
+          63
+        ],
+        "items": [
+          "counter_iron_katana",
+          "counter_iron_rapier",
+          "counter_iron_sai",
+          "counter_iron_twinblade"
+        ],
+        "clips": [],
+        "maximum_draw_displacement_range": [
+          0.0,
+          0.5990216135978699
+        ],
+        "largest_final_draw_displacement": 0.06771045,
+        "outbound_and_return_seen_in_every_trial": true,
+        "single_entity_and_single_returned_stack": true,
+        "outbound_distance_range": [
+          6.096118409068427,
+          6.096118409068427
+        ],
+        "returned_damage_values": [
+          1
+        ]
+      }
+    },
+    "observer": {
+      "wrong_generic_slash": {
+        "trials": 24,
+        "trial_indices": [
+          0,
+          1,
+          4,
+          5,
+          8,
+          9,
+          12,
+          13,
+          16,
+          17,
+          20,
+          21,
+          24,
+          25,
+          28,
+          29,
+          32,
+          33,
+          36,
+          37,
+          40,
+          41,
+          44,
+          45
+        ],
+        "items": [
+          "counter_diamond_katana",
+          "counter_diamond_twinblade",
+          "counter_gold_katana",
+          "counter_gold_twinblade",
+          "counter_iron_katana",
+          "counter_iron_twinblade",
+          "counter_netherite_katana",
+          "counter_netherite_twinblade",
+          "counter_runic_katana",
+          "counter_runic_twinblade"
+        ],
+        "clips": [
+          "bettercombat:two_handed_slash_horizontal_right"
+        ],
+        "maximum_draw_displacement_range": [
+          1.212860107421875,
+          1.4766404628753662
+        ],
+        "largest_final_draw_displacement": 0.0
+      },
+      "native_chakram_throw": {
+        "trials": 12,
+        "trial_indices": [
+          2,
+          3,
+          10,
+          11,
+          18,
+          19,
+          26,
+          27,
+          34,
+          35,
+          42,
+          43
+        ],
+        "items": [
+          "counter_diamond_rapier",
+          "counter_gold_rapier",
+          "counter_iron_rapier",
+          "counter_netherite_rapier",
+          "counter_runic_rapier"
+        ],
+        "clips": [
+          "simplyswords:one_handed_chakram_throw_left"
+        ],
+        "maximum_draw_displacement_range": [
+          3.1505627632141113,
+          3.4256479740142822
+        ],
+        "largest_final_draw_displacement": 0.04253428
+      },
+      "vanilla_swing": {
+        "trials": 12,
+        "trial_indices": [
+          6,
+          7,
+          14,
+          15,
+          22,
+          23,
+          30,
+          31,
+          38,
+          39,
+          46,
+          47
+        ],
+        "items": [
+          "counter_diamond_sai",
+          "counter_gold_sai",
+          "counter_iron_sai",
+          "counter_netherite_sai",
+          "counter_runic_sai"
+        ],
+        "clips": [],
+        "maximum_draw_displacement_range": [
+          0.7324055433273315,
+          0.8746458888053894
+        ],
+        "largest_final_draw_displacement": 0.04261352
+      },
+      "physical_right_click": {
+        "trials": 16,
+        "trial_indices": [
+          48,
+          49,
+          50,
+          51,
+          52,
+          53,
+          54,
+          55,
+          56,
+          57,
+          58,
+          59,
+          60,
+          61,
+          62,
+          63
+        ],
+        "items": [
+          "counter_iron_katana",
+          "counter_iron_rapier",
+          "counter_iron_sai",
+          "counter_iron_twinblade"
+        ],
+        "clips": [],
+        "maximum_draw_displacement_range": [
+          0.0,
+          0.792925238609314
+        ],
+        "largest_final_draw_displacement": 0.07069118,
+        "outbound_and_return_seen_in_every_trial": true,
+        "single_entity_and_single_returned_stack": true,
+        "outbound_distance_range": [
+          6.0960943652011785,
+          6.096118409068427
+        ]
+      }
+    }
+  },
+  "evidence_files": {
+    "weapon-release/scope.json": {
+      "sha256": "fb78d6ea950a8af45489843f72191035d9c624d2606715a25fa2da7f64872395",
+      "bytes": 353
+    },
+    "weapon-check/host.log": {
+      "sha256": "5d1cc48cd6e5394859c918ca1377a60cb74602e8d036a6cb64567c0d0f8c1699",
+      "bytes": 153210
+    },
+    "weapon-check/observer.log": {
+      "sha256": "60dc4867b84f840c79d0dbfac10c25cbb14f7f9eb7099108c7faf25cc774fb58",
+      "bytes": 75744
+    },
+    "weapon-check/evidence/host/identity.json": {
+      "sha256": "550b1b2b4a68a1e0ffd7a78854f75655ed52a7dab04084b1ec4d65bb07e18d01",
+      "bytes": 195
+    },
+    "weapon-check/evidence/observer/identity.json": {
+      "sha256": "b060e5ab2e6f5d5c14c5a226d833ff3eb59322d8c2952e0f00a38760db212237",
+      "bytes": 199
+    },
+    "weapon-check/evidence/observer/network-identity.json": {
+      "sha256": "263626141cf31fbf85bffd8764a793165c2accbe8493767392444ce48f520804",
+      "bytes": 179
+    },
+    "weapon-check/evidence/host/chakram-profiles.json": {
+      "sha256": "27ec63771a973ca8417b774f8066049cd9e738fb98d8dcc530c7736f19fa0b76",
+      "bytes": 51182
+    },
+    "weapon-check/evidence/host/motion-results.json": {
+      "sha256": "88b4454065695ac80cbbe48a011bab573ca2a0089fd96c32864299facd89abbe",
+      "bytes": 59592
+    },
+    "weapon-check/evidence/observer/motion-results.json": {
+      "sha256": "e3f571c8f38b842910c2345317fa2629ec381c0f1fde200931cffb966ede1eca",
+      "bytes": 58921
+    },
+    "weapon-check/evidence/host/animation-events.jsonl": {
+      "sha256": "ed020312b806c2af81424f503c57f08ca36463e55f046b48f73c2fff31c07fc0",
+      "bytes": 7636
+    },
+    "weapon-check/evidence/observer/animation-events.jsonl": {
+      "sha256": "f495e51c96eb29f2e649aba60d982512eeec40fb1b58840eecf21dbe12aa2935",
+      "bytes": 7600
+    },
+    "weapon-check/evidence/host/native-draws.tsv": {
+      "sha256": "c984f6fc4c401842d03f98a3b2c3896f34ae0ad63375a9c4e6dc62676d5dd940",
+      "bytes": 256720
+    },
+    "weapon-check/evidence/observer/native-draws.tsv": {
+      "sha256": "a9c44c5dd9992dacd790d542c6e40e3256d49eb6e37abd87dabd9232c4fa16d7",
+      "bytes": 270493
+    }
+  },
+  "reviewed_captures": [
+    {
+      "path": "weapon-check/evidence/host/chakram-001-counter_iron_twinblade-third-right-attack-008.png",
+      "sha256": "160350d76df77044e27a8e92c21da94010bef3d9a279ce51bc7219af6dc3e1f3",
+      "observation": "Baseline wrong generic slash: item remains attached to swinging hand."
+    },
+    {
+      "path": "weapon-check/evidence/host/chakram-003-counter_iron_rapier-third-right-attack-006.png",
+      "sha256": "b8d0de86bddc3e9f6f658796ad2dfc5ee09f6667f204d8c4340a9f5824a001c6",
+      "observation": "Existing correct clip: item visibly separated from hand during outward motion."
+    },
+    {
+      "path": "weapon-check/evidence/host/chakram-003-counter_iron_rapier-third-right-attack-010.png",
+      "sha256": "ed2d93c8c77ea0630df3a5ace9649c7f1532557d6264eac5fdbe7ecbf4ddb9cb",
+      "observation": "Existing correct clip: item returns towards the hand after outward motion."
+    },
+    {
+      "path": "weapon-check/evidence/host/chakram-050-counter_iron_twinblade-third-right-flight-004.png",
+      "sha256": "74b4beeab75596433116c701b182c8c2d4e034e0521ae4c4f2cf29197ab84b34",
+      "observation": "Existing right-click projectile is visible in flight."
+    },
+    {
+      "path": "weapon-check/evidence/observer/chakram-001-counter_iron_twinblade-third-right-attack-008.png",
+      "sha256": "3971a30d7cc055f2b6ca6db90fcb27816d7b0ef6547438bbc74a2d5e95b09df5",
+      "observation": "Baseline wrong generic slash: item remains attached to swinging hand."
+    },
+    {
+      "path": "weapon-check/evidence/observer/chakram-003-counter_iron_rapier-third-right-attack-006.png",
+      "sha256": "643c3984c4ced6c8f6819a8e644540c8951dd525e7bcb398207db18258e03785",
+      "observation": "Existing correct clip: item visibly separated from hand during outward motion."
+    },
+    {
+      "path": "weapon-check/evidence/observer/chakram-003-counter_iron_rapier-third-right-attack-010.png",
+      "sha256": "f1fe359332a2618f0793b11725934251d7f9e5f9978de8d03089b839e7932de5",
+      "observation": "Existing correct clip: item returns towards the hand after outward motion."
+    },
+    {
+      "path": "weapon-check/evidence/observer/chakram-050-counter_iron_twinblade-third-right-flight-004.png",
+      "sha256": "5d2425c558e62acd05e3c73d25683df90a069c04413c9904db85cc77e0b5e8fa",
+      "observation": "Existing right-click projectile is visible in flight."
+    }
+  ],
+  "finding": "Ten native two-handed twinblade/katana chakram entries select generic horizontal arm-slash clips. Five one-handed rapier entries already select item-translating Simply Swords throws, visible in both owner and TCP observer captures. Five sai entries have no native Better Combat melee profile and remain vanilla-swing controls. All sixteen physical right-click trials already travel out and return for both clients.",
+  "proposed_fix": "Remove only the two-handed exclusion in WeaponAnimationAdapter.animation; retain existing profiles, two_handed flags, gameplay fields, poses, conditional attacks, explicit presets and right-click projectile code.",
+  "candidate_evidence_required": [
+    "Correct existing chakram throw clips in native owner and TCP observer rendering; actual outbound and return frames.",
+    "First-person and both physical-hand controls pass.",
+    "Physical throw entity UUID agrees across clients; one intact stack returns with unchanged durability behavior.",
+    "No production gameplay changes; exact JAR/source scope verifier passes."
+  ],
+  "fixture_limitations": [
+    "Existing 64-trial fixture resets between attacks; baseline observes only the first (left-throw) melee clip, not sustained alternating combo playback.",
+    "Raw native-draw displacement in first-person trials includes PlayerAnimator third-person-context item passes; context presence and actual screenshots must accompany the aggregate displacement."
+  ],
+  "matching_physical_entity_uuids_across_clients": 16
+}

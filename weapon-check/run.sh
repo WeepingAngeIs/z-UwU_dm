@@ -51,6 +51,8 @@ if grep -Ei 'UWU WEAPONS CHECK FAILED|OutOfMemoryError|single server tick has ta
 grep -F 'UWU WEAPONS PACKAGED CANDIDATE PASS role=host' build/weapon-check/host.log
 grep -F 'UWU WEAPONS PACKAGED CANDIDATE PASS role=observer' build/weapon-check/observer.log
 grep -F 'UWU WEAPONS NATIVE GALLERY PASS' build/weapon-check/host.log
+grep -F 'UWU BLADE HELD VIEWS PASS representatives=12 views=48' build/weapon-check/host.log
+grep -F 'UWU VESPER TRAVERSAL CERTIFICATION PASS variants=8 views=32 snowkiss=4 negative_controls=100' build/weapon-check/host.log
 grep -F 'UWU WEAPONS OBSERVER TCP PASS' build/weapon-check/observer.log
 grep -F 'UWU CHAKRAM HOST MATRIX PASS trials=64' build/weapon-check/host.log
 grep -F 'UWU CHAKRAM OBSERVER MATRIX PASS trials=64' build/weapon-check/observer.log
@@ -58,6 +60,9 @@ if [[ ${UWU_WEAPON_BASELINE:-false} == true ]]; then
     grep -F 'UWU WEAPONS BASELINE OBSERVED' build/weapon-check/host.log
     grep -F 'UWU WEAPONS OBSERVER BASELINE OBSERVED' build/weapon-check/observer.log
 else
+    grep -F 'UWU CHAKRAM HOST COMBO MATRIX PASS trials=4 native_attacks=8' build/weapon-check/host.log
+    grep -F 'UWU CHAKRAM OBSERVER COMBO MATRIX PASS trials=4 native_attacks=8' build/weapon-check/observer.log
+    grep -F 'UWU BLADE NATIVE MODEL PASS' build/weapon-check/host.log
     grep -F 'UWU WEAPONS CLIENT PASS' build/weapon-check/host.log
     grep -F 'UWU WEAPONS OBSERVER PASS' build/weapon-check/observer.log
 fi

@@ -37,7 +37,7 @@ import net.neoforged.neoforge.common.NeoForge;
 /** Disposable hosted native client plus a separate TCP observer. Never loads a user world. */
 @Mod("uwu_weapon_check")
 public final class WeaponFixture {
-    enum Stage { LOAD, POSITION, GALLERY, HELD, CONNECT, TRIALS, FINISH, DONE }
+    enum Stage { LOAD, POSITION, GALLERY, HELD, BLADE_HELD, CONNECT, TRIALS, COMBOS, FINISH, DONE }
     static Stage stage = Stage.LOAD;
     static volatile Throwable serverFailure;
     private static boolean opening, observerReady, heldEquipped, optionsVerified;
@@ -112,11 +112,13 @@ public final class WeaponFixture {
                 case POSITION -> {
                     if (Math.abs(player.getY() - 201) > .01 || player.tickCount - entered < 10) return;
                     poseOwner(client);
+                    client.options.hideGui = true;
                     WeaponGallery.initialize(client);
                     enter(Stage.GALLERY, client);
                 }
                 case GALLERY -> {
                     if (!WeaponGallery.complete()) return;
+                    client.options.hideGui = false;
                     orbit = 90;
                     client.options.setCameraType(CameraType.THIRD_PERSON_FRONT);
                     enter(Stage.HELD, client);
@@ -124,16 +126,8 @@ public final class WeaponFixture {
                 case HELD -> {
                     poseOwner(client);
                     if (heldIndex >= WeaponGallery.HELD.size()) {
-                        orbit = 0;
-                        client.options.setCameraType(CameraType.FIRST_PERSON);
-                        ChakramProfileProbe.verify(Evidence.BASELINE);
-                        var server = client.getSingleplayerServer();
-                        Evidence.require(server != null, "No disposable integrated server");
-                        server.setUsesAuthentication(false);
-                        Evidence.require(server.publishServer(GameType.SURVIVAL, false, 25591), "Could not publish the disposable fixture");
-                        Evidence.signal("server.json", new ServerInfo(owner.toString(), 25591));
-                        System.out.println("UWU WEAPONS HOST READY native TCP port=25591 owner=" + owner);
-                        enter(Stage.CONNECT, client);
+                        BladeHeldProbe.start();
+                        enter(Stage.BLADE_HELD, client);
                         return;
                     }
                     var entry = WeaponGallery.HELD.get(heldIndex);
@@ -145,6 +139,19 @@ public final class WeaponFixture {
                             && pendingScreenshot == null) {
                         pendingScreenshot = "held-side-" + String.format("%03d", heldIndex) + "-" + entry.name();
                     }
+                }
+                case BLADE_HELD -> {
+                    if (!BladeHeldProbe.tick(client)) return;
+                    orbit = 0;
+                    client.options.setCameraType(CameraType.FIRST_PERSON);
+                    ChakramProfileProbe.verify(Evidence.BASELINE);
+                    var server = client.getSingleplayerServer();
+                    Evidence.require(server != null, "No disposable integrated server");
+                    server.setUsesAuthentication(false);
+                    Evidence.require(server.publishServer(GameType.SURVIVAL, false, 25591), "Could not publish the disposable fixture");
+                    Evidence.signal("server.json", new ServerInfo(owner.toString(), 25591));
+                    System.out.println("UWU WEAPONS HOST READY native TCP port=25591 owner=" + owner);
+                    enter(Stage.CONNECT, client);
                 }
                 case CONNECT -> {
                     Evidence.require(player.tickCount - entered < 1200, "Separate observer did not connect within 60 seconds");
@@ -168,6 +175,17 @@ public final class WeaponFixture {
                 }
                 case TRIALS -> {
                     if (ChakramTrials.hostTick(client)) {
+                        if (Evidence.BASELINE) {
+                            Evidence.signal("host-done.json", Map.of("passed", true));
+                            enter(Stage.FINISH, client);
+                        } else {
+                            ChakramCombos.start(client);
+                            enter(Stage.COMBOS, client);
+                        }
+                    }
+                }
+                case COMBOS -> {
+                    if (ChakramCombos.hostTick(client)) {
                         Evidence.signal("host-done.json", Map.of("passed", true));
                         enter(Stage.FINISH, client);
                     }
@@ -216,9 +234,11 @@ public final class WeaponFixture {
         client.player.yRotO = 135;
         client.player.setXRot(6);
         client.player.xRotO = 6;
-        ChakramTrials.observerTick(client, owner);
+        if (Files.exists(Evidence.CONTROL.resolve("combo.json"))) ChakramCombos.observerTick(client, owner);
+        else ChakramTrials.observerTick(client, owner);
         if (Files.exists(Evidence.CONTROL.resolve("host-done.json"))) {
             ChakramTrials.finishObserver();
+            if (!Evidence.BASELINE) ChakramCombos.finishObserver();
             Evidence.signal("observer-done.json", Map.of("passed", true));
             System.out.println(Evidence.BASELINE ? "UWU WEAPONS OBSERVER BASELINE OBSERVED" : "UWU WEAPONS OBSERVER PASS");
             stage = Stage.DONE;
@@ -276,6 +296,7 @@ public final class WeaponFixture {
         if (client.player == null || client.screen != null || stage == Stage.DONE) return;
         try {
             if (!Evidence.OBSERVER && stage == Stage.GALLERY) WeaponGallery.frame();
+            if (!Evidence.OBSERVER && stage == Stage.BLADE_HELD) BladeHeldProbe.frame();
             if (pendingScreenshot != null) {
                 Evidence.screenshot(pendingScreenshot);
                 pendingScreenshot = null;
@@ -283,6 +304,7 @@ public final class WeaponFixture {
                 heldEquipped = false;
             }
             if (Evidence.OBSERVER || stage == Stage.TRIALS) ChakramTrials.frame(client);
+            if (Evidence.OBSERVER || stage == Stage.COMBOS) ChakramCombos.frame(client);
         } catch (Throwable failure) { fail(failure); }
     }
 

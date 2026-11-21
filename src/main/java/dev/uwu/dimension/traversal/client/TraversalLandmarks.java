@@ -1,6 +1,7 @@
 package dev.uwu.dimension.traversal.client;
 
 import dev.uwu.dimension.Arsenal;
+import dev.uwu.dimension.client.WeaponBladeModels;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -64,7 +65,7 @@ public final class TraversalLandmarks {
     private static Mesh held(Player actor, InteractionHand hand, ItemDisplayContext context, ItemStack stack,
                              BakedModel selected, Arsenal.Relic relic) {
         if (actor == null || !(actor.level() instanceof ClientLevel level) || hand != InteractionHand.MAIN_HAND
-                || context == null || stack == null || selected == null || selected.getClass() != CompositeModel.Baked.class) return null;
+                || context == null || stack == null || selected == null) return null;
         boolean correctArm = switch (context) {
             case FIRST_PERSON_LEFT_HAND, THIRD_PERSON_LEFT_HAND -> actor.getMainArm() == HumanoidArm.LEFT;
             case FIRST_PERSON_RIGHT_HAND, THIRD_PERSON_RIGHT_HAND -> actor.getMainArm() == HumanoidArm.RIGHT;
@@ -77,8 +78,13 @@ public final class TraversalLandmarks {
         // Override dependencies need not have top-level ModelManager entries of their own.
         BakedModel actual = Minecraft.getInstance().getItemRenderer().getModel(stack, level, actor, actor.getId() + context.ordinal());
         if (actual != selected) return null;
+        // Our blade relief preserves the native layers and transforms. Certify those
+        // original layers only after matching the actual selected wrapper identity.
+        // Foreign wrappers and unknown native geometry still fail the same class guard.
+        BakedModel nativeModel = WeaponBladeModels.landmarkModel(selected);
+        if (nativeModel.getClass() != CompositeModel.Baked.class) return null;
         return CACHE.computeIfAbsent(selected, model -> Optional.ofNullable(readMesh(
-                model.getQuads(null, null, RandomSource.create(42), ModelData.EMPTY, null)))).orElse(null);
+                nativeModel.getQuads(null, null, RandomSource.create(42), ModelData.EMPTY, null)))).orElse(null);
     }
 
     private static Map<List<ResourceLocation>, Mesh> knownLayers() {

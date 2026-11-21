@@ -263,7 +263,8 @@ public final class ChakramTrials {
     }
 
     public static void observeAnimation(AbstractClientPlayer actor, String clip, String hand, float length, float upswing) {
-        if (state == null || motion == null || observedOwner == null || !actor.getUUID().equals(observedOwner)) return;
+        if (state == null || state.phase.equals("complete") || motion == null || observedOwner == null
+                || !actor.getUUID().equals(observedOwner)) return;
         motion.clips.add(clip);
         motion.animationEvents++;
         try {
@@ -334,7 +335,8 @@ public final class ChakramTrials {
             } else if (!Evidence.BASELINE && nativeMeleeProfile) {
                 Evidence.require(animationEvents > 0, "Native BC animation event was not observed: " + trial);
                 Evidence.require(clips.stream().anyMatch(clip -> clip.contains("chakram")), "Native attack retained a hand-only clip: " + report());
-                Evidence.require(maximum > .8, "Native rendered chakram did not leave the hand visibly: " + report());
+                // Successful baseline hand-only slashes already reach 1.52; native item throws exceed 2.88.
+                Evidence.require(maximum > 2.0, "Native rendered chakram did not leave the hand visibly: " + report());
                 Evidence.require(last != null && last.distance(rest) < .45, "Native rendered chakram did not return to its grip: " + report());
             } else if (!nativeMeleeProfile) {
                 Evidence.require(vanillaSwingSeen, "The preserved native vanilla-melee control did not swing: " + report());

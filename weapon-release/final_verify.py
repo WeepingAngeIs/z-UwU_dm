@@ -84,6 +84,34 @@ def source_scope():
         require(before.count(BASE_VERSION.encode()) == 1, 'Version anchor changed')
         require(Path(path).read_bytes() == before.replace(BASE_VERSION.encode(), VERSION.encode()),
                 'Version file changed beyond its version: ' + path)
+    adapter = JAVA + 'dev/uwu/dimension/WeaponAnimationAdapter.java'
+    before = blob(BASE, adapter)
+    old_guard = b'if(shape.equals("chakram")&&!two&&simply)'
+    new_guard = b'if(shape.equals("chakram")&&simply)'
+    require(before.count(old_guard) == 1 and Path(adapter).read_bytes() == before.replace(old_guard, new_guard),
+            'The animation change exceeds removal of the chakram two-handed gate')
+    landmarks = JAVA + 'dev/uwu/dimension/traversal/client/TraversalLandmarks.java'
+    expected = blob(BASE, landmarks)
+    landmark_edits = (
+        (b'import dev.uwu.dimension.Arsenal;\r\n',
+         b'import dev.uwu.dimension.Arsenal;\r\nimport dev.uwu.dimension.client.WeaponBladeModels;\r\n'),
+        (b'|| context == null || stack == null || selected == null || selected.getClass() != CompositeModel.Baked.class) return null;',
+         b'|| context == null || stack == null || selected == null) return null;'),
+        (b'        if (actual != selected) return null;\r\n',
+         b'        if (actual != selected) return null;\r\n'
+         b'        // Our blade relief preserves the native layers and transforms. Certify those\r\n'
+         b'        // original layers only after matching the actual selected wrapper identity.\r\n'
+         b'        // Foreign wrappers and unknown native geometry still fail the same class guard.\r\n'
+         b'        BakedModel nativeModel = WeaponBladeModels.landmarkModel(selected);\r\n'
+         b'        if (nativeModel.getClass() != CompositeModel.Baked.class) return null;\r\n'),
+        (b'                model.getQuads(null, null, RandomSource.create(42), ModelData.EMPTY, null)))).orElse(null);',
+         b'                nativeModel.getQuads(null, null, RandomSource.create(42), ModelData.EMPTY, null)))).orElse(null);'),
+    )
+    for old, new in landmark_edits:
+        require(expected.count(old) == 1, 'The reviewed traversal anchor changed')
+        expected = expected.replace(old, new)
+    require(Path(landmarks).read_bytes() == expected,
+            'Traversal changed beyond recognition of the owned wrapper native layers')
     # The full integrated registrations, common/client mixins, caves, Dusk, bow,
     # storybook, damage, use, projectile and return logic remain covered by the
     # exact tree comparison above unless a precise path is explicitly reviewed.

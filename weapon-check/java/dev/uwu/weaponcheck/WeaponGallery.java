@@ -82,7 +82,7 @@ final class WeaponGallery {
         CustomData.update(DataComponents.CUSTOM_DATA, staticForm, tag -> tag.putLong("uwu_static_until", Long.MAX_VALUE));
         add("glitch_static", staticForm, false);
         Evidence.json("gallery-index.json", Map.of("weapons", weapons, "controls", controls,
-                "held_views", HELD.size(), "variant_views", ALL.size(), "angles", ANGLES,
+                "held_views", HELD.size(), "variant_views", ALL.size(), "angles", ANGLES, "hud_hidden", client.options.hideGui,
                 "entries", ALL.stream().map(entry -> Map.of("name", entry.name,
                         "item", BuiltInRegistries.ITEM.getKey(entry.stack.getItem()).toString(),
                         "data", entry.stack.getOrDefault(DataComponents.CUSTOM_DATA, CustomData.EMPTY).copyTag().toString(),
@@ -90,10 +90,12 @@ final class WeaponGallery {
         List<Map<String, Object>> geometry = new ArrayList<>();
         for (var entry : ALL) {
             BakedModel model = client.getItemRenderer().getModel(entry.stack, client.level, client.player, 42);
+            BladeModelProbe.inspect(entry.name, entry.stack, model);
             geometry.add(Map.of("name", entry.name, "model_class", model.getClass().getName(),
                     "bounds", bounds(model, entry.stack), "custom_renderer", model.isCustomRenderer()));
         }
         Evidence.json("native-models.json", geometry);
+        BladeModelProbe.initialized();
     }
 
     private static void elements(String name, ItemStack stack, boolean credit) {
@@ -120,10 +122,11 @@ final class WeaponGallery {
         if (held) HELD.add(entry);
     }
 
-    static boolean complete() { return finished; }
+    static boolean complete() { return finished && BladeModelProbe.complete(); }
 
     static void gui(GuiGraphics gui) throws Exception {
-        if (finished || ALL.isEmpty()) return;
+        if (finished) { BladeModelProbe.gui(gui); return; }
+        if (ALL.isEmpty()) return;
         Minecraft client = Minecraft.getInstance();
         gui.fill(0, 0, gui.guiWidth(), gui.guiHeight(), 0xFF242A36);
         gui.drawString(client.font, "UwU actual models | " + (Evidence.BASELINE ? "integrated baseline" : "candidate")
@@ -168,7 +171,8 @@ final class WeaponGallery {
     }
 
     static void frame() throws Exception {
-        if (!drawn || finished) return;
+        if (finished) { BladeModelProbe.frame(); return; }
+        if (!drawn) return;
         String name = "gallery-" + String.format("%03d", page);
         Evidence.screenshot(name);
         try (NativeImage pixels = Screenshot.takeScreenshot(Minecraft.getInstance().getMainRenderTarget())) {

@@ -70,22 +70,66 @@ explicit geometry. Their model-dependent hand poses and previous approved art
 need preservation checks, not automatic replacement. Traversal blade landmarks
 also depend on Vesper's existing XY silhouette and texture mapping.
 
-## Hosted comparison and decision gate
+## Actual hosted baseline review and decisions
 
 Use the native `ItemRenderer` with each actual item stack at face, 60°, 90° and
 120° model-space yaw, plus real in-world third-person side captures. Compare both
 hands and the first-person held view for any changed family. Native GUI rendering
 must remain a separate check, particularly for Cupid's separate GUI transform.
 
-No production asset was changed for this initial inventory. Refinement decisions
-are deferred until the public GitHub Actions baseline gallery has been inspected.
-Only actual hosted Minecraft frames can establish the side-view problem and the
-effect of a refinement.
+The source inventory was completed before any production asset edit. The later
+review used [hosted run 44956844489](https://github.com/WeepingAngeIs/z-UwU_dm/actions/runs/44956844489),
+artifact `14728036526`: all 427 native model variants and 169 actual held side
+captures completed. That run subsequently failed when the second fixture client's
+username exceeded Minecraft's limit; it is completed visual baseline evidence,
+not a passing multiplayer test. `baseline-review.json` maps every inspected row and
+held capture to its original filename, SHA-256, source family and decision.
 
-### Proposed geometry invariants
+The completed two-client baseline is
+[run 44957916244](https://github.com/WeepingAngeIs/z-UwU_dm/actions/runs/44957916244),
+artifact `14728756840`, fixture commit `def4e4fb9169b7771c4044c949608b16f9a4d188`.
+Production remained the exact integrated Playtest 9 JAR; that run's final integration
+job was deliberately skipped. `motion-baseline.json` records the downloaded artifact
+digest, actual frame references, TCP identities and both clients' observations.
+Twinblade/katana profiles selected hand-slash clips while the existing rapier throws
+already rendered outbound and returning motion remotely. All sixteen physical throw
+trials returned one stack and shared the same projectile identity across clients.
+This is existing baseline evidence, not validation of the candidate below.
 
-If the side captures justify changing a sprite blade, the proposed implementation
-uses the existing NeoForge `elements` loader and the shipped texture coordinates.
+The audit inspected the 102 sprite blade weapons, Returnbloom Dirk, and all 212
+related elemental, credit and Glitch rows. An independent review covered the other
+66 held captures and 46 non-blade Glitch rows. At exact model-space 90 degrees, the
+sprite blades collapsed to narrow, mostly uniform strips. Their face and oblique
+views retained the intended art. Real held side views also showed that Vesper and
+Magiscythe can present their narrow edge to the camera. Returnbloom's curved face
+looked good while its blade edge was particularly thin. Dawnpetal and the shields
+already retained deliberate depth, and the two Cupid styles remained distinct.
+
+The resulting authored scope is 174 JSON models covering all 102 sprite blade
+roots and their elemental/credit states, one client-only opt-in geometry loader,
+and Returnbloom's existing blade OBJ. Non-blades, tools, shields, Dawnpetal, both
+Cupid styles, all PNGs and all animation metadata remain unchanged. Root transforms
+and override predicates are preserved. Native GUI rendering returns the original
+model, so sprite hotbar and inventory art is unchanged.
+
+The relief adds metal shoulders and a stepped ridge over reviewed blade pixels.
+Flowers, ribbons, guards, grips, dark contours and transparent gaps retain the
+native model. Every added face lies in front of or behind the original central
+extrusion, avoiding duplicate coplanar sidewalls. Original native render passes are
+retained; raised glint and flower-credit faces use their original texture and light
+data. Returnbloom's blade depth is scaled threefold around its existing midplane
+(about 0.346 to 1.037 model pixels); its explicit normals use the inverse transpose,
+while XY coordinates, UVs, faces, topology and material remain unchanged.
+
+Some fifth-row baseline gallery metrics include overlapping HUD pixels and must
+not be used for quantitative comparisons. Final native gallery capture hides the
+HUD. The authored candidate still requires the final hosted native proof, visual
+review and all requested integration checks before it can be delivered as verified.
+
+### Geometry invariants
+
+The implementation uses the existing NeoForge `elements` loader and the shipped
+texture coordinates, combined with the unchanged native item-layer render passes.
 The geometry generator must preserve the following properties:
 
 - Every existing PNG and animation metadata file remains byte-for-byte unchanged.
@@ -101,12 +145,10 @@ The geometry generator must preserve the following properties:
 - Native face and GUI views are compared for identity; native edge and oblique
   views are compared for readable blade depth. Source bounds alone are not a pass.
 
-Returnbloom is reviewed separately: its existing curved OBJ blade is only about
-0.346 model pixels deep before its held Z scale, even though it is a true mesh.
-If its real side capture needs a refinement, the existing mesh topology and UVs
-should be retained, with any depth change isolated to the blade. Dawnpetal's
-existing model is about 2.03 model pixels deep. Neither item is automatically
-exempted merely because it already has explicit geometry.
+Returnbloom was reviewed separately because its curved OBJ blade was only about
+0.346 model pixels deep before its held Z scale. Its topology and UVs remain intact
+in the authored depth refinement. Dawnpetal's existing model is about 2.03 model
+pixels deep and remains unchanged after actual side-view review.
 
 Implementation references: NeoForge's version-specific documentation for
 [built-in model loaders](https://docs.neoforged.net/docs/1.21.1/resources/client/models/modelloaders/)
@@ -114,8 +156,22 @@ and [per-face light data](https://docs.neoforged.net/docs/1.21.1/resources/clien
 
 ## Reproducing the static inventory
 
-`python weapon-audit/catalog.py` reads source assets and writes `catalog.json`.
-It does not build the mod, launch Java or render models. Optional
+`catalog.json` is the frozen source inventory from the integrated baseline. Run
+`python weapon-audit/catalog.py` only against those baseline assets to reproduce
+that snapshot. It does not build the mod, launch Java or render models. Optional
 `--contact-sheets /absolute/scratch/path` creates labelled copies of the shipped
 PNG pixels for human inspection. Compilation and all in-game verification belong
 to the hosted Actions workflow only.
+
+`python weapon-audit/generate_relief.py` authors the reviewed geometry from the
+baseline git objects and unchanged source PNGs. It writes compact JSON elements,
+the Returnbloom depth/normal change and `relief-manifest.json`, whose
+`production_paths` lists exactly 176 visual production files.
+
+`python3 weapon-audit/verify_geometry.py` is the hosted-only source gate. It uses
+only Python's standard library and writes
+`build/weapon-release/geometry-source-proof.json`. The separate native
+`BladeModelProbe` checks render-pass identity, emission data, native transforms,
+the central extrusion boundary, and same-frame GUI pixel identity after Minecraft
+bakes the packaged models. Source authoring or a successful static proof is not an
+in-game rendering pass.

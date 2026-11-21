@@ -1,6 +1,7 @@
 package dev.uwu.weaponcheck.mixin;
 
 import dev.uwu.weaponcheck.ChakramTrials;
+import dev.uwu.weaponcheck.ChakramCombos;
 import net.bettercombat.logic.AnimatedHand;
 import net.minecraft.client.player.AbstractClientPlayer;
 import org.spongepowered.asm.mixin.Dynamic;
@@ -16,5 +17,6 @@ abstract class AttackAnimationObserver {
             at = @At("HEAD"), require = 0, remap = false)
     private void weaponCheck$animation(String name, AnimatedHand hand, float length, float upswing, CallbackInfo ci) {
         ChakramTrials.observeAnimation((AbstractClientPlayer)(Object)this, name, hand.toString(), length, upswing);
+        ChakramCombos.observeAnimation((AbstractClientPlayer)(Object)this, name, hand.toString(), length, upswing);
     }
 }
