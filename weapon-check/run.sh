@@ -10,8 +10,9 @@ bash weapon-check/fetch-deps.sh
 mkdir -p build/weapon-check/control build/weapon-check/evidence/{host,observer}
 for role in host observer; do
     test ! -d "build/weapon-check/$role/saves"
-    mkdir -p "build/weapon-check/$role/config/bettercombat"
-    printf 'version:3955\nonboardAccessibility:false\ntutorialStep:none\nrenderDistance:3\nsimulationDistance:3\nmaxFps:45\nenableVsync:false\npauseOnLostFocus:false\nguiScale:1\nfov:70\n' > "build/weapon-check/$role/options.txt"
+    mkdir -p "build/weapon-check/$role/config/bettercombat" "build/weapon-check/$role/tmp" "build/weapon-check/$role/lwjgl"
+    # 1.21.1 serializes FOV as (degrees - 70) / 40; simulation distance starts at five.
+    printf 'version:3955\nonboardAccessibility:false\ntutorialStep:none\nrenderDistance:3\nsimulationDistance:5\nmaxFps:45\nenableVsync:false\npauseOnLostFocus:false\nguiScale:1\nfov:0.0\n' > "build/weapon-check/$role/options.txt"
     printf '{"firstPersonAnimations":"AUTO"}\n' > "build/weapon-check/$role/config/bettercombat/client.json5"
     printf 'earlyWindowControl = false\n' > "build/weapon-check/$role/config/fml.toml"
 done

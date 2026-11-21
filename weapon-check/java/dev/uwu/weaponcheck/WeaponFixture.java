@@ -40,7 +40,7 @@ public final class WeaponFixture {
     enum Stage { LOAD, POSITION, GALLERY, HELD, CONNECT, TRIALS, FINISH, DONE }
     static Stage stage = Stage.LOAD;
     static volatile Throwable serverFailure;
-    private static boolean opening, observerReady, heldEquipped;
+    private static boolean opening, observerReady, heldEquipped, optionsVerified;
     private static int entered, heldIndex;
     private static long started;
     private static float orbit;
@@ -65,6 +65,17 @@ public final class WeaponFixture {
             Evidence.require(System.nanoTime() - started < 18L * 60 * 1_000_000_000L, "Weapon fixture exceeded its bounded deadline");
             if (Files.exists(Evidence.CONTROL.resolve("failure.json"))) throw new AssertionError("The other fixture process reported failure");
             if (serverFailure != null) throw new AssertionError("Disposable server action failed", serverFailure);
+            if (!optionsVerified && client.screen instanceof TitleScreen) {
+                client.options.fov().set(70);
+                Evidence.require(client.options.fov().get() == 70, "Native fixture FOV did not resolve to 70 degrees");
+                Evidence.require(client.options.simulationDistance().get() == 5, "Native fixture simulation distance did not resolve to five");
+                Evidence.json("client-options.json", Map.of("fov_degrees", client.options.fov().get(),
+                        "simulation_distance", client.options.simulationDistance().get(),
+                        "render_distance", client.options.renderDistance().get(),
+                        "temporary_directory", System.getProperty("java.io.tmpdir"),
+                        "native_library_directory", System.getProperty("org.lwjgl.system.SharedLibraryExtractPath")));
+                optionsVerified = true;
+            }
             if (Evidence.OBSERVER) { observerTick(client); return; }
             if (!opening && client.screen instanceof TitleScreen title) {
                 opening = true;
