@@ -36,6 +36,8 @@ public final class ChakramCombos {
         String stem() { return "chakram-combo-" + String.format("%03d", index) + "-" + item + "-" + camera + "-" + arm; }
     }
     record State(Trial trial, String phase) {}
+    record ReturnAck(int trial, String owner, String observer, long gameTime, int elapsed,
+                     double displacement, double maximum, int samples, int consecutiveReturns, String screenshot) {}
     private enum Phase { EQUIP, REST, ACTIVE, ACK, DONE }
     private static final List<Trial> TRIALS = new ArrayList<>();
     private static final List<Map<String, Object>> RESULTS = new ArrayList<>();
@@ -108,6 +110,16 @@ public final class ChakramCombos {
                     if (combat.getComboCount() != 1 || combat.getCurrentAttackHand() != null
                             || player.getAttackStrengthScale(0) < .999F || motion.attacks.get(0).maximum <= 2.0
                             || motion.last == null || motion.rest == null || motion.last.distance(motion.rest) >= .45) return false;
+                    ReturnAck remoteReturn = Evidence.read("combo-return-" + index + ".json", ReturnAck.class);
+                    if (remoteReturn == null) return false;
+                    Evidence.require(remoteReturn.trial == index && remoteReturn.owner.equals(owner.toString())
+                                    && !remoteReturn.observer.equals(owner.toString())
+                                    && remoteReturn.displacement >= 0 && remoteReturn.displacement < .45
+                                    && remoteReturn.maximum > 2.0 && remoteReturn.samples >= 5
+                                    && remoteReturn.consecutiveReturns >= 2,
+                            "Invalid remote first-return acknowledgment: " + remoteReturn);
+                    motion.observerFirstReturn = remoteReturn;
+                    Evidence.json("combo-return-ack-" + String.format("%03d", index) + ".json", remoteReturn);
                     attack(client);
                     Evidence.require(motion.clips.size() == 2, "Second native combo input did not dispatch exactly once");
                     return false;
@@ -233,6 +245,22 @@ public final class ChakramCombos {
             evidence.contexts.add(drawContext.toString());
             Evidence.line("combo-native-draws.tsv", state.trial.index + "\t" + (attackIndex + 1) + "\t" + elapsed
                     + "\t" + drawContext + "\t" + draw.x + "\t" + draw.y + "\t" + draw.z + "\t" + draw.distance(motion.rest));
+            if (Evidence.OBSERVER && attackIndex == 0 && motion.observerFirstReturn == null) {
+                double displacement = draw.distance(motion.rest);
+                // The owner and TCP observer render at independent times. A real remote return
+                // must be seen before the owner can begin the next native attack.
+                evidence.returnFrames = evidence.maximum > 2.0 && displacement < .45
+                        ? evidence.returnFrames + 1 : 0;
+                if (evidence.returnFrames >= 2 && evidence.samples >= 5 && evidence.captures.size() >= 3) {
+                    String screenshot = state.trial.stem() + "-attack-1-return";
+                    Evidence.screenshot(screenshot);
+                    motion.observerFirstReturn = new ReturnAck(state.trial.index, owner.toString(),
+                            client.player.getUUID().toString(), tick, elapsed, displacement,
+                            evidence.maximum, evidence.samples, evidence.returnFrames, screenshot + ".png");
+                    Evidence.json("combo-return-ack-" + String.format("%03d", state.trial.index) + ".json", motion.observerFirstReturn);
+                    Evidence.signal("combo-return-" + state.trial.index + ".json", motion.observerFirstReturn);
+                }
+            }
         }
         if (CAPTURE_TICKS.contains(elapsed) && evidence.captures.add(elapsed))
             Evidence.screenshot(state.trial.stem() + "-attack-" + (attackIndex + 1) + "-" + String.format("%03d", elapsed));
@@ -240,7 +268,7 @@ public final class ChakramCombos {
 
     private static final class Attack {
         final int ordinal;
-        int samples;
+        int samples, returnFrames;
         double maximum;
         double finalDisplacement = -1;
         final Set<String> contexts = new LinkedHashSet<>();
@@ -258,9 +286,13 @@ public final class ChakramCombos {
         final List<Attack> attacks = List.of(new Attack(1), new Attack(2));
         Vector3f rest, last;
         long attackStarted;
+        ReturnAck observerFirstReturn;
         Motion(Trial trial) { this.trial = trial; }
         void finish() {
             Evidence.require(clips.equals(List.of(LEFT, RIGHT)), "Native consecutive combo did not select both existing throw clips: " + report());
+            Evidence.require(observerFirstReturn != null && observerFirstReturn.displacement >= 0
+                            && observerFirstReturn.displacement < .45 && observerFirstReturn.maximum > 2.0,
+                    "Second native input lacked a rendered remote return acknowledgment: " + report());
             attacks.get(1).finalDisplacement = rest == null || last == null ? -1 : last.distance(rest);
             for (Attack attack : attacks) {
                 Evidence.require(attack.samples >= 5 && attack.captures.size() >= 3,
@@ -275,6 +307,7 @@ public final class ChakramCombos {
         Map<String, Object> report() {
             return Map.of("trial", trial, "role", Evidence.OBSERVER ? "observer" : "host",
                     "animation_events", clips.size(), "clips", clips,
+                    "observer_first_return", observerFirstReturn == null ? Map.of() : observerFirstReturn,
                     "attack_results", attacks.stream().map(Attack::report).toList(),
                     "final_draw_displacement", rest == null || last == null ? -1 : last.distance(rest));
         }

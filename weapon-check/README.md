@@ -44,7 +44,8 @@ The exact expected coverage is 314 resolved relief variants, 5,652 transform com
 An additional 48 actual held captures cover 12 blade representatives in first/third person
 and both physical hands: the native axe, scythe, dagger, spear and trident families; each
 actual counter blade shape; and the independently refined Returnbloom OBJ. The native item
-draw observer must see the expected hand/view context before capture. The result inventory is
+draw observer must see the expected hand/view context before capture. Third-person side
+cameras mirror their orbit for the left arm so the torso cannot hide that blade. The result inventory is
 `blade-held-views.json`, its screenshots are `blade-held-*.png`, and the required marker is
 `UWU BLADE HELD VIEWS PASS representatives=12 views=48 first_person=24 third_person=24`.
 
@@ -67,6 +68,9 @@ views, with the independent observer watching all eight native attacks. Both exi
 throw clips must travel more than two blocks in the recorded native draw coordinates
 and return within 0.45 before the next attack or completion. These are ordinary
 consecutive attack inputs; the fixture never sets combo state or dispatches clips.
+Before the second click, the observer acknowledges two actual rendered first-return
+samples below 0.45. Both clients record this acknowledgment and its observer screenshot;
+this synchronizes independent rendering without changing the acceptance thresholds.
 `combo-trial-index.json`, `combo-results.json` and `chakram-combo-*.png` record the
 actual two-client evidence. All sixteen physical throws must also share the same
 projectile UUID across clients and retain baseline return durability.

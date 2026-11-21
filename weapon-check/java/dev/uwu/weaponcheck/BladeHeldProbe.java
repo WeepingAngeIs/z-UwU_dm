@@ -71,7 +71,8 @@ public final class BladeHeldProbe {
             client.player.setMainArm(arm);
             WeaponFixture.server(client, actor -> actor.setMainArm(arm));
             client.options.setCameraType(view.camera.equals("first") ? CameraType.FIRST_PERSON : CameraType.THIRD_PERSON_FRONT);
-            WeaponFixture.orbit(view.camera.equals("first") ? 0 : 90);
+            // View the equipped physical side so left-hand blades are not hidden by the torso.
+            WeaponFixture.orbit(view.camera.equals("first") ? 0 : view.arm.equals("left") ? -90 : 90);
             CONTEXTS.clear();
             entered = client.player.tickCount;
             equipped = true;

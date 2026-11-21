@@ -239,6 +239,18 @@ def main():
             reviewed.require(result['animation_events'] == 2 and result['clips'] == [
                 'simplyswords:one_handed_chakram_throw_left', 'simplyswords:one_handed_throw_chakram_right'],
                 'Native combo did not dispatch both preserved left/right throw clips: ' + str(trial))
+            remote_return = result['observer_first_return']
+            ack_path = base / role / f"combo-return-ack-{trial['index']:03d}.json"
+            reviewed.require(load(ack_path) == remote_return
+                             and remote_return['trial'] == trial['index']
+                             and remote_return['owner'] == network['owner']
+                             and remote_return['observer'] == network['observer']
+                             and remote_return['gameTime'] > 0 and remote_return['elapsed'] > 0
+                             and 0 <= remote_return['displacement'] < .45
+                             and remote_return['maximum'] > 2.0 and remote_return['samples'] >= 5
+                             and remote_return['consecutiveReturns'] >= 2
+                             and (base / 'observer' / remote_return['screenshot']).is_file(),
+                             'The second native input lacked the actual observer first-return evidence')
             attacks = result['attack_results']
             reviewed.require(len(attacks) == 2 and [r['ordinal'] for r in attacks] == [1, 2],
                              'A native combo attack was omitted or reordered')
