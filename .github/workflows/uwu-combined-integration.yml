@@ -1,7 +1,7 @@
 name: UwU combined Playtest 9 integration
 on:
   push:
-    branches: ['codex/integration/playtest9-combined-805cfd']
+    branches: ['codex/integration/playtest9-combined-805cfd', 'review/integrated-dusk-and-baker-1f489c5']
   workflow_dispatch:
 permissions:
   contents: read
@@ -10,8 +10,48 @@ concurrency:
   group: uwu-combined-playtest9-${{ github.ref }}
   cancel-in-progress: false
 jobs:
+  baker-restart:
+    name: Revisit both Baker kitchens after a server restart
+    if: github.repository == 'WeepingAngeIs/z-UwU_dm' && github.event.repository.private == false && github.ref == 'refs/heads/review/integrated-dusk-and-baker-1f489c5'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 32
+    env:
+      BASE: 1f489c5308b686a30672ec19b671a64534eb28a4
+      FROZEN_SHA256: 0e865bbe4cf695144b70889138d82ad36ed8288a019bcb0e6b8b4851a6f1a04f
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Recover the original checked integration JAR
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git diff --exit-code "$BASE" HEAD -- src build.gradle gradle gradlew settings.gradle
+          candidate="$RUNNER_TEMP/UwU-Dimension-1.21.1-1.5.0-beta.13-combined-rc.2-playtest.9-integrated.1.jar"
+          gh api repos/WeepingAngeIs/z-UwU_dm/actions/artifacts/14723910544/zip > "$candidate"
+          printf '%s  %s\n' "$FROZEN_SHA256" "$candidate" | sha256sum --check
+          echo "UWU_CHECK_FROZEN_JAR=$candidate" >> "$GITHUB_ENV"
+      - name: Prepare the pinned Gradle distribution for the test fixture
+        run: bash integration-check/bootstrap.sh
+      - name: Check two players at both toasters before and after a full restart
+        env:
+          UWU_BAKER_RESTART_ONLY: 'true'
+        run: |
+          bash guardian-check/run.sh "$UWU_CHECK_FROZEN_JAR"
+          printf '%s  %s\n' "$FROZEN_SHA256" "$UWU_CHECK_FROZEN_JAR" | sha256sum --check
+          for faction in Petal Dusk; do
+            grep -F "BAKER KITCHEN PASS $faction " build/guardian-check/baker-seed.log
+            grep -F "BAKER REVISIT PASS $faction " build/guardian-check/baker-reopen.log
+          done
+          printf 'Production source %s\n\nVerified original JAR SHA-256 %s\n\n' "$BASE" "$FROZEN_SHA256" >> "$GITHUB_STEP_SUMMARY"
+          grep -F 'BAKER REVISIT PASS' build/guardian-check/baker-reopen.log >> "$GITHUB_STEP_SUMMARY"
   verify:
-    if: github.repository == 'WeepingAngeIs/z-UwU_dm' && github.event.repository.private == false
+    if: github.repository == 'WeepingAngeIs/z-UwU_dm' && github.event.repository.private == false && github.ref != 'refs/heads/review/integrated-dusk-and-baker-1f489c5'
     runs-on: ubuntu-24.04
     timeout-minutes: 70
     env:

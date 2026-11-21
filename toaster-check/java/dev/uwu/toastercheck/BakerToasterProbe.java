@@ -55,9 +55,10 @@ public final class BakerToasterProbe {
     private static final String TOKEN = "UwUGeneratedToast";
     private static final int REJECTED_RETRY_TICKS = 200;
 
-    private enum Phase { PLAN, LOAD, INELIGIBLE, REWARD, STALE_RELOAD, DONE }
+    private enum Phase { PLAN, LOAD, INELIGIBLE, REWARD, STALE_RELOAD, REVISIT, DONE }
 
     private final Set<ChunkPos> newlyGeneratedReach = ConcurrentHashMap.newKeySet();
+    private final String restartStage = System.getProperty("uwu.check.bakerStage", "");
     private Phase phase = Phase.PLAN;
     private ServerLevel level;
     private List<BlossomVillage.Plan> plans = List.of();
@@ -96,13 +97,15 @@ public final class BakerToasterProbe {
                     require(elapsed() < 500, "Native Baker kitchen chunks failed to start ticking at " + position);
                     return false;
                 }
-                verifyKitchen();
+                boolean revisit = restartStage.equals("reopen");
+                if (revisit) verifySavedKitchen();
+                else verifyKitchen();
                 Direction intoRoom = level.getBlockState(position).getValue(HorizontalDirectionalBlock.FACING);
                 List<BlockPos> stands = standingSpots(intoRoom);
-                first = spawn("BakerFixtureOne", stands.get(0), GameType.CREATIVE);
-                second = spawn("BakerFixtureTwo", stands.get(1), GameType.SPECTATOR);
+                first = spawn("BakerFixtureOne", stands.get(0), revisit ? GameType.SURVIVAL : GameType.CREATIVE);
+                second = spawn("BakerFixtureTwo", stands.get(1), revisit ? GameType.ADVENTURE : GameType.SPECTATOR);
                 require(!first.player.getUUID().equals(second.player.getUUID()), "Expected two distinct players");
-                next(Phase.INELIGIBLE);
+                next(revisit ? Phase.REVISIT : Phase.INELIGIBLE);
             }
             case INELIGIBLE -> {
                 if (elapsed() < 30) return false;
@@ -131,7 +134,12 @@ public final class BakerToasterProbe {
                         "Native tick did not publish exactly one real bread item at " + position);
                 verifyDings();
                 verifySpentReceipt();
-                restoreStaleSnapshot();
+                if (restartStage.equals("seed")) {
+                    require(!Files.exists(witnessPath()), "Kitchen witness already existed before the first visit");
+                    NbtIo.writeCompressed(readySnapshot, witnessPath());
+                } else {
+                    restoreStaleSnapshot();
+                }
                 next(Phase.STALE_RELOAD);
             }
             case STALE_RELOAD -> {
@@ -143,15 +151,24 @@ public final class BakerToasterProbe {
                 System.out.println("BAKER KITCHEN PASS " + faction() + " generated at " + position
                         + ", real smoker, two eligible players, one bread, native dings, persisted spent receipt"
                         + (kitchenIndex == 0 ? ", rejected spawn retried" : ""));
-                cleanKitchen();
-                ++kitchenIndex;
-                if (kitchenIndex < plans.size()) {
-                    loadKitchen();
-                } else {
-                    next(Phase.DONE);
-                    System.out.println("BAKER TOASTER SERVER PASS authentic Petal and Dusk Baker kitchens,"
-                            + " eligibility, two listeners, rejected-spawn retry and stale-NBT receipt reload");
+                if (finishKitchen()) System.out.println(restartStage.equals("seed")
+                        ? "BAKER RESTART SEED PASS both original kitchens spent"
+                        : "BAKER TOASTER SERVER PASS authentic Petal and Dusk Baker kitchens,"
+                                + " eligibility, two listeners, rejected-spawn retry and stale-NBT receipt reload");
+            }
+            case REVISIT -> {
+                if (elapsed() < 60) return false;
+                for (var listener : List.of(first, second)) {
+                    require(listener.dings == 0 && !listener.player.hasDisconnected() && listener.player.isAlive()
+                                    && listener.player.distanceToSqr(Vec3.atCenterOf(position)) <= 16,
+                            "Revisiting player left the kitchen or heard a second ding");
                 }
+                require(attempts == 0 && !snapshot().hasUUID(TOKEN),
+                        "Reopened kitchen tried to dispense bread or rearmed its toaster");
+                verifySpentReceipt();
+                System.out.println("BAKER REVISIT PASS " + faction() + " " + position
+                        + " original token still spent; two eligible players, zero bread, zero dings");
+                if (finishKitchen()) System.out.println("BAKER COLD RESTART PASS both saved kitchens");
             }
             case DONE -> { return true; }
         }
@@ -170,6 +187,22 @@ public final class BakerToasterProbe {
         level.setChunkForced(kitchenChunk.x, kitchenChunk.z, true);
         if (!smokerChunk.equals(kitchenChunk)) level.setChunkForced(smokerChunk.x, smokerChunk.z, true);
         next(Phase.LOAD);
+    }
+
+    private Path witnessPath() {
+        return level.getServer().getWorldPath(LevelResource.ROOT).resolve("baker-proof-" + faction() + ".nbt");
+    }
+
+    private void verifySavedKitchen() throws IOException {
+        var original = NbtIo.readCompressed(witnessPath(), NbtAccounter.create(131072));
+        require(original.hasUUID(TOKEN) && original.getInt("x") == position.getX()
+                        && original.getInt("y") == position.getY() && original.getInt("z") == position.getZ(),
+                "Kitchen coordinates or generated token did not match the first server session");
+        token = original.getUUID(TOKEN);
+        require(!newlyGeneratedReach.contains(kitchenChunk) && level.getBlockState(smoker).is(Blocks.SMOKER)
+                        && !snapshot().hasUUID(TOKEN),
+                "The saved Baker kitchen regenerated or rearmed before the return visit");
+        verifySpentReceipt();
     }
 
     private void verifyKitchen() throws IOException {
@@ -208,7 +241,8 @@ public final class BakerToasterProbe {
     }
 
     private void trackBread(EntityJoinLevelEvent event) {
-        if (phase != Phase.INELIGIBLE && phase != Phase.REWARD && phase != Phase.STALE_RELOAD) return;
+        if (phase != Phase.INELIGIBLE && phase != Phase.REWARD && phase != Phase.STALE_RELOAD
+                && phase != Phase.REVISIT) return;
         if (event.getLevel() != level || !(event.getEntity() instanceof ItemEntity item)
                 || !BuiltInRegistries.ITEM.getKey(item.getItem().getItem()).equals(BREAD)
                 || item.position().distanceToSqr(Vec3.atCenterOf(position)) > 1) return;
@@ -298,18 +332,24 @@ public final class BakerToasterProbe {
                 "One Baker ding must reach both nearby players, got " + first.dings + "/" + second.dings);
     }
 
-    private void cleanKitchen() throws ReflectiveOperationException {
+    private boolean finishKitchen() throws ReflectiveOperationException {
         var players = onlinePlayers(level.getServer());
         for (var actor : List.of(first, second)) {
             players.remove(actor.player);
             level.removePlayerImmediately(actor.player, Entity.RemovalReason.DISCARDED);
             actor.transport.finishAndReleaseAll();
         }
-        published.discard();
+        if (published != null) published.discard();
         level.setChunkForced(kitchenChunk.x, kitchenChunk.z, false);
         if (!smokerChunk.equals(kitchenChunk)) level.setChunkForced(smokerChunk.x, smokerChunk.z, false);
         attempts = rejectedAt = 0;
         published = null;
+        if (++kitchenIndex < plans.size()) {
+            loadKitchen();
+            return false;
+        }
+        next(Phase.DONE);
+        return true;
     }
 
     @SuppressWarnings("unchecked")

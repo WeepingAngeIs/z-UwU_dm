@@ -36,6 +36,23 @@ cp "$release" "$root/build/guardian-check/guardian-home-probe.jar" mods/
 timeout --kill-after=15s 6m java -Xmx1G -jar installer.jar --installServer
 printf 'eula=true\n' >eula.txt
 printf 'server-ip=127.0.0.1\nserver-port=25599\nonline-mode=false\nlevel-type=minecraft:flat\nlevel-seed=152045\nview-distance=3\nsimulation-distance=3\nmax-tick-time=120000\nspawn-monsters=false\n' >server.properties
+if [[ ${UWU_BAKER_RESTART_ONLY:-false} == true ]]; then
+    test "${GITHUB_ACTIONS:-false}" = true
+    check_kitchens() {
+        local stage=$1 marker=$2 log="$root/build/guardian-check/baker-$1.log"
+        cmp -- "$release" "mods/$(basename "$release")"
+        timeout --kill-after=20s 10m java -Xms512m -Xmx3g -XX:+ExitOnOutOfMemoryError \
+            "-Duwu.check.bakerStage=$stage" @libraries/net/neoforged/neoforge/21.1.249/unix_args.txt nogui 2>&1 | tee "$log"
+        if grep -Ei 'OutOfMemoryError|GUARDIAN HOME CHECK FAILED|single server tick has taken' "$log"; then return 1; fi
+        grep -F "$marker" "$log"
+    }
+    check_kitchens seed 'BAKER RESTART SEED PASS both original kitchens spent'
+    test -s world/level.dat
+    test -s world/baker-proof-Petal.nbt
+    test -s world/baker-proof-Dusk.nbt
+    check_kitchens reopen 'BAKER COLD RESTART PASS both saved kitchens'
+    exit 0
+fi
 timeout --kill-after=20s 12m java -Xms512m -Xmx3g -XX:+ExitOnOutOfMemoryError -Duwu.check.duskChest="${UWU_DUSK_CHEST_ONLY:-false}" -Duwu.check.decor="${UWU_DECOR_CHECK:-false}" @libraries/net/neoforged/neoforge/21.1.249/unix_args.txt nogui 2>&1 | tee "$root/build/guardian-check/server.log"
 markers=('GUARDIAN HOME BINDING PASS' 'GUARDIAN HOME SCHEDULE PASS' 'GUARDIAN HOME DOORS PASS' 'GUARDIAN HOME SERVER PASS' 'KEEPER DOOR SERVER PASS' 'KEEPER HURT ROUTING PASS' 'GUARDIAN RESCUE PASS')
 if [[ ${UWU_DUSK_CHEST_ONLY:-false} == true ]]; then markers=('DUSK CHEST SERVER PASS'); fi

@@ -29,10 +29,11 @@ import net.neoforged.neoforge.event.tick.ServerTickEvent;
 public final class GuardianHomeProbe {
     private enum Phase { PREPARE, LOAD_ARENA, PERSONAL, BIND, DAY_EDGE, DAY_CAP, DAY_HOME, IDLE_START, IDLE_BEFORE, IDLE_AFTER, NIGHT, NIGHT_DECISION, NIGHT_ROUTE, NIGHT_HOME, MORNING, DOOR, KEEPER_DOOR, GUARDIAN_RESCUE, DUSK_CHEST, TOASTERS, READINGS, CUPID, DONE }
     private static final boolean DECOR = Boolean.getBoolean("uwu.check.decor");
-    private final BakerToasterProbe toaster = DECOR ? new BakerToasterProbe() : null;
+    private static final boolean BAKER_RESTART = System.getProperty("uwu.check.bakerStage") != null;
+    private final BakerToasterProbe toaster = DECOR || BAKER_RESTART ? new BakerToasterProbe() : null;
     private final LanternReadingHouseProbe readings = DECOR ? new LanternReadingHouseProbe() : null;
     private final CupidParityProbe cupid = DECOR ? new CupidParityProbe() : null;
-    private Phase phase = DECOR ? Phase.TOASTERS :
+    private Phase phase = DECOR || BAKER_RESTART ? Phase.TOASTERS :
             (Boolean.getBoolean("uwu.check.duskChest") ? Phase.DUSK_CHEST : Phase.PREPARE);
     private int tick, phaseStarted;
     private ServerLevel level;
@@ -226,7 +227,13 @@ public final class GuardianHomeProbe {
                     event.getServer().halt(false);
                 }
                 case TOASTERS -> {
-                    if (toaster.tick(event.getServer())) next(Phase.READINGS);
+                    if (!toaster.tick(event.getServer())) return;
+                    if (BAKER_RESTART) {
+                        phase = Phase.DONE;
+                        event.getServer().halt(false);
+                    } else {
+                        next(Phase.READINGS);
+                    }
                 }
                 case READINGS -> {
                     if (readings.tick(toaster.level(), toaster.plans())) next(Phase.CUPID);
