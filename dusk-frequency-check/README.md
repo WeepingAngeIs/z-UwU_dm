@@ -1,0 +1,46 @@
+# Hosted Dusk frequency and settings fixture
+
+This fixture runs only on free public GitHub-hosted runners. It is a separate test mod and is never included in the UwU Dimension JAR. It uses the same frozen candidate JAR for dedicated native generation and the real configuration client.
+
+## Runner contract
+
+The workflow supplies `UWU_JAR`, `UWU_EXPECTED_JAR_SHA256`, the exact integrated Playtest 9 `UWU_BASELINE_JAR`, and the separately built patched `UWU_COMPANION_JAR`. Run:
+
+```bash
+bash dusk-frequency-check/run-server.sh "$UWU_JAR" "$UWU_BASELINE_JAR"
+bash dusk-frequency-check/run-client.sh
+```
+
+The server runner compiles the disposable fixture, boots pinned NeoForge 21.1.249, and verifies the actual loaded UwU JAR path and hash on every process. Each process gets an explicitly named disposable world. The client inherits the existing pinned build runtime, loads the candidate and optional companion from their packaged JARs, and registers only the fixture as a local source mod.
+
+## Predetermined frequency sample
+
+The sample is seeds **152045, 20261121 and 8675309**, with the same **21 × 21 lattice-cell window** centered on each seed's original first-grove cell. This is 441 cells per seed, 1,323 cells total. The window has no biome filter. The existing 384-block minimum spacing and 1,536-block lattice remain fixed.
+
+The baseline and candidate independently boot fresh worlds and call their actual native terrain survey methods, one cell per server tick. Reports separate lattice cells, usable groves, canonically assigned Dusk sites, viable original 32-attempt plans, viable expanded 256-attempt plans, and accepted 75-percent plans. They also record the Velvet Highlands subset. The biome preview uses Minecraft's fuzzy biome selection against the pure noise source, so it does not load chunks.
+
+Every candidate cell checks the actual 0/75/100 plan results against its deterministic roll, with no preview freezing. All Petal signatures and every successful original 32-attempt signature must match the baseline exactly. The aggregate gate requires expanded 75-percent acceptance to exceed baseline 100-percent acceptance over the fixed window. Survey counts are terrain plans, **not counts of generated settlements**.
+
+## Separate actual generation and persistence checks
+
+Actual native village placement runs on each of the same three seeds. It checks full village footprints, the native plaza, Dusk house blocks, generated Dusk residents and Cupid-shrine exclusion. The detailed lifecycle seed is chosen deterministically from the fixed sample using explicit prerequisites. It must have a village that failed the original 32-attempt survey, succeeds at 256 attempts, passes the 75-percent roll, and actually generates in Velvet Highlands.
+
+On that seed, the fixture additionally checks an accepted 75-percent site, an accepted 100-percent site, a generation-touched 0-percent rejected footprint, and a Petal control. Live edits must leave accepted and rejected touched decisions unchanged, while a previously untouched high-roll site responds to 100. A separate Minecraft process then reloads the same saved world and verifies persisted decisions, selected structural block states, and resident UUID/type/name/trades/inventory/custom identity. The fixture does not claim whole-chunk byte identity.
+
+The original integrated baseline seeds another disposable world with partial native Dusk and Petal settlements, real residents enriched with distinctive test trades and inventory, and a generated empty footprint that would otherwise become viable only with the expanded survey. Candidate upgrade and restart must preserve those partial plans, retain the original 32-attempt/100-percent historical policy, keep the old blank footprint empty, complete new chunks with the same faction and geometry, and leave the sampled existing structural blocks and residents unchanged.
+
+The rejected-0 check exercises real generation and first-touch persistence. It does not isolate the fallback `ChunkEvent.Load` branch from the landscape feature: all eleven default Sakura Reach biomes run the landscape feature, including those without the surface settlement feature.
+
+## Actual graphical settings path
+
+The client opens the real optional Unyielding `/config` screen, selects **Config values**, types the exact Dusk setting key into the existing search field, opens its value row, types a new value through normal keyboard events, and clicks the native **Save** button. It performs **75 → 0 → 75 → 100**. No positive edit invokes the handler directly or changes the UwU config field from the fixture.
+
+Each successful save must return the real server acknowledgement and matching displayed value. The fixture captures the actual edited and saved screens, then checks the UwU getter, persisted server TOML, and subsequent native world generation. A first touch at 0 remains rejected through later GUI edits; 75 generates the recovered Velvet village; 100 generates an untouched high-roll village. Petal planning and outside-dimension exclusion remain separate assertions.
+
+Ten negative checks use the actual companion packet codec and registered server handler separately from the graphical positive path. They cover non-operator, stale expected value, unknown key, range and type failures while asserting unchanged memory and byte-identical TOML. The optional companion is a separately identified hosted test build from pinned public source plus the reviewable coordination patch, not a dependency bundled into UwU.
+
+## Evidence
+
+Logs are under `build/dusk-frequency-check/` and `build/dusk-frequency-client.log`. JSON reports and six native menu PNGs are under `build/dusk-frequency-evidence/`. Required top-level completion markers are `DUSK FREQUENCY SERVER PASS`, `DUSK FREQUENCY COMPARISON PASS` and `DUSK FREQUENCY UI PASS`. The workflow's independent provenance gate checks source and JAR identities before making the test artifact available.
+
+No local compilation, Minecraft execution, profile installation, existing-world access, server access or release is part of this fixture's preparation.

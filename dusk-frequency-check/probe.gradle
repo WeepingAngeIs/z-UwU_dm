@@ -1,0 +1,17 @@
+gradle.projectsEvaluated {
+    def project = gradle.rootProject
+    def compile = project.tasks.register('compileDuskFrequencyProbe', JavaCompile) {
+        dependsOn project.tasks.named('classes')
+        source(project.fileTree('dusk-frequency-check/java') { include '**/*.java'; exclude '**/ConfigGuiDriver.java'; exclude '**/FrequencyClient.java' })
+        classpath = project.sourceSets.main.compileClasspath + project.sourceSets.main.output
+        destinationDirectory.set(project.layout.buildDirectory.dir('dusk-frequency-check/classes'))
+        javaCompiler.set(project.tasks.named('compileJava', JavaCompile).flatMap { it.javaCompiler })
+        options.release.set(21)
+    }
+    project.tasks.register('duskFrequencyProbeJar', Jar) {
+        archiveFileName.set('dusk-frequency-probe.jar')
+        destinationDirectory.set(project.layout.buildDirectory.dir('dusk-frequency-check'))
+        from(compile.flatMap { it.destinationDirectory })
+        from(project.file('dusk-frequency-check/resources'))
+    }
+}

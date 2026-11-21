@@ -1,0 +1,114 @@
+name: UwU Dusk frequency and Unyielding setting
+on:
+  push:
+    branches: ['codex/dusk-frequency-20261121']
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: uwu-dusk-frequency-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  verify:
+    if: github.repository == 'WeepingAngeIs/z-UwU_dm' && github.event.repository.private == false
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    env:
+      VERSION: '1.5.0-beta.13-combined-rc.2-playtest.9-integrated.1-dusk-frequency.1'
+      UWU_JAR: build/dusk-frequency-candidate/UwU-Dimension-1.21.1-1.5.0-beta.13-combined-rc.2-playtest.9-integrated.1-dusk-frequency.1.jar
+      UWU_COMPANION_JAR: build/dusk-frequency-ci/companion/UnyieldingQuests-1.6.9.jar
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Bootstrap the pinned UwU build transport
+        run: bash integration-check/bootstrap.sh
+      - name: Recover the passing integrated Playtest 9 baseline
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          bash dusk-frequency-ci/recover-baseline.sh
+          echo "UWU_BASELINE_JAR=$RUNNER_TEMP/uwu-integrated-playtest9.jar" >> "$GITHUB_ENV"
+      - name: Build once and freeze the Dusk candidate
+        run: |
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          git merge-base --is-ancestor 1f489c5308b686a30672ec19b671a64534eb28a4 HEAD
+          bash ./gradlew --no-daemon --no-build-cache --max-workers=2 jar
+          mkdir -p build/dusk-frequency-candidate build/dusk-frequency-ci
+          cp "build/libs/UwU-Dimension-1.21.1-$VERSION.jar" "$UWU_JAR"
+          sha256sum "$UWU_JAR" > build/dusk-frequency-ci/candidate.sha256
+          echo "UWU_EXPECTED_JAR_SHA256=$(cut -d' ' -f1 build/dusk-frequency-ci/candidate.sha256)" >> "$GITHUB_ENV"
+      - name: Verify the bounded Dusk generation scope
+        run: python3 dusk-frequency-ci/verify.py "$UWU_JAR" "$UWU_BASELINE_JAR"
+      - name: Check fresh seed frequency, native placement and preservation
+        run: |
+          sha256sum --check build/dusk-frequency-ci/candidate.sha256
+          bash dusk-frequency-check/run-server.sh "$UWU_JAR" "$UWU_BASELINE_JAR"
+          sha256sum --check build/dusk-frequency-ci/candidate.sha256
+      - name: Build the explicit companion patch from pinned public Unyielding source
+        run: bash dusk-frequency-ci/build-companion.sh
+      - name: Prepare a disposable hosted display
+        run: |
+          if ! command -v xvfb-run >/dev/null || ! command -v xauth >/dev/null || ! dpkg-query -W libgl1-mesa-dri libopenal1 >/dev/null 2>&1; then
+            sudo apt-get update -qq
+            sudo apt-get install -y xvfb xauth libgl1-mesa-dri libopenal1
+          fi
+      - name: Edit through the actual Unyielding screen into the generator
+        run: |
+          sha256sum --check build/dusk-frequency-ci/candidate.sha256
+          bash dusk-frequency-check/run-client.sh
+          sha256sum --check build/dusk-frequency-ci/candidate.sha256
+      - name: Record source, settings path, measurements and test provenance
+        id: packet
+        run: |
+          python3 dusk-frequency-ci/verify.py "$UWU_JAR" "$UWU_BASELINE_JAR"
+          python3 dusk-frequency-ci/provenance.py
+          echo "sha=$UWU_EXPECTED_JAR_SHA256" >> "$GITHUB_OUTPUT"
+      - name: Return the passing UwU Dusk test JAR
+        id: deliver
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          path: ${{ env.UWU_JAR }}
+          archive: false
+          retention-days: 7
+          if-no-files-found: error
+      - name: Verify the uploaded UwU artifact digest
+        env:
+          EXPECTED_SHA: ${{ steps.packet.outputs.sha }}
+          UPLOADED_SHA: ${{ steps.deliver.outputs.artifact-digest }}
+        run: test "$EXPECTED_SHA" = "${UPLOADED_SHA#sha256:}"
+      - name: Return the separately identified companion test build
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: unyielding-quests-dusk-setting-companion-test-${{ github.sha }}
+          path: |
+            build/dusk-frequency-ci/companion/UnyieldingQuests-1.6.9.jar
+            build/dusk-frequency-ci/companion/companion-provenance.json
+            build/dusk-frequency-ci/companion/SHA256SUMS
+            dusk-frequency-ci/companion/
+          retention-days: 7
+          if-no-files-found: error
+      - name: Preserve focused Dusk evidence and actual menu captures
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: uwu-dusk-frequency-evidence-${{ github.sha }}
+          path: |
+            build/dusk-frequency-ci/*.json
+            build/dusk-frequency-ci/*.patch
+            build/dusk-frequency-ci/*.sha256
+            build/dusk-frequency-ci/companion/companion-build.log
+            build/dusk-frequency-ci/companion/*.json
+            build/dusk-frequency-ci/companion/SHA256SUMS
+            build/dusk-frequency-check/
+            build/dusk-frequency-evidence/
+            build/dusk-frequency-client*.log
+            build/dusk-frequency-client*/crash-reports/
+          retention-days: 7
+          if-no-files-found: warn

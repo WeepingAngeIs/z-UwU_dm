@@ -37,21 +37,30 @@ public final class BlossomVillage {
         public BlockPos doorway(House h){return site.pos(h.x(),h.floor()+1,h.z()-h.side()*h.depth());}
         public BlockPos resident(House h){return site.pos(h.x(),h.floor()+1,h.z());}
     }
-    private record Key(int gx,int gz,boolean dusk){}
+    private record Key(int gx,int gz,boolean dusk,int attempts){}
     private static final Map<ServerLevel,Map<Key,Optional<Plan>>> CACHE=new WeakHashMap<>();
     private static synchronized Map<Key,Optional<Plan>> cache(ServerLevel level){return CACHE.computeIfAbsent(level,k->new ConcurrentHashMap<>());}
     private static final Block[] JOBS={Blocks.COMPOSTER,Blocks.LOOM,Blocks.SMOKER,Blocks.BREWING_STAND,Blocks.CARTOGRAPHY_TABLE,Blocks.LECTERN,Blocks.FLETCHING_TABLE,Blocks.STONECUTTER};
     private static final int HALF=32;
     private static int ground(ServerLevel level,GroveSites.Site s,int x,int z){return GroveSites.height(level,s.wx(x,z),s.wz(x,z));}
     public static Optional<Plan> plan(ServerLevel level,GroveSites.Site s,boolean dusk){
+        if(dusk&&!SettlementLayout.duskChanceAllows(level,s))return Optional.empty();
+        return potentialPlan(level,s,dusk);
+    }
+    /** Habitable, assigned site before the configurable Dusk roll. Reservations
+     * use this stable envelope so an edit cannot introduce a structure collision. */
+    public static Optional<Plan> potentialPlan(ServerLevel level,GroveSites.Site s,boolean dusk){
         if(!GroveSites.settlement(level,s,dusk))return Optional.empty();
-        return survey(level,s,dusk);
+        return survey(level,s,dusk,dusk?SettlementLayout.duskSurveyAttempts(level,s):32);
     }
     // Pure terrain survey used while choosing the arrival site. Never asks whether this
     // region will host a settlement: that decision itself depends on the arrival site.
     static Optional<Plan> survey(ServerLevel level,GroveSites.Site s,boolean dusk){
+        return survey(level,s,dusk,32);
+    }
+    private static Optional<Plan> survey(ServerLevel level,GroveSites.Site s,boolean dusk,int attempts){
         var db=cache(level);if(db.size()>5000)db.clear();
-        return db.computeIfAbsent(new Key(s.gx(),s.gz(),dusk),k->design(level,s,dusk));
+        return db.computeIfAbsent(new Key(s.gx(),s.gz(),dusk,attempts),k->design(level,s,dusk,attempts));
     }
     public static Plan first(ServerLevel level,boolean dusk){
         var s=GroveSites.first(level);
@@ -63,9 +72,9 @@ public final class BlossomVillage {
         }
         throw new IllegalStateException("No habitable village land");
     }
-    private static Optional<Plan> design(ServerLevel level,GroveSites.Site site,boolean dusk){
+    private static Optional<Plan> design(ServerLevel level,GroveSites.Site site,boolean dusk,int attempts){
         var random=new Random(HeartwaterFeature.Valley.mix(site.x(),site.z(),level.getSeed())^(dusk?81347569:6234971));
-        for(int attempt=0;attempt<32;attempt++){
+        for(int attempt=0;attempt<attempts;attempt++){
             int x=(dusk?1:-1)*(48+random.nextInt(66)),z=-32-random.nextInt(62);
             int center=ground(level,site,x,z);
             if(center<=65||center>143||!GroveSites.cherry(level,site.wx(x,z),center+1,site.wz(x,z)))continue;

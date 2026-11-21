@@ -1,0 +1,38 @@
+diff --git a/unyielding-quests/src/main/java/dev/unyielding/quests/settings/BalanceSettings.java b/unyielding-quests/src/main/java/dev/unyielding/quests/settings/BalanceSettings.java
+--- a/unyielding-quests/src/main/java/dev/unyielding/quests/settings/BalanceSettings.java
++++ b/unyielding-quests/src/main/java/dev/unyielding/quests/settings/BalanceSettings.java
+@@ -61,6 +61,23 @@
+                     "MAX_ACTIVE", "RESPAWN_SECONDS", "CHASE_RANGE", "HUNT_RANGE", "TELEPORT_DISTANCE",
+                     "OWNER_CREDIT", "PARTICLES")) add("soul_tome", config, name);
+         });
++        // UwU owns this optional server config; older UwU builds omit the row.
++        // Read only its public ConfigValue so the existing editor keeps OP checks,
++        // optimistic concurrency, validation, persistence and rollback.
++        if (ModList.get().isLoaded("uwudimension")) {
++            try {
++                Class<?> config = Class.forName("dev.uwu.dimension.AcquisitionPolicy");
++                Object candidate = config.getField("DUSK_SITE_CHANCE").get(null);
++                if (candidate instanceof ModConfigSpec.IntValue chance
++                        && chance.getPath().equals(List.of("duskVillageChancePercent"))) {
++                    add("uwudimension", chance);
++                }
++            } catch (ClassNotFoundException | NoSuchFieldException olderUwU) {
++                // This capability is absent in older optional UwU versions.
++            } catch (ReflectiveOperationException | LinkageError incompatibleUwU) {
++                UnyieldingQuests.LOGGER.warn("UwU village setting unavailable; leaving its config to UwU", incompatibleUwU);
++            }
++        }
+         optional("culeaderboard", () -> {
+             Class<?> config = Class.forName("dev.unyielding.leaderboard.LbConfig");
+             for (String name : List.of("ROTATE_SECONDS", "REFRESH_SECONDS", "TOP_COUNT", "PAGES", "HIDDEN_PLAYERS",
+diff --git a/unyielding-quests/src/main/java/dev/unyielding/quests/settings/ConfigEditor.java b/unyielding-quests/src/main/java/dev/unyielding/quests/settings/ConfigEditor.java
+--- a/unyielding-quests/src/main/java/dev/unyielding/quests/settings/ConfigEditor.java
++++ b/unyielding-quests/src/main/java/dev/unyielding/quests/settings/ConfigEditor.java
+@@ -225,6 +225,7 @@
+             CompoundTag row = new CompoundTag();
+             row.putString("key", key);
+             if (value == Config.CUSTOM_MAP_ICON_SCALE) row.putString("title", "Map icon size");
++            if (key.equals("uwudimension.duskVillageChancePercent")) row.putString("title", "Dusk village generation chance (%)");
+             row.putString("value", JSON.toJson(value.getRaw()));
+             row.putString("help", BalanceSettings.help(value, Objects.toString(value.getSpec().getComment(), "")));
+             rows.add(row);

@@ -72,6 +72,7 @@ public final class HeartwaterFeature extends Feature<NoneFeatureConfiguration> {
         var pos=new ChunkPos(context.origin());
         var site=GroveSites.forChunk(level,pos);
         if(!site.usable())return strata;
+        SettlementLayout.beginDuskGeneration(level,site,pos);
         var valley=new Valley(context.level(),context.level().getChunk(pos.x,pos.z),site);
         if(surface)valley.surfaceLandmarks();else valley.draw();
         return true;
@@ -85,6 +86,7 @@ public final class HeartwaterFeature extends Feature<NoneFeatureConfiguration> {
         var chunk=event.getChunk();
         var site=GroveSites.forChunk(level,chunk.getPos());
         if(!site.usable())return;
+        SettlementLayout.beginDuskGeneration(level,site,chunk.getPos());
         var valley=new Valley(level,chunk,site);
         if(valley.overlaps(15,68,41,136)&&GroveSites.adventure(level,site)){
             valley.buriedStairs();
@@ -174,7 +176,10 @@ public final class HeartwaterFeature extends Feature<NoneFeatureConfiguration> {
             // Later tree placements therefore see final ground, and never get amputated by grading.
 
             if(overlaps(-211,-205,211,35)) {
-                for(boolean dusk:new boolean[]{false,true})BlossomVillage.plan(level.getLevel(),site,dusk).ifPresent(p->{
+                // Pure authored reservations include a possible Dusk village even
+                // when its current roll is denied. They remain valid after live edits.
+                for(boolean dusk:new boolean[]{false,true})(planning()?BlossomVillage.potentialPlan(level.getLevel(),site,dusk)
+                        :BlossomVillage.plan(level.getLevel(),site,dusk)).ifPresent(p->{
                     part(p.dusk()?"dusk_village":"petal_village",()->BlossomVillage.place(this,p));
                     MoonveilTreehouse.plan(level.getLevel(),p).ifPresent(tree->part("moonveil_treehouse",()->MoonveilTreehouse.place(this,tree)));
                     part("village_sakura",()->VillageSakura.place(this,p));

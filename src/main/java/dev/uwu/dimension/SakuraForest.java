@@ -119,7 +119,8 @@ public final class SakuraForest {
         int lz=switch(site.turns()){case 1->-dx;case 2->-dz;case 3->dx;default->dz;};
         if(GroveSites.adventure(level,site)&&Math.abs(lx)<=33&&lz>=site.lip()-32&&lz<=site.lip()+27)return true;
         for(boolean dusk:new boolean[]{false,true}){
-            var village=BlossomVillage.plan(level,site,dusk);
+            // Keep cached tree reservations stable when the future-site chance is edited.
+            var village=BlossomVillage.potentialPlan(level,site,dusk);
             if(village.isEmpty())continue;
             var p=village.get();
             // Reserve the complete settlement envelope and its approach, not individual trunk cells.
