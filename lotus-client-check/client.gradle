@@ -5,16 +5,53 @@ gradle.beforeProject { project ->
         probe.resources.srcDirs = [project.file('lotus-client-check/resources')]
         probe.compileClasspath += project.sourceSets.main.compileClasspath + project.sourceSets.main.output
         project.dependencies.add('runtimeOnly', project.fileTree('build/lotus-client-deps') { include '*.jar' })
-        project.neoForge.mods.create('uwu_lotus_client_check') { sourceSet(probe) }
+        def probeMod = project.neoForge.mods.create('uwu_lotus_client_check') { sourceSet(probe) }
+
+        def candidatePath = System.getenv('UWU_JAR')?.trim()
+        def candidateSha = System.getenv('UWU_EXPECTED_JAR_SHA256')?.trim()
+        def candidateJar = candidatePath ? project.file(candidatePath).canonicalFile : null
+        if (candidateJar != null) {
+            if (!candidateJar.isFile() || !candidateJar.name.endsWith('.jar')) {
+                throw new org.gradle.api.GradleException('UWU_JAR must name an existing packaged candidate JAR: ' + candidateJar)
+            }
+            if (candidateSha == null || !candidateSha.matches('(?i)[0-9a-f]{64}')) {
+                throw new org.gradle.api.GradleException('Packaged fixture mode requires UWU_EXPECTED_JAR_SHA256 (64 hexadecimal characters)')
+            }
+            // Inherit dependency configurations, never main.output: the fixture compiles against
+            // main above, but NeoForge must discover the product only from the frozen JAR.
+            project.configurations.getByName(probe.runtimeClasspathConfigurationName)
+                    .extendsFrom(project.configurations.getByName(project.sourceSets.main.runtimeClasspathConfigurationName))
+            project.dependencies.add(probe.runtimeOnlyConfigurationName, project.files(candidateJar))
+        } else if (candidateSha) {
+            throw new org.gradle.api.GradleException('UWU_EXPECTED_JAR_SHA256 requires UWU_JAR; refusing a source-output fallback')
+        }
+
         project.neoForge.runs.create('lotusClient') {
             client()
+            if (candidateJar != null) {
+                // ModDevGradle RunModel uses sourceSet.runtimeClasspath for the JVM and
+                // loadedMods for fml.modFolders. Only the disposable fixture is a local mod.
+                sourceSet = probe
+                loadedMods = [probeMod]
+                jvmArgument('-Duwu.check.candidateJar=' + candidateJar.absolutePath)
+                jvmArgument('-Duwu.check.candidateSha256=' + candidateSha)
+            }
             def dirkCountdown = System.getenv('UWU_DIRK_COUNTDOWN_CHECK') == 'true'
             def shrineCheck = System.getenv('UWU_SHRINE_CLIENT_CHECK') == 'true'
-            gameDirectory = project.file(shrineCheck ? 'build/shrine-client' :
-                    (dirkCountdown ? 'build/dirk-countdown-client' : 'build/lotus-client'))
+            def cupidLantern = System.getenv('UWU_CUPID_LANTERN_CHECK') == 'true'
+            def caveCheck = System.getenv('UWU_CAVE_CLIENT_CHECK') == 'true'
+            gameDirectory = project.file(cupidLantern ? 'build/cupid-lantern-client' :
+                    (caveCheck ? 'build/cave-client' :
+                    (shrineCheck ? 'build/shrine-client' :
+                    (dirkCountdown ? 'build/dirk-countdown-client' : 'build/lotus-client'))))
             jvmArgument('-Xmx3G')
             if (dirkCountdown) jvmArgument('-Duwu.check.dirkCountdown=true')
             if (shrineCheck) jvmArgument('-Duwu.check.shrine=true')
+            if (caveCheck) jvmArgument('-Duwu.check.cave=true')
+            if (cupidLantern) {
+                jvmArgument('-Duwu.check.cupidLantern=true')
+                jvmArgument('-Duwu.check.evidence=' + project.file('build/cupid-lantern-evidence').absolutePath)
+            }
             if (System.getenv('UWU_DECOR_CHECK') == 'true') jvmArgument('-Duwu.check.decor=true')
         }
     }

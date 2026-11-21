@@ -1,6 +1,8 @@
 package dev.uwu.lotusclientcheck;
 
 import com.mojang.blaze3d.vertex.PoseStack;
+import dev.uwu.dimension.CupidBowVisualConfig;
+import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.HashSet;
 import java.util.List;
@@ -8,6 +10,7 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.CameraType;
 import net.minecraft.client.renderer.block.model.BakedQuad;
 import net.minecraft.client.resources.model.BakedModel;
 import net.minecraft.core.component.DataComponents;
@@ -48,10 +51,39 @@ final class CupidBowProbe {
         }
     }
 
-    private record Trial(boolean smooth, InteractionHand hand) {}
-    private static final List<Trial> TRIALS = List.of(new Trial(false, InteractionHand.MAIN_HAND),
-            new Trial(false, InteractionHand.OFF_HAND), new Trial(true, InteractionHand.MAIN_HAND),
-            new Trial(true, InteractionHand.OFF_HAND));
+    private static final boolean FOCUSED = Boolean.getBoolean("uwu.check.cupidLantern");
+    private record Trial(boolean smooth, InteractionHand hand, CameraType camera, double scale, float orbit) {
+        String label() {
+            return "cupid-" + (smooth ? "detailed" : "original") + "-" + hand.name().toLowerCase()
+                    + "-" + camera.name().toLowerCase() + "-scale" + (int) (scale * 100)
+                    + (orbit == 0 ? "" : "-orbit" + (orbit < 0 ? "minus" : "plus") + (int) Math.abs(orbit));
+        }
+    }
+    private static final List<Trial> TRIALS = trials();
+
+    private static List<Trial> trials() {
+        var result = new ArrayList<Trial>();
+        for (CameraType camera : FOCUSED ? List.of(CameraType.FIRST_PERSON, CameraType.THIRD_PERSON_FRONT)
+                : List.of(CameraType.FIRST_PERSON)) {
+            for (boolean detailed : List.of(false, true)) {
+                for (double scale : FOCUSED && detailed ? List.of(1D, 1.5D) : List.of(1D)) {
+                    for (InteractionHand hand : InteractionHand.values()) result.add(new Trial(detailed, hand, camera, scale, 0));
+                }
+            }
+        }
+        if (FOCUSED) {
+            // Actual camera orbits show both sides of the bow/arm depth relationship without
+            // changing the held model, player pose, or the native survival draw/release path.
+            for (float orbit : new float[]{-45, 45}) {
+                for (double scale : new double[]{1, 1.5}) {
+                    for (InteractionHand hand : InteractionHand.values()) {
+                        result.add(new Trial(true, hand, CameraType.THIRD_PERSON_FRONT, scale, orbit));
+                    }
+                }
+            }
+        }
+        return List.copyOf(result);
+    }
 
     private final EnumMap<ItemDisplayContext, Matrix4f> mounts = new EnumMap<>(ItemDisplayContext.class);
     private final EnumMap<Pose, Long> smoothGeometry = new EnumMap<>(Pose.class);
@@ -62,6 +94,13 @@ final class CupidBowProbe {
     private long deadline;
     private boolean requested;
     private boolean drawing;
+    private boolean released;
+    private int restingAt = -1;
+    private int releasedAt;
+    private final Set<String> renderedPoses = new HashSet<>();
+    private double savedScale;
+    private CameraType savedCamera;
+    private int savedFov;
     private int originalWear;
     private CompletableFuture<Void> reload;
     private volatile Throwable serverFailure;
@@ -71,6 +110,9 @@ final class CupidBowProbe {
         if (player == null || client.level == null || client.gameMode == null) return false;
         if (serverFailure != null) throw new AssertionError("Could not set up Cupid fixture hands", serverFailure);
         if (classic == null) {
+            savedScale = CupidBowVisualConfig.HELD_SCALE.get();
+            savedCamera = client.options.getCameraType();
+            savedFov = client.options.fov().get();
             verifyCreativeChoices(client);
             var rest = client.getItemRenderer().getModel(classic, client.level, null, 11);
             for (var context : MOUNTS) {
@@ -84,8 +126,11 @@ final class CupidBowProbe {
                             .equals(mounts.get(ItemDisplayContext.THIRD_PERSON_RIGHT_HAND), 1E-5F),
                     "Classic left/right hand mounts were not distinct");
         }
+        if (FOCUSED && !CupidLanternVisualProbe.icons(classic, smooth)) return false;
 
         if (trialIndex == TRIALS.size()) {
+            CupidLanternVisualProbe.orbit(0);
+            client.options.fov().set(savedFov);
             if (reload == null) {
                 require(new HashSet<>(smoothGeometry.values()).size() == Pose.values().length,
                         "Smooth drawing did not produce five distinct baked position meshes: " + smoothGeometry);
@@ -96,8 +141,11 @@ final class CupidBowProbe {
             require(System.nanoTime() < deadline, "Timed out reloading Cupid resources");
             if (!reload.isDone()) return false;
             reload.join();
+            if (FOCUSED) CupidHeldScaleProbe.verify(client);
             verifyPose(client, classic, false, Pose.REST, null);
             verifyPose(client, smooth, true, Pose.REST, null);
+            CupidBowVisualConfig.HELD_SCALE.set(savedScale);
+            client.options.setCameraType(savedCamera);
             System.out.println("CUPID CREATIVE AND CLIENT POSES PASS classic and smooth, 0/8/15/20 draw poses, "
                     + "both hands, release, GUI and held/world geometry after reload");
             return true;
@@ -105,6 +153,10 @@ final class CupidBowProbe {
 
         Trial trial = TRIALS.get(trialIndex);
         if (!requested) {
+            client.options.setCameraType(trial.camera);
+            CupidLanternVisualProbe.orbit(trial.orbit);
+            client.options.fov().set(trial.orbit == 0 ? savedFov : 50);
+            CupidBowVisualConfig.HELD_SCALE.set(trial.scale);
             requested = true;
             deadline = System.nanoTime() + 20_000_000_000L;
             var server = client.getSingleplayerServer();
@@ -126,11 +178,28 @@ final class CupidBowProbe {
         require(System.nanoTime() < deadline, "Timed out during " + trial + " draw=" + drawing
                 + " useTicks=" + player.getTicksUsingItem() + " stack=" + stack);
         if (!cupid(stack) || marked(stack) != trial.smooth) return false;
+        if (released) {
+            if (FOCUSED && !CupidLanternVisualProbe.saved(trial.label() + "-release")) return false;
+            if (player.tickCount - releasedAt < (FOCUSED ? 3 : 0)) return false;
+            finishTrial();
+            return false;
+        }
         if (!drawing) {
             var otherHand = trial.hand == InteractionHand.MAIN_HAND ? InteractionHand.OFF_HAND : InteractionHand.MAIN_HAND;
             if (!player.getItemInHand(otherHand).isEmpty() || player.isUsingItem()) return false;
+            if (!ItemStack.isSameItemSameComponents(stack, trial.smooth ? smooth : classic)) return false;
             require(stack.getUseAnimation() == UseAnim.BOW, "Cupid lost its normal draw animation");
             verifyPose(client, stack, trial.smooth, Pose.REST, player);
+            if (restingAt < 0) restingAt = player.tickCount;
+            if (FOCUSED) {
+                // Main-hand equip height follows attack recovery, which lasts longer than the
+                // old eight-tick wait. Also wait for a completed render, not just another tick:
+                // several catch-up ticks can run before a frame on the software-rendered client.
+                if (player.tickCount - restingAt < 16 || player.getAttackStrengthScale(0) < .99F) return false;
+                String restingFrame = trial.label() + "-rest";
+                CupidLanternVisualProbe.request(restingFrame);
+                if (!CupidLanternVisualProbe.saved(restingFrame)) return false;
+            }
             originalWear = stack.getDamageValue();
             client.options.keyUse.setDown(true);
             require(client.gameMode.useItem(player, trial.hand).consumesAction(), "Cupid draw could not start for " + trial);
@@ -141,11 +210,14 @@ final class CupidBowProbe {
         require(player.isUsingItem() && player.getUsedItemHand() == trial.hand && player.getUseItem() == stack,
                 "Cupid stopped drawing before release for " + trial);
         int ticks = player.getTicksUsingItem();
+        if (FOCUSED && Set.of(0, 8, 15, 20).contains(ticks) && renderedPoses.add(Pose.at(ticks).name())) {
+            CupidLanternVisualProbe.request(trial.label() + "-" + Pose.at(ticks).name().toLowerCase());
+        }
         if (Set.of(0, 7, 8, 14, 15, 19, 20).contains(ticks)) {
             drawTicks.add(ticks);
             verifyPose(client, stack, trial.smooth, Pose.at(ticks), player);
         }
-        if (ticks < 20) return false;
+        if (ticks < (FOCUSED ? 22 : 20)) return false;
 
         require(drawTicks.equals(Set.of(0, 7, 8, 14, 15, 19, 20)), "Missing draw boundary observations: " + drawTicks);
         require(stack.getDamageValue() == originalWear, "Drawing wore the bow before release");
@@ -153,13 +225,23 @@ final class CupidBowProbe {
         client.gameMode.releaseUsingItem(player);
         require(!player.isUsingItem(), "Cupid release did not clear the active item");
         verifyPose(client, stack, trial.smooth, Pose.REST, player);
+        if (FOCUSED) CupidLanternVisualProbe.request(trial.label() + "-release");
 
         System.out.println("CUPID DRAW CLIENT " + trial + " selected, drew through 0/8/15/20 and returned to rest");
+        released = true;
+        releasedAt = player.tickCount;
+        return false;
+    }
+
+    private void finishTrial() {
+        CupidLanternVisualProbe.orbit(0);
         drawTicks.clear();
+        renderedPoses.clear();
         requested = false;
         drawing = false;
+        released = false;
+        restingAt = -1;
         trialIndex++;
-        return false;
     }
 
     private void verifyCreativeChoices(Minecraft client) {
@@ -206,7 +288,8 @@ final class CupidBowProbe {
 
         var guiPose = new PoseStack();
         var gui = transformed(model, ItemDisplayContext.GUI, guiPose);
-        // The smooth portrait is upright, while the original portrait already lies on a diagonal.
+        // Retain the rising diagonal, but assert its outward curvature from actual rendered pixels
+        // in CupidLanternVisualProbe. Rotation alone did not catch the Playtest 8/9 reversed curve.
         var top = guiPose.last().pose().transformDirection(0, 1, 0, new org.joml.Vector3f());
         require(top.x > 0 && top.y > 0 && Math.abs(top.x - top.y) < 1E-5F,
                 "Smooth hotbar portrait did not follow the original rising diagonal: " + top);

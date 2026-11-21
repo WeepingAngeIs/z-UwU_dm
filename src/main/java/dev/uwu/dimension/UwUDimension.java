@@ -28,6 +28,7 @@ public final class UwUDimension {
         container.registerConfig(net.neoforged.fml.config.ModConfig.Type.SERVER,AcquisitionPolicy.SPEC,"uwudimension-server.toml");
         container.registerConfig(net.neoforged.fml.config.ModConfig.Type.SERVER,HeartLauncher.SPEC,"uwudimension-launcher.toml");
         container.registerConfig(net.neoforged.fml.config.ModConfig.Type.CLIENT,SacredSpring.CLIENT_SPEC,"uwudimension-client.toml");
+        container.registerConfig(net.neoforged.fml.config.ModConfig.Type.CLIENT,CupidBowVisualConfig.SPEC,"uwudimension-cupid-visuals-client.toml");
         bus.addListener((net.neoforged.fml.event.config.ModConfigEvent.Loading event) -> {
             if(event.getConfig().getSpec()==AcquisitionPolicy.SPEC){
                 AcquisitionPolicy.heartLocketCraftingEnabled();AcquisitionPolicy.weaponAcquisitionEnabled();
@@ -44,6 +45,7 @@ public final class UwUDimension {
         CupidWishes.register();
         ReefLife.register(bus);
         dev.uwu.dimension.lush.LushGeodes.register(bus);
+        dev.uwu.dimension.lush.UwUCaveBerries.register(bus);
         ReachLife.register(bus);
         SakuraCraft.register(bus);
         SakuraMaterials.register(bus);
