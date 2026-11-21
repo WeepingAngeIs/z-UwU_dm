@@ -18,7 +18,6 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.GameRules;
-import net.minecraft.world.level.storage.LevelResource;
 
 /** Consumes only changes already made through the real client GUI and native network path. */
 final class UiWorldProbe {
@@ -49,7 +48,7 @@ final class UiWorldProbe {
     void begin(ServerPlayer owner,int value)throws Exception{
         target=value;
         require(AcquisitionPolicy.duskVillageChancePercent()==value,"Native GUI Save did not reach actual UwU getter");
-        var path=owner.getServer().getWorldPath(LevelResource.ROOT).resolve("serverconfig/uwudimension-server.toml");
+        var path=configPath();
         String toml=Files.readString(path);
         require(Pattern.compile("(?m)^duskVillageChancePercent\\s*=\\s*"+value+"\\s*$").matcher(toml).find(),"Native GUI Save did not persist server TOML");
         require(signature(BlossomVillage.plan(level,petal.site(),false)).equals(signature(petal)),"GUI edit changed Petal plan");

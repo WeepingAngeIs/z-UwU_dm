@@ -15,7 +15,6 @@ import java.util.UUID;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.level.storage.LevelResource;
 import net.neoforged.neoforge.common.util.FakePlayer;
 
 /** Negative packet-handler checks, separate from the native UI's successful edits. */
@@ -30,8 +29,7 @@ public final class ConfigGuardProbe {
         require(operator.hasPermissions(2), "The actual UI operator lost permission before guard checks.");
         require(AcquisitionPolicy.duskVillageChancePercent() == 100,
                 "Guard checks must follow the native UI's successful final edit to 100.");
-        Path config = operator.getServer().getWorldPath(LevelResource.ROOT)
-                .resolve("serverconfig/uwudimension-server.toml");
+        Path config = FrequencySupport.configPath();
         byte[] original = Files.readAllBytes(config);
         String digest = HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(original));
 

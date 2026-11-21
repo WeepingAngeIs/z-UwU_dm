@@ -12,6 +12,7 @@ import dev.uwu.dimension.Keeper;
 import dev.uwu.dimension.People;
 import dev.uwu.dimension.PetalShrinePlacement;
 import dev.uwu.dimension.SettlementLayout;
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
@@ -29,6 +30,8 @@ import net.minecraft.server.level.TicketType;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.phys.AABB;
+import net.neoforged.fml.config.ModConfig;
+import net.neoforged.fml.config.ModConfigs;
 
 /** Shared native checks, with no production writes beyond ordinary fixture generation. */
 final class FrequencySupport {
@@ -59,6 +62,15 @@ final class FrequencySupport {
         AcquisitionPolicy.DUSK_SITE_CHANCE.set(value);
         if(save)AcquisitionPolicy.DUSK_SITE_CHANCE.save();
         require(AcquisitionPolicy.duskVillageChancePercent()==value,"Config getter did not consume "+value);
+    }
+    static Path configPath()throws IOException{
+        // FML uses the game config directory unless an existing world override
+        // is present. Ask the registered live config rather than assuming either.
+        var configs=ModConfigs.getModConfigs("uwudimension").stream()
+                .filter(c->c.getType()==ModConfig.Type.SERVER&&c.getSpec()==AcquisitionPolicy.SPEC).toList();
+        require(configs.size()==1,"Expected one registered UwU acquisition policy config");
+        var config=configs.getFirst();require(config.getFileName().equals("uwudimension-server.toml"),"Unexpected UwU policy filename");
+        Path path=config.getFullPath().toRealPath();require(Files.isRegularFile(path),"Registered UwU policy has no persisted file");return path;
     }
     static JsonObject read(String name)throws Exception{return JsonParser.parseString(Files.readString(OUTPUT.resolve(name))).getAsJsonObject();}
     static void write(String name,JsonObject value)throws Exception{
