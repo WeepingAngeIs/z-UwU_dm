@@ -9,24 +9,25 @@ import sys
 from zipfile import ZipFile
 
 REPO = "WeepingAngeIs/z-UwU_dm"
-BASELINE_COMMIT = "c509523831c5f94af42a3b568c3a24e710dbeda6"
-VILLAGE_RUN = 44988599623
-VILLAGE_INPUT = 14740668957
-ARCHIVE_DIGEST = "sha256:f22703c32fbf3c6dc2963c65671873c1a653b72a7b070264c07c556abf3c3ed1"
+BASELINE_COMMIT = "2b9ad77d4e2f72a1fb6fcaaff9a0fbb6d79bdd4a"
+VILLAGE_RUN = 44989057092
+VILLAGE_ARCHIVE = 14741047496
+ARCHIVE_DIGEST = "sha256:566a330368637b7f3e8668d97a7e5b930a41792b83800b8359ee6ebba179b972"
 VILLAGE_HASH = "5cd27d5e473f58835dbfda1ef639cf98c61fda3d662c122e924bb7be1a89fb1d"
 
 def gh(path):
     return subprocess.check_output(["gh", "api", f"repos/{REPO}/{path}"])
 
 run = json.loads(gh(f"actions/runs/{VILLAGE_RUN}"))
-assert run["head_sha"] == BASELINE_COMMIT
+assert run["head_sha"] == BASELINE_COMMIT and run["conclusion"] == "success"
 verified_jobs = {j["name"] for j in json.loads(gh(f"actions/runs/{VILLAGE_RUN}/jobs"))["jobs"] if j["conclusion"] == "success"}
-assert {"package", "generate (152045)", "generate (20261121)", "generate (8675309)"} <= verified_jobs
-raw = gh(f"actions/artifacts/{VILLAGE_INPUT}/zip")
+assert {"package", "generate (152045)", "generate (20261121)", "generate (8675309)", "verified"} <= verified_jobs
+raw = gh(f"actions/artifacts/{VILLAGE_ARCHIVE}/zip")
 assert "sha256:" + sha256(raw).hexdigest() == ARCHIVE_DIGEST
 with ZipFile(BytesIO(raw)) as bundle:
-    baseline = bundle.read("candidate.jar")
-    assert json.loads(bundle.read("scope.json"))["candidateSha256"] == VILLAGE_HASH
+    jar_name, = [n for n in bundle.namelist() if n.endswith("-villages.1.jar")]
+    baseline = bundle.read(jar_name)
+    assert json.loads(bundle.read("village-checks.json"))["scope"]["candidateSha256"] == VILLAGE_HASH
 assert sha256(baseline).hexdigest() == VILLAGE_HASH
 
 candidate = Path(sys.argv[1])
@@ -56,7 +57,7 @@ with ZipFile(BytesIO(baseline)) as old, ZipFile(candidate) as new:
     assert all(resource_prefix + p in new.NameToInfo for p in resources)
     assert all("dev/uwu/dimension/" + name + ".class" in changes for name in ("BlossomWarden", "GuardianWarnings", "MaleGuardianModel"))
 out.parent.mkdir(exist_ok=True,parents=True)
-report = dict(villageSource=BASELINE_COMMIT, villageArchive=VILLAGE_INPUT, villageSHA256=VILLAGE_HASH,
+report = dict(villageSource=BASELINE_COMMIT, villageArchive=VILLAGE_ARCHIVE, villageSHA256=VILLAGE_HASH,
               candidateSHA256=sha256(candidate.read_bytes()).hexdigest(), identicalEntries=len(entries)-len(changes), changedEntries=changes)
 out.write_text(json.dumps(report, indent=2)+"\n")
 print(json.dumps(report, indent=2))
