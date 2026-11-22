@@ -143,15 +143,21 @@ final class PocketWorldProbe {
             var p=pig(c);stopped.add(p);frozenAges.add(p.tickCount);
         }
         for(int[] c:OUTSIDE) moving.add(pig(c));
+        pigAt(-3.5,FLOOR+1,15);
+        pigAt(3.5,FLOOR+1,18);
         outsideAge=moving.get(0).tickCount;
-        sand=fall(-3.5,244,12.5);outsideSand=fall(3.5,244,22.5);
+        sand=fall(-6.5,214.25,15.5);outsideSand=fall(3.5,244,22.5);
         sandOrigin=sand.position();outsideOrigin=outsideSand.position();
     }
 
     private static Pig pig(int[] c) {
+        return pigAt(c[0]*16+8.5,FLOOR+2,c[1]*16+8.5);
+    }
+
+    private static Pig pigAt(double x,double y,double z) {
         Pig p=EntityType.PIG.create(level);
         check(p!=null,"Failed to create pig");
-        p.setPos(c[0]*16+8.5,FLOOR+2,c[1]*16+8.5);
+        p.setPos(x,y,z);
         p.setNoGravity(true);p.setNoAi(true);p.setSilent(true);p.setPersistenceRequired();
         check(level.addFreshEntity(p),"Failed to add pig");
         return p;
@@ -247,7 +253,8 @@ final class PocketWorldProbe {
         try {
             check(impacts==3 && claimEvents==1 && level.getBlockState(targetPos(0)).isAir()
                     && level.getBlockState(targetPos(1)).is(Blocks.YELLOW_CONCRETE)
-                    && level.getBlockEntity(targetPos(2)) instanceof ChestBlockEntity,
+                    && level.getBlockEntity(targetPos(2)) instanceof ChestBlockEntity chest
+                    && chest.getItem(0).is(Items.EMERALD) && chest.getItem(0).getCount()==3,
                     "Disposable target or protected terrain was not preserved correctly");
             home();
             owner().setItemInHand(InteractionHand.MAIN_HAND,new ItemStack(TimePocket.CLOCK.get()));

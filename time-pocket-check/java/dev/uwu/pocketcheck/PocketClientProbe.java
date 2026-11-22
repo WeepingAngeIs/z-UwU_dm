@@ -48,7 +48,7 @@ import org.lwjgl.openal.EXTEfx;
 @Mod(value="uwu_pocket_check", dist=Dist.CLIENT)
 public final class PocketClientProbe {
     private enum Stage { TITLE, PREPARE, BASELINE, WAIT_FIELD, COLOR_ON, COLOR_OFF, COLOR_AGAIN,
-        MOTION, END, HOME, RESTORED, TARGET_READY, TARGET_HIT, SECOND, EARLY, GALLERY, DONE }
+        MOTION, EXIT_EDGE, REENTER, END, HOME, RESTORED, TARGET_READY, TARGET_HIT, SECOND, EARLY, GALLERY, DONE }
     static final Path OUT=Path.of(System.getProperty("uwu.pocket.evidence"));
     private static final Map<SoundInstance,String> markers=new ConcurrentHashMap<>();
     private static final Map<String,Float> gains=new ConcurrentHashMap<>(), air=new ConcurrentHashMap<>();
@@ -61,6 +61,20 @@ public final class PocketClientProbe {
     private static Particle inside,outside;
     private static Vec3 insideAt,outsideAt;
     private static boolean particleCheck;
+    private static boolean frozenMobDrawn, movingMobDrawn, frozenSandDrawn;
+
+    public static void pose(net.minecraft.world.entity.Entity entity, float partial) {
+        if(stage==Stage.DONE || !PocketWorldProbe.ready)return;
+        var f=TimePocketClient.field(entity.level());
+        if(f==null)return;
+        if(entity instanceof net.minecraft.world.entity.animal.Pig || entity instanceof net.minecraft.world.entity.item.FallingBlockEntity) {
+            if(f.at(entity.getX(),entity.getZ())) {
+                if(partial!=1F) {fail(new AssertionError("Frozen model interpolated with "+partial));return;}
+                if(entity instanceof net.minecraft.world.entity.animal.Pig)frozenMobDrawn=true;
+                else frozenSandDrawn=true;
+            } else if(entity instanceof net.minecraft.world.entity.animal.Pig && partial<.99F) movingMobDrawn=true;
+        }
+    }
 
     public PocketClientProbe() {
         CandidateJarProbe.verify();
@@ -175,11 +189,28 @@ public final class PocketClientProbe {
                     if(!moveStarted && age>=5) {mc.options.keyRight.setDown(true);moveStarted=true;}
                     if(moveStarted && age>=12)mc.options.keyRight.setDown(false);
                     if(!emitted && age>=15 && PocketGallery.starOnCamera) {photo="projectile";emitted=true;}
-                    if(age>=20 && emitted && photo==null)advance(Stage.END);
+                    if(age>=20 && emitted && photo==null) {
+                        server.execute(()->server.getPlayerList().getPlayer(player.getUUID()).connection.teleport(.5,PocketWorldProbe.FLOOR+1,16.5,0,0));
+                        advance(Stage.EXIT_EDGE);
+                    }
+                }
+                case EXIT_EDGE -> {
+                    check(f!=null && f.until()==until,"Crossing the edge ended the field");
+                    if(!requested && !f.at(player.getX(),player.getZ()) && TimePocketClient.gain(SoundSource.BLOCKS)==1F){
+                        ping(mc,"outside-field");requested=true;
+                    }
+                    if(requested && gains.containsKey("outside-field")){server.execute(PocketWorldProbe::home);advance(Stage.REENTER);}
+                }
+                case REENTER -> {
+                    check(f!=null && f.until()==until,"Returning restarted the field");
+                    if(!requested && atHome(mc) && TimePocketClient.gain(SoundSource.BLOCKS)<1F){ping(mc,"reentered");requested=true;}
+                    if(requested && gains.containsKey("reentered"))advance(Stage.END);
                 }
                 case END -> {
                     if(f==null && PocketWorldProbe.resumeChecked && PocketWorldProbe.shotFinished) {
                         check(particleCheck && inside.getPos().distanceTo(insideAt)>.02,"Particle failed to resume");
+                        check(frozenMobDrawn && movingMobDrawn && frozenSandDrawn,"Native pose evidence missing "+
+                                frozenMobDrawn+"/"+movingMobDrawn+"/"+frozenSandDrawn);
                         check(ticks.get()>0 && tocks.get()>0,"Missing audible tick or tock");
                         beatAtEnd=ticks.get()+tocks.get();
                         server.execute(PocketWorldProbe::home);advance(Stage.HOME);
@@ -245,7 +276,8 @@ public final class PocketClientProbe {
     private static void verifyAudio(){
         float before=gains.get("before");
         check(before>.02 && Math.abs(gains.get("negative")/before-.2)<.03 && Math.abs(gains.get("filter-off")/before-.2)<.03
-                && Math.abs(gains.get("after")/before-1)<.03,"Ordinary source volume did not duck and recover "+gains);
+                && Math.abs(gains.get("after")/before-1)<.03 && Math.abs(gains.get("outside-field")/before-1)<.03
+                && Math.abs(gains.get("reentered")/before-.2)<.03,"Ordinary source volume did not duck and recover "+gains);
         if(air.get("before")>=0) check(air.get("negative")==10F && air.get("filter-off")==10F && air.get("after").equals(air.get("before")),
                 "High-frequency damping failed to restore "+air);
     }

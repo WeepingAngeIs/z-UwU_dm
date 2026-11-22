@@ -3,6 +3,6 @@
   "minVersion": "0.8",
   "package": "dev.uwu.pocketcheck.mixin",
   "compatibilityLevel": "JAVA_21",
-  "client": ["AudioSource", "GalleryCamera", "ItemDraw"],
+  "client": ["AudioSource", "EntityPose", "GalleryCamera", "ItemDraw"],
   "injectors": {"defaultRequire": 1}
 }

@@ -187,9 +187,13 @@ public final class TimePocket {
                 || entity instanceof PrimedTnt || entity instanceof Projectile || entity instanceof ExperienceOrb;
     }
 
+    public static boolean suspended(Entity entity) {
+        return stopped(entity, field(entity.level()));
+    }
+
     private static void entityTick(EntityTickEvent.Pre e) {
         var entity=e.getEntity();
-        if(!stopped(entity,field(entity.level())))return;
+        if(!suspended(entity))return;
         // 1.21.1 has advanced the counter immediately before firing this event on both sides.
         entity.tickCount--;
         e.setCanceled(true);

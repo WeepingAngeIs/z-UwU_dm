@@ -31,6 +31,8 @@ public final class TimePocketClient {
         // A login or dimension packet can arrive before its new ClientLevel is installed.
         if (message.field().until() < 0) FIELDS.remove(message.dimension());
         else FIELDS.put(message.dimension(), message.field());
+        // New sounds can start between receiving the field and the next client tick.
+        updateListener(Minecraft.getInstance());
     }
 
     public static TimePocket.Field field(Level level) {
@@ -53,6 +55,11 @@ public final class TimePocketClient {
         return quiet && ordinary(channel) ? .20F : 1F;
     }
 
+    private static void updateListener(Minecraft mc) {
+        var current = field(mc.level);
+        setQuiet(mc, current != null && mc.player != null && current.at(mc.player.getX(), mc.player.getZ()));
+    }
+
     private static void setQuiet(Minecraft mc, boolean inside) {
         if (quiet == inside) return;
         quiet = inside;
@@ -69,9 +76,8 @@ public final class TimePocketClient {
     @SubscribeEvent public static void tick(ClientTickEvent.Post event) {
         var mc=Minecraft.getInstance();
         var f=field(mc.level);
-        boolean inside=f!=null && mc.player!=null && f.at(mc.player.getX(),mc.player.getZ());
-        setQuiet(mc, inside);
-        if (inside && mc.level.getGameTime() >= nextBeat) {
+        updateListener(mc);
+        if (quiet && mc.level.getGameTime() >= nextBeat) {
             lastBeat=SimpleSoundInstance.forUI((tock?TimePocket.TOCK:TimePocket.TICK).get(),1F,.7F);
             mc.getSoundManager().play(lastBeat);
             tock=!tock;
