@@ -55,6 +55,9 @@ final class GuardianWarningProbe {
     private static int draw=-1;
     private static Stage stage=Stage.SETUP;
     private static BlossomWarden guard,oldDusk,oldPetal;
+    private static long legacyStarted;
+    private static String legacyError;
+    private static boolean legacyChecked;
     private static Witness witness;
     private static BlockPos arena;
     private static int round,shake,winks,grips,flips,ground,peerShake;
@@ -68,7 +71,14 @@ final class GuardianWarningProbe {
 
     static boolean filming(Trial t){return t==filming;}
     static void fail(Throwable e){
-        if(!failed){failed=true;System.err.println("GUARDIAN WARNING CHECK FAILED round="+round+" stage="+stage);e.printStackTrace();}
+        if(!failed){
+            failed=true;System.err.println("GUARDIAN WARNING CHECK FAILED round="+round+" stage="+stage);e.printStackTrace();
+            try {
+                Files.createDirectories(GuardianCamera.OUT);
+                if(track!=null)Files.writeString(GuardianCamera.OUT.resolve("last-track.csv"),track);
+                Files.writeString(GuardianCamera.OUT.resolve("partial-outcomes.json"),new GsonBuilder().setPrettyPrinting().create().toJson(outcomes));
+            }catch(Exception evidence){e.addSuppressed(evidence);}
+        }
         done=true;
     }
     static void damage(LivingIncomingDamageEvent event){
@@ -123,25 +133,38 @@ final class GuardianWarningProbe {
         var level=player.serverLevel();long now=level.getGameTime();
         try{
             require(now-since<900 || stage==Stage.SETUP,"Timed out. "+details(player));
+            if(oldDusk!=null&&!legacyChecked && (oldDusk.tickCount>=42&&oldPetal.tickCount>=42 || now-legacyStarted>260)){
+                legacyChecked=true;
+                var d=oldDusk.saveWithoutId(new CompoundTag());var p=oldPetal.saveWithoutId(new CompoundTag());
+                boolean pass=oldDusk.duskGuardian()&&!oldPetal.duskGuardian()&&d.contains("DuskGuardian")&&p.contains("DuskGuardian")
+                        &&oldDusk.getType()==oldPetal.getType()&&oldPetal.getType()==People.BLOSSOM_WARDEN.get();
+                if(pass)System.out.println("GUARDIAN LEGACY PETAL AND DUSK PLAZA PASS");
+                else legacyError="Dusk="+d.getString("VillageHomeDimension")+"/"+d.getBoolean("DuskGuardian")
+                        +" ticks="+oldDusk.tickCount+" court="+BlockPos.of(d.getLong("VillageCourt"))+" PetalKnown="+p.contains("DuskGuardian")
+                        +" PetalTicks="+oldPetal.tickCount;
+                oldDusk.discard();oldPetal.discard();
+            }
             switch(stage){
                 case SETUP -> {
-                    arena=new BlockPos(player.getBlockX(),208,player.getBlockZ());
+                    if(!level.dimension().equals(ReefLife.REACH)){
+                        var reach=event.getServer().getLevel(ReefLife.REACH);
+                        require(reach!=null,"Missing Sakura Reach playtest environment");
+                        reach.setBlockAndUpdate(new BlockPos(32,207,32),Blocks.POLISHED_DIORITE.defaultBlockState());
+                        require(player.teleportTo(reach,32.5,208,32.5,java.util.Set.of(),180,0),"Could not enter Sakura Reach");
+                        return;
+                    }
+                    arena=new BlockPos(32,208,32);
                     courtyard(level);
                     level.getGameRules().getRule(GameRules.RULE_DAYLIGHT).set(false,event.getServer());
                     level.getGameRules().getRule(GameRules.RULE_DOMOBSPAWNING).set(false,event.getServer());
                     level.getGameRules().getRule(GameRules.RULE_NATURAL_REGENERATION).set(false,event.getServer());
                     level.setDayTime(6000);level.setWeatherParameters(6000,0,false,false);
-                    player.setHealth(player.getMaxHealth());oldVillageControls(level);
+                    player.setHealth(player.getMaxHealth());oldVillageControls(level);legacyStarted=now;
                     prepare(player,now);
                 }
                 case READY -> {
                     if(now-since<36 || !player.onGround())return;
-                    if(round==0){
-                        require(oldDusk.duskGuardian()&&!oldPetal.duskGuardian(),"Old natural village guardians failed to adopt the original court faction");
-                        require(oldDusk.getType()==oldPetal.getType()&&oldDusk.getType()==People.BLOSSOM_WARDEN.get(),"Changed registry identity");
-                        oldDusk.discard();oldPetal.discard();
-                        System.out.println("GUARDIAN LEGACY PETAL AND DUSK PLAZA PASS");
-                    }
+                    // The independent legacy plaza actors are checked while the native encounter is filming.
                     trial=new Trial(round,guard.getId(),round>=4,round>=2&&round<=5,round==1||round==3,round==0||round==6,arena.getY());
                     next(Stage.ACTIVE,now);
                 }
@@ -169,6 +192,7 @@ final class GuardianWarningProbe {
                     if(now-since<4)return;
                     Files.createDirectories(GuardianCamera.OUT);
                     Files.writeString(GuardianCamera.OUT.resolve("outcomes.json"),new GsonBuilder().setPrettyPrinting().create().toJson(outcomes));
+                    require(legacyChecked&&legacyError==null,"Legacy court adoption failed: "+legacyError);
                     System.out.println("GUARDIAN NATIVE ENCOUNTERS PASS view="+(GuardianCamera.observer()?"observer":"player"));done=true;
                 }
             }
