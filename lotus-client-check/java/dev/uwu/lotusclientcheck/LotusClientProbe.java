@@ -38,7 +38,6 @@ public final class LotusClientProbe {
     private static final boolean SHRINE_ONLY = Boolean.getBoolean("uwu.check.shrine");
     private static final boolean CUPID_LANTERN_ONLY = Boolean.getBoolean("uwu.check.cupidLantern");
     private static final boolean CAVE_ONLY = Boolean.getBoolean("uwu.check.cave");
-    private static final boolean GUARDIAN_ONLY = "true".equals(System.getenv("UWU_GUARDIAN_WARNING_CHECK"));
     private static boolean opening;
     private static DirkCountdownProbe dirk;
     private static JadeFluidProbe jade;
@@ -53,12 +52,14 @@ public final class LotusClientProbe {
     private static int baseLight, peakLight;
     private static int cueCount, frameAlpha, peakAlpha, frames, fadeFrames;
     private static long clientCueTick = -1;
+    private static final boolean GUARDIAN_ONLY = "true".equals(System.getenv("UWU_GUARDIAN_WARNING_CHECK"));
 
     public LotusClientProbe() {
         CandidateJarProbe.verify();
         NeoForge.EVENT_BUS.addListener(LotusClientProbe::tick);
         if (GUARDIAN_ONLY) {
             NeoForge.EVENT_BUS.addListener(GuardianWarningProbe::serverTick);
+            NeoForge.EVENT_BUS.addListener(GuardianWarningProbe::damage);
             return;
         }
         NeoForge.EVENT_BUS.addListener(LotusClientProbe::frame);

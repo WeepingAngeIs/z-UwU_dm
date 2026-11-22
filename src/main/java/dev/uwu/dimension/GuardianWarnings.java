@@ -85,8 +85,8 @@ public final class GuardianWarnings {
         player.getPersistentData().put(LANDING, landing);
         player.fallDistance = 0;
         player.setOnGround(false);
-        // The grip raises the player about two blocks. Vanilla gravity supplies the remaining eight.
-        player.setDeltaMovement(0, 1.20, 0);
+        // Vanilla movement covers the remainder of the ten-block arc from the raised hands.
+        player.setDeltaMovement(0, 1.30, 0);
         player.hurtMarked = true; // ServerEntity sends the velocity to the player and tracking clients.
     }
 
@@ -101,7 +101,6 @@ public final class GuardianWarnings {
         var data = player.getPersistentData();
         if (!data.contains(LANDING, Tag.TAG_COMPOUND)) return;
         var landing = data.getCompound(LANDING);
-        data.remove(LANDING);
         if (current(player, landing)) {
             float naturalDrop = (float)Math.max(0, landing.getDouble("Floor") - player.getY());
             float discount = Math.clamp(event.getDistance() - naturalDrop, 0F, 10.5F);
@@ -115,7 +114,19 @@ public final class GuardianWarnings {
         var data = player.getPersistentData();
         if (!data.contains(LANDING, Tag.TAG_COMPOUND)) return;
         var landing = data.getCompound(LANDING);
-        if (!current(player, landing) || player.onGround() && player.level().getGameTime() - landing.getLong("Launched") > 2)
+        if (!current(player, landing)) {
             data.remove(LANDING);
+            return;
+        }
+        // Acknowledgments from the grip can still report ground after release. Retire
+        // protection only after the descent ends and the actual landing packets settle.
+        double y = player.getY();
+        if (landing.contains("LastY") && y < landing.getDouble("LastY") - .02
+                && player.level().getGameTime() - landing.getLong("Launched") > 4)
+            landing.putBoolean("Descending", true);
+        landing.putDouble("LastY", y);
+        int grounded = player.onGround() && landing.getBoolean("Descending") ? landing.getInt("Grounded") + 1 : 0;
+        if (grounded >= 4) data.remove(LANDING);
+        else landing.putInt("Grounded", grounded);
     }
 }

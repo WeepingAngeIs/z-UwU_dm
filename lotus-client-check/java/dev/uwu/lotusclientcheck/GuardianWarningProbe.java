@@ -5,6 +5,7 @@ import dev.uwu.dimension.BlossomWarden;
 import dev.uwu.dimension.GuardianFlight;
 import dev.uwu.dimension.People;
 import io.netty.channel.embedded.EmbeddedChannel;
+import java.util.List;
 import java.util.UUID;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
@@ -13,6 +14,8 @@ import net.minecraft.network.Connection;
 import net.minecraft.network.PacketSendListener;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.PacketFlow;
+import net.minecraft.network.protocol.game.ClientboundPlayerInfoUpdatePacket;
+import net.minecraft.network.protocol.game.ClientboundPlayerInfoRemovePacket;
 import net.minecraft.network.protocol.game.ClientboundSetEntityMotionPacket;
 import net.minecraft.network.protocol.game.ServerboundInteractPacket;
 import net.minecraft.server.level.ClientInformation;
@@ -24,11 +27,12 @@ import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.GameRules;
 import net.minecraft.world.level.block.Blocks;
+import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 
 /** Native Survival attack packets and movement from the hosted client, observed on both sides. */
 final class GuardianWarningProbe {
-    private enum Phase { SETUP, READY, WARNING, PATROL, QUIET, REPEAT }
+    private enum Phase { SETUP, READY, WARNING, PATROL, FALL_CONTROL, QUIET, REPEAT }
     private record Swing(int number, int guardian, boolean duplicate) {}
     private record View(int swing, boolean grip, double peak, float left, float right, float pitch) {}
     private static volatile Swing request;
@@ -40,11 +44,18 @@ final class GuardianWarningProbe {
     private static BlossomWarden guard;
     private static Witness other;
     private static BlockPos start;
-    private static int round, gripTicks, secondGripTicks, serial;
+    private static int round, gripTicks, secondGripTicks, grounded, serial;
     private static long since;
     private static double peak, patrolStartX;
     private static float health;
     private static boolean clientWasWarned;
+
+    static void damage(LivingIncomingDamageEvent event) {
+        if (joined && !done && event.getEntity() instanceof ServerPlayer player) {
+            System.out.println("GUARDIAN DAMAGE " + event.getSource().getMsgId() + " amount=" + event.getAmount()
+                    + " phase=" + phase + " feet=" + player.getY() + " fallDistance=" + player.fallDistance);
+        }
+    }
 
     static void clientTick(Minecraft client) {
         if (done) { client.stop(); return; }
@@ -96,7 +107,7 @@ final class GuardianWarningProbe {
                     if (now - since < 20 || !player.onGround()) return;
                     peak = player.getY();
                     health = player.getHealth();
-                    gripTicks = secondGripTicks = 0;
+                    gripTicks = secondGripTicks = grounded = 0;
                     clientWasWarned = false;
                     request = new Swing(++serial, guard.getId(), round == 0);
                     next(round == 3 ? Phase.REPEAT : Phase.WARNING, now);
@@ -116,7 +127,9 @@ final class GuardianWarningProbe {
                         require(!other.player.getPersistentData().contains(GuardianFlight.STATE), "Second player inherited a repeat hit");
                         if (other.player.getUUID().equals(guard.offender()) && guard.gripping()) secondGripTicks++;
                     }
-                    if (gripTicks < 1 || guard.offender() != null || !player.onGround()) return;
+                    if (gripTicks < 1 || guard.offender() != null) return;
+                    grounded = player.onGround() && Math.abs(player.getY()-start.getY()) < .05 ? grounded + 1 : 0;
+                    if (grounded < 8) return;
                     View v = view;
                     if (v == null || v.swing != serial || !v.grip) return;
                     double rise = peak - start.getY(), clientRise = v.peak - start.getY();
@@ -141,11 +154,22 @@ final class GuardianWarningProbe {
                     require(clientWasWarned && guard.offender() == null && guard.getTarget() == null, "Player was reacquired");
                     if (guard.getX() < patrolStartX + 1.0) return;
                     System.out.printf(java.util.Locale.ROOT, "GUARDIAN PATROL RESUMED round=%d walked=%.2f%n", round, guard.getX()-patrolStartX);
-                    if (round == 0) { next(Phase.QUIET, now); return; }
+                    if (round == 0) {
+                        player.connection.teleport(player.getX(), start.getY()+7.5, player.getZ(), 0, 0);
+                        next(Phase.FALL_CONTROL, now);
+                        return;
+                    }
                     round++;
                     if (round == 2) { guard.discard(); spawn(level, true); }
                     position(player);
                     next(Phase.READY, now);
+                }
+                case FALL_CONTROL -> {
+                    if (now - since < 20 || !player.onGround() || player.getY() > start.getY()+.05) return;
+                    require(player.getHealth() < health && player.isAlive(), "An unrelated ordinary fall was protected");
+                    player.setHealth(health);
+                    System.out.println("GUARDIAN ORDINARY FALL CONTROL PASS");
+                    next(Phase.QUIET, now);
                 }
                 case QUIET -> {
                     if (now - since < 605) return;
@@ -191,7 +215,8 @@ final class GuardianWarningProbe {
     private static void next(Phase to, long now) { phase = to; since = now; }
     private static String details(ServerPlayer p) {
         return phase + " round=" + round + " grip=" + gripTicks + "/" + secondGripTicks + " peak=" + peak
-                + " feet=" + p.getY() + " ground=" + p.onGround() + " view=" + view + " guardian="
+                + " feet=" + p.getY() + " ground=" + p.onGround() + " health=" + p.getHealth() + "/" + health
+                + " otherImpulse=" + (other != null && other.shortImpulse) + " view=" + view + " guardian="
                 + (guard == null ? "missing" : guard.position() + " target=" + guard.offender());
     }
     private static void require(boolean condition, String message) { if (!condition) throw new AssertionError(message); }
@@ -205,6 +230,7 @@ final class GuardianWarningProbe {
             this(level, new Connection(PacketFlow.SERVERBOUND), new ServerPlayer(level.getServer(), level,
                     new GameProfile(UUID.randomUUID(), "SecondGardener"), ClientInformation.createDefault()));
             player.moveTo(guardian.getX()-1.8, guardian.getY(), guardian.getZ(), -90, 0);
+            level.getServer().getPlayerList().broadcastAll(ClientboundPlayerInfoUpdatePacket.createPlayerInitializing(List.of(player)));
             level.addNewPlayer(player);
         }
         private Witness(ServerLevel level, Connection connection, ServerPlayer player) {
@@ -217,6 +243,7 @@ final class GuardianWarningProbe {
         }
         void close(ServerLevel level) {
             level.removePlayerImmediately(player, Entity.RemovalReason.DISCARDED);
+            level.getServer().getPlayerList().broadcastAll(new ClientboundPlayerInfoRemovePacket(List.of(player.getUUID())));
             channel.finishAndReleaseAll();
         }
     }

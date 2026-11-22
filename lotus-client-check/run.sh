@@ -37,13 +37,6 @@ if grep -Ei 'OutOfMemoryError|CHECK FAILED|single server tick has taken' "$log";
 if [[ -n ${UWU_JAR:-} ]]; then
     grep -F 'UWU PACKAGED CANDIDATE PASS' "$log"
 fi
-if [[ ${UWU_GUARDIAN_WARNING_CHECK:-false} == true ]]; then
-    grep -F 'GUARDIAN MALE WARNING PASS' "$log"
-    grep -F 'GUARDIAN QUIET RESET PASS' "$log"
-    grep -F 'GUARDIAN FEMALE WARNING PASS' "$log"
-    grep -F 'GUARDIAN INDEPENDENT PLAYERS AND REPEAT PASS' "$log"
-    exit 0
-fi
 if [[ ${UWU_CUPID_LANTERN_CHECK:-false} == true ]]; then
     grep -F 'LANTERN COVER CLIENT PASS' "$log"
     grep -F 'CUPID HELD SCALE PASS' "$log"
@@ -70,6 +63,14 @@ fi
 if [[ ${UWU_DIRK_COUNTDOWN_CHECK:-false} == true ]]; then
     grep -F 'DIRK NATIVE PACKET REPLAY' "$log"
     grep -F 'DIRK COUNTDOWN OBSERVED' "$log"
+    exit 0
+fi
+if [[ ${UWU_GUARDIAN_WARNING_CHECK:-false} == true ]]; then
+    grep -F 'GUARDIAN MALE WARNING PASS' "$log"
+    grep -F 'GUARDIAN ORDINARY FALL CONTROL PASS' "$log"
+    grep -F 'GUARDIAN QUIET RESET PASS' "$log"
+    grep -F 'GUARDIAN FEMALE WARNING PASS' "$log"
+    grep -F 'GUARDIAN INDEPENDENT PLAYERS AND REPEAT PASS' "$log"
     exit 0
 fi
 grep -F 'LOTUS FIRST PERSON PASS' build/lotus-client.log
