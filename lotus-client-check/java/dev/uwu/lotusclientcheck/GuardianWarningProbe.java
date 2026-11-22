@@ -273,6 +273,7 @@ final class GuardianWarningProbe {
         p.getInventory().clearContent();p.getInventory().selected=0;
         if(ranged){p.getInventory().setItem(0,new ItemStack(Items.BOW));p.getInventory().setItem(9,new ItemStack(Items.ARROW,4));}
         p.inventoryMenu.broadcastChanges();
+        p.connection.send(new net.minecraft.network.protocol.game.ClientboundSetCarriedItemPacket(0));
         p.connection.teleport(arena.getX()+.5,arena.getY(),arena.getZ()+(ranged?8.5:3.3),180,0);
         p.fallDistance=0;p.setDeltaMovement(Vec3.ZERO);
         from=release=walkFrom=null;initialGuard=guard.position();initialDistance=p.distanceTo(guard);
@@ -305,7 +306,8 @@ final class GuardianWarningProbe {
         level.setBlockAndUpdate(feet.offset(2,0,-2),Blocks.BELL.defaultBlockState());
         var entity=People.BLOSSOM_WARDEN.get().create(level);
         // Recreate only actual old fields, with no future faction tag.
-        var tag=new CompoundTag();tag.putLong("VillageCourt",feet.asLong());tag.putString("VillageHomeDimension",level.dimension().location().toString());
+        var tag=entity.saveWithoutId(new CompoundTag());
+        tag.remove("DuskGuardian");tag.putLong("VillageCourt",feet.asLong());tag.putString("VillageHomeDimension",level.dimension().location().toString());
         entity.readAdditionalSaveData(tag);entity.moveTo(feet.getX()+.5,feet.getY(),feet.getZ()+.5,0,0);
         require(level.addFreshEntity(entity),"Old village Guardian failed to load");return entity;
     }

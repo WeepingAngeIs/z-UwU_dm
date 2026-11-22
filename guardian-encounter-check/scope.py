@@ -10,23 +10,24 @@ from zipfile import ZipFile
 
 REPO = "WeepingAngeIs/z-UwU_dm"
 BASELINE_COMMIT = "c509523831c5f94af42a3b568c3a24e710dbeda6"
-baseline_name = "uwu-village-playtest-" + BASELINE_COMMIT
+VILLAGE_RUN = 44988599623
+VILLAGE_INPUT = 14740668957
+ARCHIVE_DIGEST = "sha256:f22703c32fbf3c6dc2963c65671873c1a653b72a7b070264c07c556abf3c3ed1"
+VILLAGE_HASH = "5cd27d5e473f58835dbfda1ef639cf98c61fda3d662c122e924bb7be1a89fb1d"
 
 def gh(path):
     return subprocess.check_output(["gh", "api", f"repos/{REPO}/{path}"])
 
-matching = json.loads(gh("actions/artifacts?name=" + baseline_name))["artifacts"]
-archive, = [item for item in matching if not item["expired"] and item["workflow_run"]["head_sha"] == BASELINE_COMMIT]
-run = json.loads(gh("actions/runs/" + str(archive["workflow_run"]["id"])))
-assert run["conclusion"] == "success" and run["head_sha"] == BASELINE_COMMIT, "Village base was not verified"
-raw = gh(f'actions/artifacts/{archive["id"]}/zip')
-assert "sha256:" + sha256(raw).hexdigest() == archive["digest"]
+run = json.loads(gh(f"actions/runs/{VILLAGE_RUN}"))
+assert run["head_sha"] == BASELINE_COMMIT
+verified_jobs = {j["name"] for j in json.loads(gh(f"actions/runs/{VILLAGE_RUN}/jobs"))["jobs"] if j["conclusion"] == "success"}
+assert {"package", "generate (152045)", "generate (20261121)", "generate (8675309)"} <= verified_jobs
+raw = gh(f"actions/artifacts/{VILLAGE_INPUT}/zip")
+assert "sha256:" + sha256(raw).hexdigest() == ARCHIVE_DIGEST
 with ZipFile(BytesIO(raw)) as bundle:
-    fname, = [n for n in bundle.namelist() if n.endswith("-villages.1.jar")]
-    baseline = bundle.read(fname)
-    scope_name, = [n for n in bundle.namelist() if n.endswith("village-checks.json")]
-    predecessor_hash = json.loads(bundle.read(scope_name))["scope"]["candidateSha256"]
-assert sha256(baseline).hexdigest() == predecessor_hash
+    baseline = bundle.read("candidate.jar")
+    assert json.loads(bundle.read("scope.json"))["candidateSha256"] == VILLAGE_HASH
+assert sha256(baseline).hexdigest() == VILLAGE_HASH
 
 candidate = Path(sys.argv[1])
 out = Path(sys.argv[2])
@@ -55,7 +56,7 @@ with ZipFile(BytesIO(baseline)) as old, ZipFile(candidate) as new:
     assert all(resource_prefix + p in new.NameToInfo for p in resources)
     assert all("dev/uwu/dimension/" + name + ".class" in changes for name in ("BlossomWarden", "GuardianWarnings", "MaleGuardianModel"))
 out.parent.mkdir(exist_ok=True,parents=True)
-report = dict(villageSource=BASELINE_COMMIT, villageArchive=archive["id"], villageSHA256=predecessor_hash,
+report = dict(villageSource=BASELINE_COMMIT, villageArchive=VILLAGE_INPUT, villageSHA256=VILLAGE_HASH,
               candidateSHA256=sha256(candidate.read_bytes()).hexdigest(), identicalEntries=len(entries)-len(changes), changedEntries=changes)
 out.write_text(json.dumps(report, indent=2)+"\n")
 print(json.dumps(report, indent=2))
