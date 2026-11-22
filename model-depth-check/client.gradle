@@ -1,0 +1,29 @@
+gradle.beforeProject { project ->
+    project.plugins.withId('net.neoforged.moddev') {
+        def candidate = project.file(System.getenv('UWU_JAR')).canonicalFile
+        def digest = System.getenv('UWU_EXPECTED_JAR_SHA256')
+        if (!candidate.isFile() || !(digest ==~ /[a-f0-9]{64}/)) {
+            throw new GradleException('A frozen, hash-identified game JAR is required')
+        }
+        def check = project.sourceSets.create('modelDepthCheck')
+        check.java.srcDirs = [project.file('model-depth-check/java'), project.file('lotus-client-check/java')]
+        check.java.include('dev/uwu/depthcheck/**', 'dev/uwu/lotusclientcheck/CandidateJarProbe.java')
+        check.resources.srcDirs = [project.file('model-depth-check/resources')]
+        check.compileClasspath += project.sourceSets.main.compileClasspath + project.files(candidate)
+        project.configurations.getByName(check.runtimeClasspathConfigurationName)
+            .extendsFrom(project.configurations.getByName(project.sourceSets.main.runtimeClasspathConfigurationName))
+        project.dependencies.add(check.runtimeOnlyConfigurationName, project.files(candidate))
+        project.dependencies.add(check.runtimeOnlyConfigurationName, project.fileTree('build/depth-deps') { include '*.jar' })
+        def testMod = project.neoForge.mods.create('uwu_depth_check') { sourceSet(check) }
+        project.neoForge.runs.create('modelDepthClient') {
+            client()
+            sourceSet = check
+            loadedMods = [testMod]
+            gameDirectory = project.file('build/depth-client')
+            jvmArgument('-Xmx3G')
+            jvmArgument('-Duwu.check.candidateJar=' + candidate.absolutePath)
+            jvmArgument('-Duwu.check.candidateSha256=' + digest)
+            jvmArgument('-Duwu.depth.evidence=' + project.file('build/depth-evidence').absolutePath)
+        }
+    }
+}

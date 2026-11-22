@@ -1,0 +1,57 @@
+name: Native model depth captures
+on:
+  push:
+    branches: ['qa/model-depth-playtest9']
+permissions:
+  contents: read
+  actions: read
+jobs:
+  capture:
+    if: github.repository == 'WeepingAngeIs/z-UwU_dm' && github.event.repository.private == false
+    runs-on: ubuntu-24.04
+    timeout-minutes: 23
+    env:
+      UWU_JAR: build/depth-input/UwU-Dimension-playtest9.jar
+      UWU_EXPECTED_JAR_SHA256: ab5e3c767d5f996b57fd27aa18070d3a0c0c7105cf2c563f48bf272e8dd11ed4
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with: {fetch-depth: 0, persist-credentials: false}
+      - uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880
+        with: {distribution: temurin, java-version: '21'}
+      - name: Retrieve the exact existing JAR
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -eu
+          git diff --exit-code eb534710706ec9c495d1e84071715e7f9d87d640 HEAD -- src build.gradle settings.gradle
+          mkdir -p build/depth-input build/depth-evidence
+          gh api repos/WeepingAngeIs/z-UwU_dm/actions/artifacts/14736340074/zip > "$UWU_JAR"
+          printf '%s  %s\n' "$UWU_EXPECTED_JAR_SHA256" "$UWU_JAR" | sha256sum --check
+          printf 'product_source=%s\nproof=%s\njar_sha256=%s\nartifact_id=14736340074\n' eb534710706ec9c495d1e84071715e7f9d87d640 "$GITHUB_SHA" "$UWU_EXPECTED_JAR_SHA256" > build/depth-evidence/identity.txt
+      - name: Record the models through the native world renderer
+        run: |
+          set -euo pipefail
+          bash weapon-release/bootstrap.sh
+          if ! command -v xvfb-run >/dev/null || ! command -v xauth >/dev/null || ! dpkg-query -W libgl1-mesa-dri libopenal1 >/dev/null 2>&1; then
+            sudo apt-get update -qq
+            sudo apt-get install -y xvfb xauth libgl1-mesa-dri libopenal1
+          fi
+          mkdir -p build/depth-deps build/depth-client/config
+          curl --retry 3 --retry-all-errors -fsSL 'https://cdn.modrinth.com/data/EltpO5cN/versions/ST5FHZnD/lootr-neoforge-1.21.1-1.11.38.125.jar' -o build/depth-deps/lootr.jar
+          printf '%s  %s\n' 091878598fa5cb51cd304bf9324afe46420d328b6f77a9ba38acc15e26945e9e build/depth-deps/lootr.jar | sha256sum --check
+          printf 'version:3955\nonboardAccessibility:false\ntutorialStep:none\nrenderDistance:4\nsimulationDistance:5\nmaxFps:60\nenableVsync:false\npauseOnLostFocus:false\n' > build/depth-client/options.txt
+          printf 'earlyWindowControl = false\n' > build/depth-client/config/fml.toml
+          export LIBGL_ALWAYS_SOFTWARE=1 ALSOFT_DRIVERS=null
+          timeout 12m xvfb-run -a -s '-screen 0 1024x768x24' bash gradlew --no-daemon --max-workers=2 -I model-depth-check/client.gradle runModelDepthClient 2>&1 | tee build/depth-evidence/client.log
+          grep -F "UWU PACKAGED CANDIDATE PASS sha256=$UWU_EXPECTED_JAR_SHA256" build/depth-evidence/client.log
+          grep -F 'DEPTH NATIVE CAPTURE COMPLETE frames=742' build/depth-evidence/client.log
+          test "$(find build/depth-evidence/frames -name '*.png' | wc -l)" -eq 742
+          printf '%s  %s\n' "$UWU_EXPECTED_JAR_SHA256" "$UWU_JAR" | sha256sum --check
+      - name: Preserve the camera evidence
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: native-model-depth-captures
+          path: build/depth-evidence/
+          retention-days: 7
+          if-no-files-found: error
