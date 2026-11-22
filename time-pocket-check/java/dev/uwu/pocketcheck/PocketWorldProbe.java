@@ -1,5 +1,6 @@
 package dev.uwu.pocketcheck;
 
+import dev.uwu.dimension.AcquisitionPolicy;
 import dev.uwu.dimension.TimePocket;
 import java.util.ArrayList;
 import java.util.List;
@@ -25,6 +26,7 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.event.entity.ProjectileImpactEvent;
+import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 import net.neoforged.neoforge.event.level.BlockEvent;
 import net.neoforged.neoforge.event.tick.LevelTickEvent;
 
@@ -47,8 +49,11 @@ final class PocketWorldProbe {
     private static TimePocket.Star tracked;
     private static long deadline, fieldStart, lastStarTick;
     private static int outsideAge, slowSteps, normalSteps, loadedSamples, claimEvents, impacts;
-    private static boolean activeBefore, fieldEnded, early;
-    static volatile boolean ready, frozenChecked, resumeChecked, shotFinished, casterMoved, earlyEnded;
+    private static boolean activeBefore, fieldEnded;
+    private static int casts, walkSamples, wallSamples, walkPigAge;
+    private static long lastUse = -1;
+    private static double walked;
+    static volatile boolean ready, frozenChecked, resumeChecked, shotFinished, casterMoved, walkEnded, earlyEnded;
     static volatile int targetDone = -1;
     static volatile Throwable failure;
     private static int target = -1;
@@ -91,30 +96,29 @@ final class PocketWorldProbe {
     private static ServerPlayer owner() { return level.getServer().getPlayerList().getPlayer(caster); }
     private static BlockPos targetPos(int index) { return new BlockPos(LANES[index],FLOOR+2,24); }
 
+    static void used(PlayerInteractEvent.RightClickItem event) {
+        if (ready && event.getLevel() == level && event.getEntity() == owner()
+                && event.getHand() == InteractionHand.MAIN_HAND && event.getItemStack().is(TimePocket.CLOCK.get())
+                && TimePocket.field(level) == null && !owner().getCooldowns().isOnCooldown(TimePocket.CLOCK.get())) {
+            lastUse = level.getGameTime();
+        }
+    }
+
     static void tick(LevelTickEvent.Post event) {
         if (!ready || event.getLevel()!=level || failure!=null || owner()==null) return;
         try {
             var f=TimePocket.field(level);
-            if (f!=null && !activeBefore) {
-                if (!fieldEnded) start(f);
-                else early=true;
-                activeBefore=true;
+            if (f != null) {
+                if (!activeBefore) beginCast(f);
+                check(f.until() == deadline, "An active freeze changed its deadline");
+                if (casts == 1) examine(f);
+                if (casts == 2) examineWalk(f);
+            } else if (activeBefore) {
+                endCast();
             }
-            if (f!=null && !early) examine(f);
-            if (f==null && activeBefore) {
-                activeBefore=false;
-                if (early) {
-                    check(level.getGameTime()<deadline,"Early field expired before cancellation");
-                    earlyEnded=true;
-                } else {
-                    check(level.getGameTime()>=deadline,"Field ended early");
-                    check(frozenChecked && casterMoved && slowSteps>=4,"Missing inside motion evidence");
-                    fieldEnded=true;
-                }
-            }
-            if (early && f!=null) deadline=f.until();
-            if (deadline!=0 && !early && target<0) observeShot(f);
-            if (fieldEnded && !early && sand!=null && !resumeChecked && sand.getY()<sandOrigin.y-.1) {
+            activeBefore = f != null;
+            if (casts == 1 && target < 0) observeShot(f);
+            if (fieldEnded && sand!=null && !resumeChecked && sand.getY()<sandOrigin.y-.1) {
                 check(stopped.get(0).tickCount>frozenAges.get(0),"Mob failed to resume");
                 for(int i=0;i<CROSS.length;i++)
                     check(level.getChunkSource().getChunkNow(CROSS[i][0],CROSS[i][1])==retained.get(i),"Chunk replaced");
@@ -129,13 +133,66 @@ final class PocketWorldProbe {
         } catch(Throwable ex) { failure=ex; }
     }
 
+    private static void beginCast(TimePocket.Field field) {
+        casts++;
+        int seconds = switch (casts) {
+            case 1 -> 4;
+            case 2 -> 7;
+            case 3 -> 2;
+            default -> throw new AssertionError("Unexpected activation " + casts);
+        };
+        deadline = field.until();
+        check(lastUse >= 0 && deadline - lastUse == seconds * 20L, "Wrong duration from the actual item use");
+        System.out.println("UWUZI ITEM USE PASS cast=" + casts + " seconds=" + seconds + " ticks=" + (deadline - lastUse));
+        lastUse = -1;
+        if (casts == 1) start(field);
+        if (casts == 2) {
+            firstPlayer = owner().position();
+            walkPigAge = stopped.get(0).tickCount;
+        }
+    }
+
+    private static void endCast() {
+        if (casts == 3) {
+            check(level.getGameTime() < deadline, "Spectator cancellation missed the short freeze");
+            earlyEnded = true;
+            return;
+        }
+        check(level.getGameTime() >= deadline && level.getGameTime() <= deadline + 1, "Wrong expiry tick");
+        if (casts == 1) {
+            check(frozenChecked && casterMoved && slowSteps >= 4, "Missing first-cast evidence");
+            fieldEnded = true;
+        } else {
+            check(walkSamples >= 139 && wallSamples >= 12 && walked > 10, "Caster failed the walk to the solid wall");
+            check(AcquisitionPolicy.uwuziFreezeSeconds() == 2, "Mid-freeze setting edit did not take effect for the next cast");
+            walkEnded = true;
+            System.out.println("UWUZI WALK PASS frozenSamples=" + walkSamples + " distance=" + walked + " wallTicks=" + wallSamples);
+        }
+    }
+
+    private static void examineWalk(TimePocket.Field field) {
+        var player = owner();
+        double z = player.getZ();
+        check(player.gameMode.getGameModeForPlayer() == GameType.SURVIVAL && field.at(player.getX(), z), "Walk left the freeze");
+        check(Math.abs(player.getY() - (FLOOR + 1)) < .02
+                        && level.getBlockState(player.blockPosition().below()).is(Blocks.SMOOTH_STONE), "Caster fell through the floor");
+        check(level.getBlockState(new BlockPos(-1,FLOOR+1,20)).is(Blocks.LIME_CONCRETE) && z < 19.72, "Caster passed through the wall");
+        check(stopped.get(0).tickCount == walkPigAge, "Frozen mob advanced during the walk");
+        for (int i = 0; i < CROSS.length; i++) {
+            check(level.getChunkSource().getChunkNow(CROSS[i][0], CROSS[i][1]) == retained.get(i), "A frozen chunk was unloaded");
+        }
+        walkSamples++;
+        walked = Math.max(walked, z - firstPlayer.z);
+        if (z > 19.65 && player.onGround()) wallSamples++;
+    }
+
     private static void start(TimePocket.Field f) {
         check(baselinePig.tickCount>=6 && baselineSand.getY()<243,"Ordinary simulation did not advance before casting");
         check(f.x()==-1 && f.z()==0 && f.caster().equals(caster),"Wrong frozen chunk or caster");
         int cardinality=0;
         for(int x=-4;x<=2;x++) for(int z=-3;z<=3;z++) if(f.contains(x,z)) cardinality++;
         check(cardinality==5 && f.at(-.001,31.999) && !f.at(0,16) && !f.at(-16.001,-.001),"Wrong five-chunk boundary");
-        deadline=f.until();fieldStart=level.getGameTime();firstPlayer=owner().position();
+        fieldStart=level.getGameTime();firstPlayer=owner().position();
         for(int[] c:CROSS) {
             LevelChunk chunk=level.getChunkSource().getChunkNow(c[0],c[1]);
             check(chunk!=null,"Fixture chunk wasn't already loaded");
@@ -211,6 +268,14 @@ final class PocketWorldProbe {
                     level.getServer().createCommandSourceStack());
             check(result==1,"Operator color toggle failed");
         } catch(Throwable ex) { failure=ex; }
+    }
+
+    static void duration(int seconds) {
+        var server = level.getServer();
+        try {
+            int result = server.getCommands().getDispatcher().execute("uwu uwuzi freezeseconds " + seconds, server.createCommandSourceStack());
+            check(result == 1 && AcquisitionPolicy.uwuziFreezeSeconds() == seconds, "Duration command failed");
+        } catch (Throwable ex) { failure = ex; }
     }
 
     static void prepareTarget(int index) {

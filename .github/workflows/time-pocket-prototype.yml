@@ -29,7 +29,7 @@ jobs:
         name: Seal the product and check the fixture is absent
         run: |
           mkdir -p build/pocket-input
-          cp build/libs/*-time-prototype.1.jar build/pocket-input/
+          cp build/libs/*-uwuzi-prototype.2.jar build/pocket-input/
           python3 time-pocket-check/check_package.py build/pocket-input/*.jar
           cd build/pocket-input
           sha256sum *.jar > SHA256SUMS.txt

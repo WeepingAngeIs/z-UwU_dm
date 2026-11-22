@@ -48,7 +48,7 @@ import org.lwjgl.openal.EXTEfx;
 @Mod(value="uwu_pocket_check", dist=Dist.CLIENT)
 public final class PocketClientProbe {
     private enum Stage { TITLE, PREPARE, BASELINE, WAIT_FIELD, COLOR_ON, COLOR_OFF, COLOR_AGAIN,
-        MOTION, EXIT_EDGE, REENTER, END, HOME, RESTORED, TARGET_READY, TARGET_HIT, SECOND, EARLY, GALLERY, DONE }
+        MOTION, EXIT_EDGE, REENTER, END, HOME, RESTORED, TARGET_READY, TARGET_HIT, SECOND, LONG_WALK, NEXT_CAST, EARLY, GALLERY, DONE }
     static final Path OUT=Path.of(System.getProperty("uwu.pocket.evidence"));
     private static final Map<SoundInstance,String> markers=new ConcurrentHashMap<>();
     private static final Map<String,Float> gains=new ConcurrentHashMap<>(), air=new ConcurrentHashMap<>();
@@ -60,7 +60,7 @@ public final class PocketClientProbe {
     private static String photo;
     private static Particle inside,outside;
     private static Vec3 insideAt,outsideAt;
-    private static boolean particleCheck;
+    private static boolean particleCheck, walkFrame, reachedSolidWall;
     private static boolean frozenMobDrawn, movingMobDrawn, frozenSandDrawn;
 
     public static void pose(net.minecraft.world.entity.Entity entity, float partial) {
@@ -83,6 +83,7 @@ public final class PocketClientProbe {
         NeoForge.EVENT_BUS.addListener(EventPriority.LOWEST, PocketClientProbe::sound);
         NeoForge.EVENT_BUS.addListener(PocketGallery::beforeFrame);
         NeoForge.EVENT_BUS.addListener(PocketWorldProbe::tick);
+        NeoForge.EVENT_BUS.addListener(PocketWorldProbe::used);
         NeoForge.EVENT_BUS.addListener(PocketWorldProbe::practiceImpact);
         NeoForge.EVENT_BUS.addListener(PocketWorldProbe::claim);
     }
@@ -146,6 +147,7 @@ public final class PocketClientProbe {
                     if(PocketWorldProbe.ready && atHome(mc) && age>=55 && frameAge>=8 &&
                             mc.level.getBlockState(new BlockPos(4,PocketWorldProbe.FLOOR+3,20)).is(Blocks.LIME_CONCRETE)
                             && player.getMainHandItem().is(TimePocket.CLOCK.get())) {
+                        check(player.getMainHandItem().getHoverName().getString().equals("UwUzi"), "Wrong item name in the native client");
                         check(f==null,"Existing field at baseline");ping(mc,"before");photo="baseline";advance(Stage.BASELINE);
                     }
                 }
@@ -165,7 +167,12 @@ public final class PocketClientProbe {
                     check(f!=null && f.negative(),"Lost the active first field");
                     if(!requested && age>=3 && frameAge>=2) {photo="negative";requested=true;}
                     if(requested && photo==null && gains.containsKey("negative")) {
-                        pressUse(mc);server.execute(()->PocketWorldProbe.setting(false));advance(Stage.COLOR_OFF);
+                        pressUse(mc);
+                        server.execute(() -> {
+                            PocketWorldProbe.duration(7);
+                            PocketWorldProbe.setting(false);
+                        });
+                        advance(Stage.COLOR_OFF);
                     }
                 }
                 case COLOR_OFF -> {
@@ -240,7 +247,37 @@ public final class PocketClientProbe {
                 }
                 case SECOND -> {
                     if(atHome(mc) && age>5 && !player.getCooldowns().isOnCooldown(TimePocket.CLOCK.get()) && player.getMainHandItem().is(TimePocket.CLOCK.get())) {
-                        pressUse(mc);advance(Stage.EARLY);
+                        pressUse(mc);advance(Stage.LONG_WALK);
+                    }
+                }
+                case LONG_WALK -> {
+                    if (!requested && f != null) {
+                        until = f.until();
+                        requested = true;
+                        photo = "walk-start";
+                        server.execute(() -> PocketWorldProbe.duration(2));
+                        mc.options.keyUp.setDown(true);
+                    }
+                    if (requested && f != null) {
+                        check(f.until() == until, "A setting edit changed the freeze already in progress");
+                        if (!walkFrame && photo == null && player.getZ() > 13 && player.getZ() < 18) {
+                            check(mc.level.getBlockState(player.blockPosition().below()).is(Blocks.SMOOTH_STONE), "Walkable floor missing on client");
+                            photo = "walk-middle";
+                            walkFrame = true;
+                        }
+                        if (player.horizontalCollision && player.onGround() && player.getZ() > 19.65) reachedSolidWall = true;
+                    }
+                    if (f == null && PocketWorldProbe.walkEnded) {
+                        mc.options.keyUp.setDown(false);
+                        check(walkFrame && reachedSolidWall, "Native walking input did not meet the solid wall");
+                        server.execute(PocketWorldProbe::home);
+                        advance(Stage.NEXT_CAST);
+                    }
+                }
+                case NEXT_CAST -> {
+                    if (atHome(mc) && age > 5 && !player.getCooldowns().isOnCooldown(TimePocket.CLOCK.get())) {
+                        pressUse(mc);
+                        advance(Stage.EARLY);
                     }
                 }
                 case EARLY -> {

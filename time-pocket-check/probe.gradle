@@ -34,6 +34,7 @@ gradle.beforeProject { project ->
             jvmArgument('-Duwu.check.candidateJar=' + candidate.absolutePath)
             jvmArgument('-Duwu.check.candidateSha256=' + hash)
             jvmArgument('-Duwu.pocket.evidence=' + project.file('build/pocket-evidence').absolutePath)
+            jvmArgument('-Duwu.pocket.stage=' + (System.getenv('POCKET_RUN_STAGE') ?: 'client'))
         }
     }
 }

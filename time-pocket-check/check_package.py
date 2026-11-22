@@ -7,6 +7,8 @@ with ZipFile(sys.argv[1]) as jar:
     assert not any(n.startswith(("dev/uwu/pocketcheck/", "time-pocket-check/")) for n in entries)
     assert "dev/uwu/dimension/TimePocket.class" in entries
     root = "assets/uwudimension/"
+    lang = json.loads(jar.read(root + "lang/en_us.json"))
+    assert lang["item.uwudimension.pocket_clock_prototype"] == "UwUzi"
     sounds = json.loads(jar.read(root + "sounds.json"))
     for name in ("pocket_tick", "pocket_tock"):
         assert sounds[name]["sounds"] == ["uwudimension:" + name]

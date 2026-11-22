@@ -56,8 +56,7 @@ import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
 import net.neoforged.neoforge.registries.DeferredRegister;
 
 public final class TimePocket {
-    // Provisional playtest values, measured in normal game ticks.
-    public static final int DURATION = 80, COOLDOWN = 240;
+    public static final int COOLDOWN = 240;
     private static final DeferredRegister.Items ITEMS = DeferredRegister.createItems("uwudimension");
     private static final DeferredRegister<EntityType<?>> TYPES = DeferredRegister.create(Registries.ENTITY_TYPE,"uwudimension");
     private static final DeferredRegister<SoundEvent> SOUNDS = DeferredRegister.create(Registries.SOUND_EVENT,"uwudimension");
@@ -207,7 +206,8 @@ public final class TimePocket {
             if(world instanceof ServerLevel s && p instanceof ServerPlayer owner) {
                 if(SERVER.containsKey(s) || p.getCooldowns().isOnCooldown(this))return InteractionResultHolder.fail(held);
                 ChunkPos c=p.chunkPosition();
-                publish(s,new Field(owner.getUUID(),c.x,c.z,s.getGameTime()+DURATION,NEGATIVE.get()));
+                long deadline = s.getGameTime() + 20L * AcquisitionPolicy.uwuziFreezeSeconds();
+                publish(s,new Field(owner.getUUID(),c.x,c.z,deadline,NEGATIVE.get()));
                 p.getCooldowns().addCooldown(this,COOLDOWN);
             }
             return InteractionResultHolder.sidedSuccess(held,world.isClientSide);

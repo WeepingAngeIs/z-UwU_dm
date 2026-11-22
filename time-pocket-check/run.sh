@@ -2,7 +2,7 @@
 set -euo pipefail
 test "${GITHUB_ACTIONS:-false}" = true
 (cd build/pocket-input && sha256sum -c SHA256SUMS.txt && grep -Fx "$GITHUB_SHA" source.txt)
-export UWU_JAR=$(realpath build/pocket-input/*-time-prototype.1.jar)
+export UWU_JAR=$(realpath build/pocket-input/*-uwuzi-prototype.2.jar)
 mkdir -p build/pocket-evidence build/pocket-deps "build/pocket-$POCKET_SIDE/config"
 cp build/pocket-input/{source.txt,SHA256SUMS.txt} build/pocket-evidence/
 bash weapon-release/bootstrap.sh
@@ -24,8 +24,24 @@ case "$POCKET_SIDE" in
   server)
     printf 'eula=true\n' > build/pocket-server/eula.txt
     printf 'server-ip=127.0.0.1\nserver-port=25598\nonline-mode=false\nlevel-name=DisposableTimePocketServer\nlevel-seed=152045\nview-distance=3\nsimulation-distance=3\n' > build/pocket-server/server.properties
-    timeout 13m bash gradlew --no-daemon --max-workers=2 -I time-pocket-check/probe.gradle runPocketCheck 2>&1 | tee build/pocket-evidence/game.log
-    grep -F 'TIME POCKET DEDICATED PASS' build/pocket-evidence/game.log
+    for POCKET_RUN_STAGE in write restart; do
+      export POCKET_RUN_STAGE
+      timeout 13m bash gradlew --no-daemon --max-workers=2 -I time-pocket-check/probe.gradle runPocketCheck 2>&1 | tee -a build/pocket-evidence/game.log
+    done
+    grep -F 'UWUZI DEDICATED WRITE PASS' build/pocket-evidence/game.log
+    grep -F 'UWUZI DEDICATED RESTART PASS' build/pocket-evidence/game.log
+    python3 - <<'PY'
+from pathlib import Path
+import tomllib
+for path in Path("build/pocket-server").rglob("uwudimension-server.toml"):
+    with path.open("rb") as source:
+        data = tomllib.load(source)
+    if data.get("uwuziFreezeSeconds") == 7 and data.get("cupidBowCharmSeconds") == 9:
+        print("UWUZI DISK SETTINGS PASS", path)
+        break
+else:
+    raise AssertionError("Missing saved UwUzi and Cupid Bow durations")
+PY
     ;;
   *) exit 2 ;;
 esac
