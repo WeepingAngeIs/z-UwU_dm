@@ -74,6 +74,7 @@
     "SakuraGrassTintMixin",
     "ReactiveMusicRealmMixin",
     "GuardianHeldPlayerMixin",
+    "GuardianHeldCameraMixin",
     "WeaponCarryPoseMixin",
     "ScytheFirstPersonMixin",
     "ScytheAttackInputMixin",

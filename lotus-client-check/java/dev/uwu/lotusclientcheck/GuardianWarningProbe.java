@@ -61,6 +61,8 @@ final class GuardianWarningProbe {
     private static Witness witness;
     private static BlockPos arena;
     private static int round,shake,winks,grips,flips,ground,peerShake;
+    private static int releasePhaseTick, followTicks;
+    private static double followTravel;
     private static long since;
     private static double peak,initialDistance,minHand,maxHand,maxHandHeight,approach,clientPeak;
     private static Vec3 initialGuard,from,release,walkFrom;
@@ -212,7 +214,7 @@ final class GuardianWarningProbe {
         var level=player.serverLevel();var t=trial;
         if(!sawAttack)return;
         if(track.length()<230000)track.append(String.format(Locale.ROOT,"%d,%s,%.5f,%.5f,%.5f,%.5f,%.5f,%.5f,%s,%.1f%n",
-                now,guard.warningShake()?"shake":guard.warningWink()?"wink":guard.warningFlip()?"flip":guard.gripping()?"grip":guard.chasing()?"chase":"free",
+                now,guard.warningShake()?"shake":guard.warningWink()?"wink":guard.warningFollowThrough()?"follow":guard.warningFlip()?"flip":guard.gripping()?"grip":guard.chasing()?"chase":"free",
                 player.getX(),player.getY(),player.getZ(),guard.getX(),guard.getY(),guard.getZ(),player.onGround(),player.getHealth()));
         if(round==7){
             if(!player.getPersistentData().contains(GuardianFlight.STATE))return;
@@ -235,7 +237,7 @@ final class GuardianWarningProbe {
                     require(forward.dot(toward)>.72,"Warning Guardian faced away from the player");
                 }
             }
-            if(guard.gripping()||guard.warningFlip()){
+            if(guard.gripping()){
                 if(!hadGrip){require(t.second()?winks>=8:shake>=32,"Animation too short or missing before grab");from=player.position();hadGrip=true;}
                 grips++;
                 if(grips==1)guard.bindVillage(arena.east(15));
@@ -254,14 +256,31 @@ final class GuardianWarningProbe {
             }
         }
         if(witness!=null&&witness.player.getUUID().equals(guard.offender())&&guard.warningShake())peerShake++;
-        if(hadGrip&&release==null&&!(player.getUUID().equals(guard.offender())&&(guard.gripping()||guard.warningFlip())))
+        if(hadGrip && release==null && !(player.getUUID().equals(guard.offender()) && guard.gripping()))
             release=player.position();
+        if(guard.warningFollowThrough()) {
+            require(t.second() && release!=null && !guard.gripping() && !guard.holdsDuringFlip(player), "Queued warning remained attached after launch");
+            if(followTicks++==0) {
+                releasePhaseTick=(int)guard.warningPhaseTicks(0);
+                var landing=player.getPersistentData().getCompound("uwudimension:guardian_warning_landing");
+                require(landing.contains("Launched") && landing.getLong("Launched")==now
+                        && player.getDeltaMovement().y>.6 && player.getDeltaMovement().horizontalDistance()>1.6,
+                        "Player did not get the upward and sideways impulse at release");
+                var saved=People.BLOSSOM_WARDEN.get().create(level);
+                saved.load(guard.saveWithoutId(new CompoundTag()));
+                require(saved.warningFollowThrough() && !saved.gripping() && !saved.holdsDuringFlip(player)
+                        && (int)saved.warningPhaseTicks(0)==releasePhaseTick, "Reload restored a grip after release");
+            }
+            followTravel=Math.max(followTravel, player.position().distanceTo(release));
+        }
         if(guard.offender()!=null||release==null||!hadGrip)return;
         ground=player.onGround()&&Math.abs(player.getY()-arena.getY())<.07?ground+1:0;
         if(ground<10)return;
         double rise=peak-arena.getY(),distance=player.position().subtract(release).horizontalDistance();
         require(player.isAlive()&&player.getHealth()==health&&guard.getTarget()==null,"First or second warning hurt/reacquired the player");
         if(t.second()){
+            require(releasePhaseTick==21 && followTicks==3,
+                    "Release timing did not leave three ticks of the 24-tick backflip: "+releasePhaseTick+"/"+followTicks);
             require(winks>=8&&shake==0&&flips>=18&&minHand<-.25&&maxHand>.25
                     &&maxHand-minHand>(t.girl()?.70:1.40)&&maxHandHeight>1.80,
                     "Missing Petal wink or held rotation "+details(player));
@@ -281,6 +300,11 @@ final class GuardianWarningProbe {
         record.addProperty("serverRise",rise);record.addProperty("clientRise",clientPeak-arena.getY());
         record.addProperty("horizontal",distance);record.addProperty("groundedShakeTicks",shake);record.addProperty("groundedWinkTicks",winks);
         record.addProperty("gripTicks",grips);record.addProperty("heldFlipTicks",flips);record.addProperty("runUp",approach);
+        if(t.second()) {
+            record.addProperty("releaseOnFlipTick",releasePhaseTick);
+            record.addProperty("remainingFlipTicks",followTicks);
+            record.addProperty("travelDuringFollowThrough",followTravel);
+        }
         record.addProperty("health",health);outcomes.add(record);
         Files.createDirectories(GuardianCamera.OUT);Files.writeString(GuardianCamera.OUT.resolve("track-"+round+".csv"),track);
         System.out.println("GUARDIAN VERIFIED "+record);
@@ -313,6 +337,7 @@ final class GuardianWarningProbe {
         from=release=walkFrom=null;initialGuard=guard.position();initialDistance=p.distanceTo(guard);
         health=p.getHealth();peak=arena.getY();approach=0;minHand=Double.POSITIVE_INFINITY;maxHand=Double.NEGATIVE_INFINITY;maxHandHeight=0;
         shake=winks=flips=grips=ground=peerShake=0;hadGrip=sawAttack=false;
+        releasePhaseTick=-1;followTicks=0;followTravel=0;
         track=new StringBuilder("tick,phase,playerX,playerY,playerZ,guardianX,guardianY,guardianZ,grounded,health\n");
         next(Stage.READY,now);
     }

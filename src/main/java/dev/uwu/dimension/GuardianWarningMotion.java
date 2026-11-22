@@ -4,6 +4,8 @@ import java.lang.ref.WeakReference;
 import java.util.Map;
 import java.util.WeakHashMap;
 import javax.annotation.Nullable;
+import net.minecraft.util.Mth;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
 
@@ -63,6 +65,30 @@ public final class GuardianWarningMotion {
         double handHeight = PIVOT_Y + flipLift(flipTicks) + height * Math.cos(theta) + forward * Math.sin(theta);
         return guard.position().add(forward(bearing).scale(forwardOffset * scale))
                 .add(0, Math.max(.03, handHeight * scale - PLAYER_GRIP_HEIGHT), 0);
+    }
+
+    /** The same interpolated hand pose drives the visible player's waist and carried eyes. */
+    public record CarryPose(Vec3 waist, float bearing, float angle) {
+        public Vec3 eye(double eyeHeight) {
+            double aboveWaist = eyeHeight - PLAYER_GRIP_HEIGHT;
+            return waist.add(forward(bearing).scale(-aboveWaist * Math.sin(angle)))
+                    .add(0, aboveWaist * Math.cos(angle), 0);
+        }
+    }
+
+    public static CarryPose renderedCarry(BlossomWarden guardian, float partial) {
+        float bearing = Mth.rotLerp(partial, guardian.yBodyRotO, guardian.yBodyRot);
+        float elapsed = guardian.warningPhaseTicks(partial);
+        Vec3 waist = grip(guardian, bearing, elapsed, 1)
+                .add(renderPosition(guardian, partial).subtract(guardian.position()))
+                .add(0, PLAYER_GRIP_HEIGHT, 0);
+        return new CarryPose(waist, bearing, flipAngle(elapsed));
+    }
+
+    public static Vec3 renderPosition(Entity entity, float partial) {
+        return new Vec3(Mth.lerp((double)partial, entity.xOld, entity.getX()),
+                Mth.lerp((double)partial, entity.yOld, entity.getY()),
+                Mth.lerp((double)partial, entity.zOld, entity.getZ()));
     }
 
     private GuardianWarningMotion() {}

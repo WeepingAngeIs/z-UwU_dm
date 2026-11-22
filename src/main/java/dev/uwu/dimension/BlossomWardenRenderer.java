@@ -138,9 +138,13 @@ public final class BlossomWardenRenderer extends MobRenderer<BlossomWarden,Bloss
             left.xRot=grab+step*.45F;right.xRot=grab-step*.45F;
             left.zRot=.08F+Mth.sin(age*.06F)*.03F;right.zRot=-left.zRot;
             if (w.warningFlip()) {
-                // Curl the forearms toward the held player's ribs for the whole revolution.
-                left.xRot=right.xRot=-1.34F;left.zRot=.28F;right.zRot=-.28F;
-                footL.xRot=footR.xRot=-.20F;
+                float partial = Mth.clamp(age - w.tickCount, 0F, 1F);
+                float settle = w.warningFollowThrough() ? Mth.clamp(
+                        (w.warningPhaseTicks(partial) - BlossomWarden.FLIP_RELEASE_TICK)
+                                / (BlossomWarden.WARNING_FLIP_TICKS - BlossomWarden.FLIP_RELEASE_TICK), 0F, 1F) : 0F;
+                left.xRot=right.xRot=Mth.lerp(settle, -1.34F, 0F);
+                left.zRot=Mth.lerp(settle, .28F, .08F);right.zRot=-left.zRot;
+                footL.xRot=footR.xRot=Mth.lerp(settle, -.20F, 0F);
             }
             if (female) {
                 boolean grounded = w.onGround() && !w.isPassenger() && !w.isInWaterOrBubble();

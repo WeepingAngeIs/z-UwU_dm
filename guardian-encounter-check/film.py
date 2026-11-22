@@ -67,6 +67,11 @@ def camera_checks():
                 need(min(r["actorBodyUp"] for r in contact)<-.72 and max(r["actorBodyUp"] for r in contact)>.64
                      and min(r["actorGuardAlignment"] for r in contact)>.93,
                      f"Attacker failed to turn with the actual Guardian mesh in {k}")
+                follow=[r for r in rows if r["action"]=="follow" and r["actorDraw"] and r["guardianDraw"] and "actorBodyUp" in r]
+                need(follow and all(not r["carried"] and r["actorBodyUp"]>.93 for r in follow),
+                     f"Player remained visually attached after the Petal release in {k}")
+                need(any(r["palmToPlayerAnchor"]>.55 for r in follow),
+                     f"No visible separation before the Guardian finished its turn in {k}: {follow}")
                 after=[r for r in rows if r["tick"]>max(s["tick"] for s in flip) and r["action"]=="free" and "actorBodyUp" in r]
                 need(bool(after) and min(r["actorBodyUp"] for r in after)>.93,
                      f"Attacker remained visually rotated after release in {k}")
@@ -74,6 +79,8 @@ def camera_checks():
                 attached=[r for r in rows if r["action"]=="flip" and "ownerRoll" in r]
                 need(len(attached)>=4 and all(abs(r["ownerRoll"])<1 and r["ownerYawError"]<2 and r["ownerPitchError"]<2 for r in attached),
                      f"First-person camera was rotated away from the player's own look in {k}")
+                need(any(r["action"]=="follow" and not r["carried"] for r in rows),
+                     f"No first-person frames between release and the end of the turn in {k}")
                 if k==3:
                     need(max(r["cameraYaw"] for r in attached)-min(r["cameraYaw"] for r in attached)>15,
                          "Player could not look around during the second female Petal warning")
@@ -101,7 +108,9 @@ def camera_checks():
             CHECKED[-1].update({"measuredDualModelFrames":len(contact),
                                 "largestPalmToWaistGap":max(r["palmToPlayerAnchor"] for r in contact),
                                 "minimumPlayerUp":min(r["actorBodyUp"] for r in contact),
-                                "minimumAlignment":min(r["actorGuardAlignment"] for r in contact)})
+                                "minimumAlignment":min(r["actorGuardAlignment"] for r in contact),
+                                "followThroughFrames":len(follow),
+                                "gapDuringFollowThrough":max(r["palmToPlayerAnchor"] for r in follow)})
 
 def gallery():
     records = json.loads((ROOT / "gallery.json").read_text())
@@ -200,6 +209,9 @@ def chart():
     im.save(ROOT/"petal-trajectory.png",optimize=True)
 
 camera_checks()
+if ROLE=="player":
+    from eye_clearance import check_views
+    check_views(ROOT, SAMPLES)
 movies()
 if ROLE=="observer":
     gallery()

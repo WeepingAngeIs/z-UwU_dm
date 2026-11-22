@@ -23,7 +23,7 @@ public final class GuardianCamera {
     public record View(Vec3 eye,float yaw,float pitch) {}
     private static final JsonArray frames=new JsonArray();
     private static int lastTick=-100,sequence;
-    private static boolean guardDraw,playerDraw;
+    private static boolean guardDraw,playerDraw,barrierChecked;
     private static float head,arms,up;
     private static String texture;
     public static boolean observer(){return ACTIVE&&OBSERVER;}
@@ -84,7 +84,7 @@ public final class GuardianCamera {
             if(observer() && !camera.isDetached() || !observer() && camera.isDetached())return;
             var row=new JsonObject();
             row.addProperty("trial",t.number());row.addProperty("tick",tick);row.addProperty("worldTick",mc.level.getGameTime());
-            row.addProperty("action",g.warningShake()?"shake":g.warningWink()?"wink":g.warningFlip()?"flip":g.gripping()?"grip":g.chasing()?"approach":g.throwing()?"throw":"free");
+            row.addProperty("action",g.warningShake()?"shake":g.warningWink()?"wink":g.warningFollowThrough()?"follow":g.warningFlip()?"flip":g.gripping()?"grip":g.chasing()?"approach":g.throwing()?"throw":"free");
             row.addProperty("phaseTick",g.warningPhaseTicks(0));row.addProperty("guardianDraw",guardDraw);row.addProperty("actorDraw",playerDraw);
             row.addProperty("headYaw",guardDraw?head:0);row.addProperty("minArmRaise",guardDraw?arms:0);
             if(guardDraw&&Float.isFinite(up))row.addProperty("bodyUp",up);
@@ -93,6 +93,15 @@ public final class GuardianCamera {
             row.addProperty("hurtOverlay",g.hurtTime>0||g.deathTime>0);
             row.addProperty("height",a.getY()-t.floor());row.addProperty("cameraToPlayer",camera.getPosition().distanceTo(a.getEyePosition()));
             row.addProperty("cameraType",mc.options.getCameraType().name());
+            row.addProperty("carried",g.holdsDuringFlip(a));
+            if(!observer()){
+                float partial=mc.getTimer().getGameTimeDeltaPartialTick(false);
+                Vec3 nativeEye=a.getEyePosition(partial);
+                row.addProperty("nativeEyeGap",camera.getPosition().distanceTo(nativeEye));
+                if(!barrierChecked && t.number()==1 && g.holdsDuringFlip(a))
+                    barrierChecked=GuardianCameraBarrier.checked(a, partial, camera.getPosition());
+                if(barrierChecked && t.number()==1)row.addProperty("cameraBarrierChecked",true);
+            }
             GuardianGripFrame.evidence(row);
             if(!observer()&&g.warningFlip()){
                 float partial=mc.getTimer().getGameTimeDeltaPartialTick(false);

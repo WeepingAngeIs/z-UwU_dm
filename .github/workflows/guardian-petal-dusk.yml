@@ -30,9 +30,9 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           mkdir -p build/guardian-input
-          cp build/libs/*-guardians.1.jar build/guardian-input/
+          cp build/libs/*-guardians.2.jar build/guardian-input/
           cp build/village-size-check/village-size-probe.jar build/guardian-input/
-          jar=$(realpath build/guardian-input/*-guardians.1.jar)
+          jar=$(realpath build/guardian-input/*-guardians.2.jar)
           python3 guardian-encounter-check/scope.py "$jar" build/guardian-input/scope.json
           printf '%s\n' "$GITHUB_SHA" > build/guardian-input/source.txt
           echo "hash=$(sha256sum "$jar" | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
@@ -86,7 +86,7 @@ jobs:
           UWU_EXPECTED_JAR_SHA256: ${{ needs.build.outputs.hash }}
         run: |
           (cd build/guardian-input && sha256sum -c SHA256SUMS.txt)
-          export UWU_JAR=$(realpath build/guardian-input/*-guardians.1.jar)
+          export UWU_JAR=$(realpath build/guardian-input/*-guardians.2.jar)
           bash weapon-release/bootstrap.sh
           if ! command -v xvfb-run >/dev/null || ! command -v ffmpeg >/dev/null || ! /usr/bin/python3 -c 'import numpy, PIL'; then
             sudo apt-get update -qq && sudo apt-get install -y xvfb xauth libgl1-mesa-dri libopenal1 ffmpeg python3-pil python3-numpy fonts-dejavu-core
@@ -112,6 +112,7 @@ jobs:
             build/guardian-evidence/${{ matrix.view }}/*.png
             build/guardian-evidence/${{ matrix.view }}/outcomes.json
             build/guardian-evidence/${{ matrix.view }}/camera-checks.json
+            build/guardian-evidence/${{ matrix.view }}/eye-clearance.json
             build/guardian-evidence/${{ matrix.view }}/surface-stability.json
             build/guardian-evidence/${{ matrix.view }}/candidate.sha256
           retention-days: 7
@@ -134,7 +135,7 @@ jobs:
         env: {UWU_EXPECTED_JAR_SHA256: '${{ needs.build.outputs.hash }}'}
         run: |
           (cd build/guardian-input && sha256sum -c SHA256SUMS.txt)
-          export UWU_JAR=$(realpath build/guardian-input/*-guardians.1.jar)
+          export UWU_JAR=$(realpath build/guardian-input/*-guardians.2.jar)
           bash guardian-encounter-check/villages.sh
       - if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
@@ -182,7 +183,7 @@ jobs:
           grep -Fx "$HASH" build/guardian-delivery/player/candidate.sha256
           grep -Fx "$HASH" build/guardian-delivery/observer/candidate.sha256
           grep -Fx "$GITHUB_SHA" build/guardian-input/source.txt
-          cp build/guardian-input/*-guardians.1.jar build/guardian-input/{scope.json,source.txt} build/guardian-delivery/
+          cp build/guardian-input/*-guardians.2.jar build/guardian-input/{scope.json,source.txt} build/guardian-delivery/
           cp build/guardian-villages/layouts-8675309.json build/guardian-delivery/
           (cd build/guardian-delivery && sha256sum *.jar > SHA256SUMS.txt)
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9

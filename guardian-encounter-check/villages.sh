@@ -2,7 +2,7 @@
 set -euo pipefail
 test "$GITHUB_ACTIONS" = true
 mkdir -p build/village-input
-products=(build/guardian-input/*-guardians.1.jar)
+products=(build/guardian-input/*-guardians.2.jar)
 if [[ -f build/guardian-input/candidate.jar ]]; then products=(build/guardian-input/candidate.jar); fi
 test -f "${products[0]}"
 cp "${products[0]}" build/village-input/candidate.jar

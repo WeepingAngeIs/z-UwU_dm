@@ -58,8 +58,9 @@ public final class BlossomWarden extends PathfinderMob {
     private static final int RESCUE_TICKS = 60;
     private static final double RESCUE_RANGE_SQUARED = 64 * 64;
     private static final byte IDLE = 0, CHASE = 1, GRIP = 2, THROW = 3, OLD_POST_TOSS_LOOK = 4;
-    private static final byte WARNING_SHAKE = 5, WARNING_WINK = 6, WARNING_FLIP = 7, WARNING_FACE = 8;
+    private static final byte WARNING_SHAKE = 5, WARNING_WINK = 6, WARNING_FLIP = 7, WARNING_FACE = 8, WARNING_FOLLOW_THROUGH = 9;
     public static final int WARNING_SHAKE_TICKS = 46, WARNING_WINK_TICKS = 12, WARNING_FLIP_TICKS = 24;
+    public static final int FLIP_RELEASE_TICK = WARNING_FLIP_TICKS - 3;
     private static final int WINK_SETTLE_TICKS = 10;
     private static final EntityDataAccessor<Byte> POSE = SynchedEntityData.defineId(BlossomWarden.class, EntityDataSerializers.BYTE);
     private static final EntityDataAccessor<Boolean> FEMALE =
@@ -248,8 +249,11 @@ public final class BlossomWarden extends PathfinderMob {
     }
     public boolean warningShake() { return entityData.get(POSE) == WARNING_SHAKE; }
     public boolean warningWink() { return entityData.get(POSE) == WARNING_WINK; }
-    public boolean warningFlip() { return entityData.get(POSE) == WARNING_FLIP; }
-    public boolean holdsDuringFlip(Player player) { return warningFlip() && entityData.get(HELD_PLAYER) == player.getId(); }
+    public boolean warningFollowThrough() { return entityData.get(POSE) == WARNING_FOLLOW_THROUGH; }
+    public boolean warningFlip() { return entityData.get(POSE) == WARNING_FLIP || warningFollowThrough(); }
+    public boolean holdsDuringFlip(Player player) {
+        return entityData.get(POSE) == WARNING_FLIP && entityData.get(HELD_PLAYER) == player.getId();
+    }
 
     private void trackCarriedPlayer() {
         if (warningFlip() && level().getEntity(entityData.get(HELD_PLAYER)) instanceof Player player)
@@ -258,7 +262,7 @@ public final class BlossomWarden extends PathfinderMob {
     public float warningPhaseTicks(float partial) {
         return Math.max(0, level().getGameTime() - entityData.get(WARNING_STARTED) + partial);
     }
-    public boolean gripping() { return entityData.get(POSE) == GRIP || warningFlip(); }
+    public boolean gripping() { return entityData.get(POSE) == GRIP || entityData.get(POSE) == WARNING_FLIP; }
     public boolean throwing() { return entityData.get(POSE) == THROW; }
     @Nullable public UUID offender() { return offenders.peekFirst(); }
 
@@ -271,6 +275,7 @@ public final class BlossomWarden extends PathfinderMob {
             case WARNING_FACE -> "facing player";
             case WARNING_WINK -> "winking";
             case WARNING_FLIP -> "holding through backflip";
+            case WARNING_FOLLOW_THROUGH -> "finishing backflip";
             default -> "patrolling";
         };
         return phase + ", " + offenders.size() + " queued, pursuit " + (pursueTicks / 20.0)
@@ -360,7 +365,7 @@ public final class BlossomWarden extends PathfinderMob {
             return;
         }
         if (rescue != null && rescue.target.equals(id)) return;
-        if (gripping() || throwing() || facingForWarning() || rescue != null) {
+        if (gripping() || warningFollowThrough() || throwing() || facingForWarning() || rescue != null) {
             if (!id.equals(offender())) rescueAlerts.putIfAbsent(id, level().getGameTime() + RESCUE_TICKS);
             return;
         }
@@ -405,7 +410,7 @@ public final class BlossomWarden extends PathfinderMob {
                 finish(level, false);
             }
         }
-        if (rescue == null && !gripping() && !throwing() && !facingForWarning() && !rescueAlerts.isEmpty()) {
+        if (rescue == null && !gripping() && !warningFollowThrough() && !throwing() && !facingForWarning() && !rescueAlerts.isEmpty()) {
             var pending = rescueAlerts.entrySet().iterator();
             while (pending.hasNext()) {
                 var alert = pending.next();
@@ -488,6 +493,14 @@ public final class BlossomWarden extends PathfinderMob {
             BlossomWarden other = registry.active(level, court);
             if (other != null && other != this) { discard(); return; }
             registry.remember(court, this);
+        }
+        if (warningFollowThrough()) {
+            // The player is already flying. Complete only the Guardian's turn, even if the player disconnects.
+            setYRot(warningBearing);
+            setYBodyRot(warningBearing);
+            setYHeadRot(warningBearing);
+            if (++motionTicks >= WARNING_FLIP_TICKS) finishWarning(level);
+            return;
         }
         if (offenders.isEmpty() && tickCount%10==0) acquireThreat(level);
         villagePatrol.observe();
@@ -644,7 +657,7 @@ public final class BlossomWarden extends PathfinderMob {
         if (player.distanceToSqr(hands) > .0016) move(player,hands);
         player.setDeltaMovement(Vec3.ZERO);
         player.fallDistance = 0;
-        if (++motionTicks < (flip ? WARNING_FLIP_TICKS : kind == GuardianWarnings.SECOND ? 6 : 14)) return;
+        if (++motionTicks < (flip ? FLIP_RELEASE_TICK : kind == GuardianWarnings.SECOND ? 6 : 14)) return;
         if (!flip && kind == GuardianWarnings.SECOND) {
             entityData.set(HELD_PLAYER, player.getId());
             transition(WARNING_FLIP);
@@ -654,6 +667,16 @@ public final class BlossomWarden extends PathfinderMob {
         GuardianWarnings.toss(player, takeoffY, kind, warningBearing, (getUUID().getLeastSignificantBits() & 1) == 0);
         sound(level, SoundEvents.IRON_GOLEM_ATTACK, .72F);
         level.sendParticles(ParticleTypes.CHERRY_LEAVES, hands.x, hands.y+.3, hands.z, 5,.2,.12,.2,.015);
+        if (flip) {
+            // Keep the original animation clock. Removing the grip here also releases the client body and camera.
+            entityData.set(HELD_PLAYER, -1);
+            entityData.set(POSE, WARNING_FOLLOW_THROUGH);
+            return;
+        }
+        finishWarning(level);
+    }
+
+    private void finishWarning(ServerLevel level) {
         finish(level, false);
         if (offenders.isEmpty()) departure.afterToss(warningBearing);
     }
