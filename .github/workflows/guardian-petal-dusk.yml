@@ -44,6 +44,25 @@ jobs:
           compression-level: 0
           retention-days: 2
           if-no-files-found: error
+  geometry:
+    if: github.repository == 'WeepingAngeIs/z-UwU_dm' && github.event.repository.private == false
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with: {persist-credentials: false}
+      - name: Inspect the double chin, crown, shoulders and limbs through the animation
+        run: |
+          if ! /usr/bin/python3 -c 'import numpy, PIL'; then
+            sudo apt-get update -qq && sudo apt-get install -y python3-pil python3-numpy
+          fi
+          /usr/bin/python3 guardian-art/check_surfaces.py build/guardian-geometry
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: guardian-geometry-${{ github.sha }}
+          path: build/guardian-geometry/
+          retention-days: 7
+          if-no-files-found: error
   film:
     needs: build
     runs-on: ubuntu-24.04
@@ -127,7 +146,7 @@ jobs:
           retention-days: 7
           if-no-files-found: warn
   delivery:
-    needs: [build,film,villages]
+    needs: [build,film,villages,geometry]
     runs-on: ubuntu-24.04
     timeout-minutes: 8
     steps:
@@ -150,6 +169,11 @@ jobs:
         with:
           name: guardian-village-evidence-${{ github.sha }}
           path: build/guardian-villages
+          digest-mismatch: error
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
+        with:
+          name: guardian-geometry-${{ github.sha }}
+          path: build/guardian-delivery/geometry
           digest-mismatch: error
       - name: Package the tested candidate and its films
         env: {HASH: '${{ needs.build.outputs.hash }}'}
