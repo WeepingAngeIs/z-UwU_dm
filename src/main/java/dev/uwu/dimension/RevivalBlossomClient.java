@@ -10,7 +10,6 @@ import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.item.ItemProperties;
 import net.minecraft.client.renderer.texture.OverlayTexture;
-import net.minecraft.util.Mth;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
@@ -32,6 +31,7 @@ public final class RevivalBlossomClient {
     private static final int TICKS_PER_FRAME = 2;
     // The widest nontransparent silhouette spans 92 of the 96 frame pixels.
     private static final float QUAD_SIZE = .40F * FRAME_PIXELS / 92F;
+    // Only nearby ready companions keep per-player motion state.
     private static final Map<Player, RevivalBlossomMotion> MOTION = new IdentityHashMap<>();
     private static Level motionLevel;
 
@@ -57,9 +57,12 @@ public final class RevivalBlossomClient {
 
     private static RevivalBlossomMotion motion(Player player) {
         observeLevel(player.level());
+        Vec3 owner = player.position();
+        float scale = player.getScale();
+        Vec3 anchor = restingAnchor(player, owner, scale);
         var follow = MOTION.computeIfAbsent(player,
-                actor -> new RevivalBlossomMotion(actor.position(), actor.tickCount));
-        follow.follow(player.position(), player.tickCount, player.getScale());
+                actor -> new RevivalBlossomMotion(anchor, owner, actor.tickCount));
+        follow.follow(anchor, owner, player.tickCount, scale);
         return follow;
     }
 
@@ -78,7 +81,10 @@ public final class RevivalBlossomClient {
 
     public static void resetCompanionMotion(Player player, int interpolationTicks) {
         var follow = MOTION.get(player);
-        if (follow != null) follow.reset(player.position(), player.tickCount, interpolationTicks);
+        if (follow != null) {
+            Vec3 owner = player.position();
+            follow.reset(restingAnchor(player, owner, player.getScale()), owner, player.tickCount, interpolationTicks);
+        }
     }
 
     public static void resetCompanionAfterRemoteRelocation(Player player, double x, double y, double z) {
@@ -89,10 +95,15 @@ public final class RevivalBlossomClient {
     }
 
     static Vec3 anchor(Player player, float partialTick) {
-        double yaw = Math.toRadians(Mth.rotLerp(partialTick, player.yBodyRotO, player.yBodyRot));
-        double back = .55 * player.getScale();
-        double right = -1.05 * player.getScale();
-        return motion(player).sample(partialTick).add(
+        return motion(player).sample(partialTick);
+    }
+
+    private static Vec3 restingAnchor(Player player, Vec3 owner, float scale) {
+        // Follow a world-space goal so a turn moves the goal, while the flower keeps its momentum.
+        double yaw = Math.toRadians(player.yBodyRot);
+        double back = .55 * scale;
+        double right = -1.05 * scale;
+        return owner.add(
                 Math.cos(yaw) * right + Math.sin(yaw) * back,
                 player.getBbHeight() * 1.15,
                 Math.sin(yaw) * right - Math.cos(yaw) * back);

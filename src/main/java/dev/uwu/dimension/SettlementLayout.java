@@ -47,6 +47,8 @@ public final class SettlementLayout extends SavedData {
     private final Map<Long,BitSet> beforeBakerToasters=new HashMap<>();
     private final Map<Long,BitSet> beforeCupidShrines=new HashMap<>();
     private final Map<Long,BitSet> beforeDuskFactions=new HashMap<>();
+    private final Map<Long,BitSet> beforeDuskFrequency=new HashMap<>();
+    private final Map<Long,Integer> duskSiteChances=new java.util.concurrent.ConcurrentHashMap<>();
     private final Map<Long,Boolean> duskFactions=new java.util.concurrent.ConcurrentHashMap<>();
     private final Set<Long> rejectedForest=java.util.concurrent.ConcurrentHashMap.newKeySet();
     private int distance;
@@ -83,6 +85,9 @@ public final class SettlementLayout extends SavedData {
         // Playtest 9 already has a lattice. Its occupied/partially generated sites are
         // not in the older pre-lattice mask, so freeze a separate upgrade boundary.
         loadRoomSnapshot(regions,"uwudimension_before_dusk_factions_v1.dat",data.beforeDuskFactions);
+        // Existing empty chunks are protected too: never grow half a new village
+        // around a footprint that was already generated under the previous policy.
+        loadRoomSnapshot(regions,"uwudimension_before_dusk_frequency_v1.dat",data.beforeDuskFrequency);
         data.previous.forEach((key,bits)->{
             var region=new ChunkPos(key);
             for(int i=bits.nextSetBit(0);i>=0;i=bits.nextSetBit(i+1)){
@@ -277,6 +282,47 @@ public final class SettlementLayout extends SavedData {
         }
         return false;
     }
+    /** The first 32 attempts are the original survey; additional attempts only
+     * recover new Dusk sites within exactly the same road, house and footprint limits. */
+    public static int duskSurveyAttempts(ServerLevel level,GroveSites.Site site){
+        return ReefLife.isSettlementRealm(level) && active(level).frequencyApplies(level,site)?1024:32;
+    }
+    private boolean frequencyApplies(ServerLevel level,GroveSites.Site site){
+        return legacyMask(level,site)==0 && untouchedRoom(beforeDuskFrequency,site,-211,-205,211,35);
+    }
+    /** Pure preview. Merely locating a future village never freezes its setting. */
+    public static int duskChanceForSite(ServerLevel level,GroveSites.Site site){
+        if(!ReefLife.isSettlementRealm(level))return 0;
+        var data=active(level);
+        if(!data.frequencyApplies(level,site))return 100;
+        return data.duskSiteChances.getOrDefault(ChunkPos.asLong(site.gx(),site.gz()),AcquisitionPolicy.duskVillageChancePercent());
+    }
+    public static boolean duskChanceFrozen(ServerLevel level,GroveSites.Site site){
+        if(!ReefLife.isSettlementRealm(level))return false;
+        var data=active(level);
+        return !data.frequencyApplies(level,site) || data.duskSiteChances.containsKey(ChunkPos.asLong(site.gx(),site.gz()));
+    }
+    /** A separate salted hash: the roll does not consume the terrain survey RNG. */
+    public static int duskSiteRoll(ServerLevel level,GroveSites.Site site){
+        return Math.floorMod(HeartwaterFeature.Valley.mix(site.gx(),site.gz(),level.getSeed()^0x4455534B5F534954L),100);
+    }
+    static boolean duskChanceAllows(ServerLevel level,GroveSites.Site site){
+        if(!ReefLife.isSettlementRealm(level))return false;
+        return duskSiteRoll(level,site)<duskChanceForSite(level,site);
+    }
+    /** Called only by actual generation, before any native village writes, and
+     * on NEW full chunks whose biome did not run the native surface feature. */
+    static void beginDuskGeneration(ServerLevel level,GroveSites.Site site,ChunkPos chunk){
+        if(!ReefLife.isSettlementRealm(level)||!site.usable())return;
+        var a=site.pos(-211,0,-205);var b=site.pos(211,0,35);
+        if(chunk.getMaxBlockX()<Math.min(a.getX(),b.getX()) || chunk.getMinBlockX()>Math.max(a.getX(),b.getX())
+                || chunk.getMaxBlockZ()<Math.min(a.getZ(),b.getZ()) || chunk.getMinBlockZ()>Math.max(a.getZ(),b.getZ()))return;
+        var data=active(level);
+        if(!data.frequencyApplies(level,site)||!admits(level,site,true))return;
+        long key=ChunkPos.asLong(site.gx(),site.gz());
+        if(data.duskSiteChances.putIfAbsent(key,AcquisitionPolicy.duskVillageChancePercent())==null)
+            level.getServer().execute(data::setDirty);
+    }
     private static boolean latticeCell(GroveSites.Site origin,int gx,int gz,int distance){
         int stride=stride(distance);
         return Math.floorMod(gx-origin.gx(),stride)==0 && Math.floorMod(gz-origin.gz(),stride)==0;
@@ -297,6 +343,12 @@ public final class SettlementLayout extends SavedData {
     private static SettlementLayout read(CompoundTag tag,HolderLookup.Provider registries){
         var data=new SettlementLayout();
         data.distance=tag.getInt("Spacing");
+        var chances=tag.getCompound("DuskSiteChancesV1");
+        for(String key:chances.getAllKeys()){
+            if(!chances.contains(key,Tag.TAG_INT)||chances.getInt(key)<0||chances.getInt(key)>100)
+                throw new IllegalStateException("Invalid saved Dusk site chance "+key);
+            data.duskSiteChances.put(Long.parseLong(key),chances.getInt(key));
+        }
         var index=tag.getCompound("Existing");
         for(String key:index.getAllKeys())data.previous.put(Long.parseLong(key),BitSet.valueOf(index.getLongArray(key)));
         data.treehouseSnapshot=tag.getBoolean("TreehouseSnapshot");
@@ -313,6 +365,9 @@ public final class SettlementLayout extends SavedData {
     }
     @Override public CompoundTag save(CompoundTag tag,HolderLookup.Provider registries){
         tag.putInt("Spacing",distance);
+        var chances=new CompoundTag();
+        duskSiteChances.forEach((key,chance)->chances.putInt(Long.toString(key),chance));
+        tag.put("DuskSiteChancesV1",chances);
         var index=new CompoundTag();
         previous.forEach((key,bits)->index.putLongArray(Long.toString(key),bits.toLongArray()));
         tag.put("Existing",index);

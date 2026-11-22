@@ -96,7 +96,7 @@ public final class WeaponAnimationAdapter {
     }
     private static String animation(String shape,boolean two,boolean simply,int index){
         boolean right=(index&1)==0;
-        if(shape.equals("chakram")&&!two&&simply)return right?"simplyswords:one_handed_chakram_throw_left":"simplyswords:one_handed_throw_chakram_right";
+        if(shape.equals("chakram")&&simply)return right?"simplyswords:one_handed_chakram_throw_left":"simplyswords:one_handed_throw_chakram_right";
         if(shape.equals("hammer"))return two?"bettercombat:two_handed_slam":"bettercombat:one_handed_slam";
         if(shape.equals("spear")||shape.equals("wand"))return two?"bettercombat:two_handed_stab_right":"bettercombat:one_handed_stab";
         return "bettercombat:"+(two?"two_handed":"one_handed")+"_slash_horizontal_"+(right?"right":"left");

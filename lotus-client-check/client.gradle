@@ -40,11 +40,14 @@ gradle.beforeProject { project ->
             def shrineCheck = System.getenv('UWU_SHRINE_CLIENT_CHECK') == 'true'
             def cupidLantern = System.getenv('UWU_CUPID_LANTERN_CHECK') == 'true'
             def caveCheck = System.getenv('UWU_CAVE_CLIENT_CHECK') == 'true'
-            gameDirectory = project.file(cupidLantern ? 'build/cupid-lantern-client' :
+            def blossomCheck = System.getenv('UWU_BLOSSOM_CLIENT_CHECK') == 'true'
+            gameDirectory = project.file(blossomCheck ? 'build/blossom-client' :
+                    (cupidLantern ? 'build/cupid-lantern-client' :
                     (caveCheck ? 'build/cave-client' :
                     (shrineCheck ? 'build/shrine-client' :
-                    (dirkCountdown ? 'build/dirk-countdown-client' : 'build/lotus-client'))))
+                    (dirkCountdown ? 'build/dirk-countdown-client' : 'build/lotus-client')))))
             jvmArgument('-Xmx3G')
+            if (blossomCheck) jvmArgument('-Duwu.check.blossom=true')
             if (dirkCountdown) jvmArgument('-Duwu.check.dirkCountdown=true')
             if (shrineCheck) jvmArgument('-Duwu.check.shrine=true')
             if (caveCheck) jvmArgument('-Duwu.check.cave=true')

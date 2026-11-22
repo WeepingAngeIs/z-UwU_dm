@@ -1,0 +1,34 @@
+gradle.beforeProject { project ->
+    project.plugins.withId('net.neoforged.moddev') {
+        def probe = project.sourceSets.create('duskFrequencyCheck')
+        probe.java.srcDirs = [project.file('dusk-frequency-check/java')]
+        probe.resources.srcDirs = [project.file('dusk-frequency-check/resources')]
+        probe.compileClasspath += project.sourceSets.main.compileClasspath + project.sourceSets.main.output
+        project.configurations.getByName(probe.runtimeClasspathConfigurationName)
+                .extendsFrom(project.configurations.getByName(project.sourceSets.main.runtimeClasspathConfigurationName))
+        def path = System.getenv('UWU_JAR')?.trim()
+        def hash = System.getenv('UWU_EXPECTED_JAR_SHA256')?.trim()
+        def companionPath = System.getenv('UWU_COMPANION_JAR')?.trim()
+        if (!path || !hash?.matches('(?i)[0-9a-f]{64}') || !companionPath) {
+            throw new org.gradle.api.GradleException('Dusk UI checks require frozen UWU_JAR/hash and UWU_COMPANION_JAR')
+        }
+        def candidate = project.file(path).canonicalFile
+        def companion = project.file(companionPath).canonicalFile
+        if (!candidate.isFile() || !companion.isFile()) throw new org.gradle.api.GradleException('Missing packaged candidate/companion')
+        project.dependencies.add(probe.runtimeOnlyConfigurationName, project.files(candidate, companion))
+        project.dependencies.add(probe.runtimeOnlyConfigurationName, project.fileTree('build/dusk-frequency-deps') { include '*.jar' })
+        def probeMod = project.neoForge.mods.create('uwu_dusk_frequency_check') { sourceSet(probe) }
+        project.neoForge.runs.create('duskFrequencyClient') {
+            client()
+            sourceSet = probe
+            loadedMods = [probeMod]
+            gameDirectory = project.file('build/dusk-frequency-client')
+            jvmArgument('-Xmx3G')
+            jvmArgument('-Duwu.check.candidateJar=' + candidate.absolutePath)
+            jvmArgument('-Duwu.check.candidateSha256=' + hash)
+            jvmArgument('-Duwu.check.companionJar=' + companion.absolutePath)
+            jvmArgument('-Duwu.check.seed=' + project.file('build/dusk-frequency-evidence/selected-seed.txt').text.trim())
+            jvmArgument('-Duwu.check.evidence=' + project.file('build/dusk-frequency-evidence').absolutePath)
+        }
+    }
+}

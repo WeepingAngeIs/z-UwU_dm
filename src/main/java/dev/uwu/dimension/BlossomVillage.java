@@ -2,8 +2,10 @@ package dev.uwu.dimension;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.QuartPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.DyeColor;
+import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.block.*;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BedPart;
@@ -37,21 +39,66 @@ public final class BlossomVillage {
         public BlockPos doorway(House h){return site.pos(h.x(),h.floor()+1,h.z()-h.side()*h.depth());}
         public BlockPos resident(House h){return site.pos(h.x(),h.floor()+1,h.z());}
     }
-    private record Key(int gx,int gz,boolean dusk){}
+    private record Key(int gx,int gz,boolean dusk,int attempts){}
     private static final Map<ServerLevel,Map<Key,Optional<Plan>>> CACHE=new WeakHashMap<>();
     private static synchronized Map<Key,Optional<Plan>> cache(ServerLevel level){return CACHE.computeIfAbsent(level,k->new ConcurrentHashMap<>());}
     private static final Block[] JOBS={Blocks.COMPOSTER,Blocks.LOOM,Blocks.SMOKER,Blocks.BREWING_STAND,Blocks.CARTOGRAPHY_TABLE,Blocks.LECTERN,Blocks.FLETCHING_TABLE,Blocks.STONECUTTER};
     private static final int HALF=32;
     private static int ground(ServerLevel level,GroveSites.Site s,int x,int z){return GroveSites.height(level,s.wx(x,z),s.wz(x,z));}
+    /** Immutable seed queries shared within one extended Dusk survey. This is
+     * thread-confined and discarded with the call, never retained by a plan.
+     * Current house/road probes use at most 130 by 118 ground columns; the caps
+     * also bound memory if later templates add probes beyond that rectangle. */
+    private static final class SurveyTerrain {
+        private static final int MAX_SAMPLES=32768;
+        private record BiomeCell(int x,int y,int z){}
+        private final ServerLevel level;
+        private final GroveSites.Site site;
+        private final Map<Long,Integer> heights;
+        private final Map<BiomeCell,Boolean> land;
+        SurveyTerrain(ServerLevel level,GroveSites.Site site,boolean memoize){
+            this.level=level;this.site=site;
+            heights=memoize?new HashMap<>():null;
+            land=memoize?new HashMap<>():null;
+        }
+        int ground(int x,int z){
+            if(heights==null)return BlossomVillage.ground(level,site,x,z);
+            long key=ChunkPos.asLong(x,z);
+            Integer known=heights.get(key);if(known!=null)return known;
+            int height=BlossomVillage.ground(level,site,x,z);
+            if(heights.size()<MAX_SAMPLES)heights.put(key,height);
+            return height;
+        }
+        boolean cherry(int x,int y,int z){
+            int wx=site.wx(x,z),wz=site.wz(x,z);
+            if(land==null)return GroveSites.cherry(level,wx,y,wz);
+            // GroveSites.cherry queries the noise biome at these exact world
+            // quart coordinates. Include Y: stacked cave/surface biomes differ.
+            var key=new BiomeCell(QuartPos.fromBlock(wx),QuartPos.fromBlock(y),QuartPos.fromBlock(wz));
+            Boolean known=land.get(key);if(known!=null)return known;
+            boolean fits=GroveSites.cherry(level,wx,y,wz);
+            if(land.size()<MAX_SAMPLES)land.put(key,fits);
+            return fits;
+        }
+    }
     public static Optional<Plan> plan(ServerLevel level,GroveSites.Site s,boolean dusk){
+        if(dusk&&!SettlementLayout.duskChanceAllows(level,s))return Optional.empty();
+        return potentialPlan(level,s,dusk);
+    }
+    /** Habitable, assigned site before the configurable Dusk roll. Reservations
+     * use this stable envelope so an edit cannot introduce a structure collision. */
+    public static Optional<Plan> potentialPlan(ServerLevel level,GroveSites.Site s,boolean dusk){
         if(!GroveSites.settlement(level,s,dusk))return Optional.empty();
-        return survey(level,s,dusk);
+        return survey(level,s,dusk,dusk?SettlementLayout.duskSurveyAttempts(level,s):32);
     }
     // Pure terrain survey used while choosing the arrival site. Never asks whether this
     // region will host a settlement: that decision itself depends on the arrival site.
     static Optional<Plan> survey(ServerLevel level,GroveSites.Site s,boolean dusk){
+        return survey(level,s,dusk,32);
+    }
+    private static Optional<Plan> survey(ServerLevel level,GroveSites.Site s,boolean dusk,int attempts){
         var db=cache(level);if(db.size()>5000)db.clear();
-        return db.computeIfAbsent(new Key(s.gx(),s.gz(),dusk),k->design(level,s,dusk));
+        return db.computeIfAbsent(new Key(s.gx(),s.gz(),dusk,attempts),k->design(level,s,dusk,attempts));
     }
     public static Plan first(ServerLevel level,boolean dusk){
         var s=GroveSites.first(level);
@@ -63,13 +110,14 @@ public final class BlossomVillage {
         }
         throw new IllegalStateException("No habitable village land");
     }
-    private static Optional<Plan> design(ServerLevel level,GroveSites.Site site,boolean dusk){
+    private static Optional<Plan> design(ServerLevel level,GroveSites.Site site,boolean dusk,int attempts){
+        var terrain=new SurveyTerrain(level,site,dusk&&attempts>32);
         var random=new Random(HeartwaterFeature.Valley.mix(site.x(),site.z(),level.getSeed())^(dusk?81347569:6234971));
-        for(int attempt=0;attempt<32;attempt++){
+        for(int attempt=0;attempt<attempts;attempt++){
             int x=(dusk?1:-1)*(48+random.nextInt(66)),z=-32-random.nextInt(62);
-            int center=ground(level,site,x,z);
-            if(center<=65||center>143||!GroveSites.cherry(level,site.wx(x,z),center+1,site.wz(x,z)))continue;
-            int left=ground(level,site,x-HALF,z),right=ground(level,site,x+HALF,z);
+            int center=terrain.ground(x,z);
+            if(center<=65||center>143||!terrain.cherry(x,center+1,z))continue;
+            int left=terrain.ground(x-HALF,z),right=terrain.ground(x+HALF,z);
             if(Math.min(left,right)<=64 || Math.abs(left-right)>12 || Math.abs(left-center)>7 || Math.abs(right-center)>7)continue;
             int[] road=new int[HALF*2+1],bends=new int[road.length];
             double phase=random.nextDouble()*Math.PI*2,frequency=.035+random.nextDouble()*.055;
@@ -78,7 +126,7 @@ public final class BlossomVillage {
                 bends[i]=(int)Math.round(amplitude*(Math.sin((i-HALF)*frequency+phase)-Math.sin(phase)));
             boolean dry=true;
             for(int i=0;i<road.length;i++){
-                int y=ground(level,site,x+i-HALF,z+bends[i]);
+                int y=terrain.ground(x+i-HALF,z+bends[i]);
                 if(y<64||i>0&&Math.abs(y-road[i-1])>1){dry=false;break;}
                 road[i]=y;
             }
@@ -89,11 +137,11 @@ public final class BlossomVillage {
                 int style=(firstStyle+houses.size())%VillageHouse.STYLES.size();
                 var template=VillageHouse.STYLES.get(style);
                 int hx=x-24+lot*16,width=template.width,depth=template.depth;
-                int hz=z+bends[hx-x+HALF]+side*(depth+6+random.nextInt(3)),floor=ground(level,site,hx,hz-side*depth);
+                int hz=z+bends[hx-x+HALF]+side*(depth+6+random.nextInt(3)),floor=terrain.ground(hx,hz-side*depth);
                 int roadY=road[hx-x+HALF];boolean fits=Math.abs(floor-roadY)<=2;
                 for(int ex:new int[]{-width,0,width})for(int ez:new int[]{-depth,0,depth}){
-                    int earth=ground(level,site,hx+ex,hz+ez);
-                    if(earth<64||Math.abs(earth-floor)>3||!GroveSites.cherry(level,site.wx(hx+ex,hz+ez),earth+1,site.wz(hx+ex,hz+ez)))fits=false;
+                    int earth=terrain.ground(hx+ex,hz+ez);
+                    if(earth<64||Math.abs(earth-floor)>3||!terrain.cherry(hx+ex,earth+1,hz+ez))fits=false;
                 }
                 if(fits){
                     boolean wallBeds=SettlementLayout.useWallBeds(level,site,hx,hz,template.radiusX,template.radiusZ);

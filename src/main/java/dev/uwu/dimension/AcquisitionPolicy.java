@@ -5,6 +5,7 @@ import net.neoforged.neoforge.common.ModConfigSpec;
 public final class AcquisitionPolicy {
  public static final ModConfigSpec SPEC;
  public static final ModConfigSpec.IntValue SETTLEMENT_DISTANCE;
+ public static final ModConfigSpec.IntValue DUSK_SITE_CHANCE;
  public static final ModConfigSpec.BooleanValue GUARDIAN_FAMILY;
  public static final ModConfigSpec.IntValue GUARDIAN_COOLDOWN,GUARDIAN_GROWTH,GUARDIAN_READY,GUARDIAN_PAIR_RADIUS,
          GUARDIAN_POPULATION_RADIUS,GUARDIAN_POPULATION_CAP,GUARDIAN_PERMISSION;
@@ -17,6 +18,7 @@ public final class AcquisitionPolicy {
  static {
   var b=new ModConfigSpec.Builder();
   SETTLEMENT_DISTANCE=b.comment("Minimum separation between native new Petal/Dusk village footprints, in blocks. Chosen when the world first opens with this version and then saved per world; old villages keep their locations.").worldRestart().defineInRange("nativeVillageSpacingBlocks",384,192,2048);
+  DUSK_SITE_CHANCE=b.comment("Chance, in percent, for each newly considered habitable Dusk settlement site in Sakura Reach (not per chunk or biome). Existing and already-touched sites retain their decision; edits apply to untouched future sites. Petal placement and saved village spacing are unchanged.").defineInRange("duskVillageChancePercent",75,0,100);
   HEART_LOCKET_CRAFTING=b.comment("Allow crafting heartwater_locket. Restart the world/server after changing; clients receive the server policy.").worldRestart().define("heartLocketCraftingEnabled",true);
   WEAPON_ACQUISITION=b.comment("Allow new survival acquisition of all UwU weapons through crafting, trades and generated loot (including unopened Lootr rolls). Existing owned/opened inventories and operator/creative access remain. Restart after changing.").worldRestart().define("weaponAcquisitionEnabled",true);
   AREA_MINING=b.comment("Allow deliberate 9 by 9 Bell Hammer mining. Block permissions and harvest rules still apply.").define("bellHammerAreaMiningEnabled",true);
@@ -40,6 +42,8 @@ public final class AcquisitionPolicy {
   b.pop();
   SPEC=b.build();
  }
+ /** Stable server-policy API used by the optional Unyielding configuration adapter. */
+ public static int duskVillageChancePercent(){return SPEC.isLoaded()?DUSK_SITE_CHANCE.get():75;}
  public static boolean heartLocketCraftingEnabled(){return !SPEC.isLoaded()||HEART_LOCKET_CRAFTING.get();}
  public static boolean weaponAcquisitionEnabled(){return !SPEC.isLoaded()||WEAPON_ACQUISITION.get();}
  /** Called only when choosing a backend for a previously unassigned new reward site. */

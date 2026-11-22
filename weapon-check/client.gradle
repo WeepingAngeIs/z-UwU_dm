@@ -1,0 +1,39 @@
+gradle.beforeProject { project ->
+    project.plugins.withId('net.neoforged.moddev') {
+        def probe = project.sourceSets.create('weaponCheck')
+        probe.java.srcDirs = [project.file('weapon-check/java')]
+        probe.resources.srcDirs = [project.file('weapon-check/resources')]
+        probe.compileClasspath += project.sourceSets.main.compileClasspath + project.sourceSets.main.output
+        def fixture = project.neoForge.mods.create('uwu_weapon_check') { sourceSet(probe) }
+        def candidate = project.file(System.getenv('UWU_JAR') ?: '').canonicalFile
+        def digest = System.getenv('UWU_EXPECTED_JAR_SHA256') ?: ''
+        if (!candidate.isFile() || !digest.matches('(?i)[0-9a-f]{64}')) {
+            throw new org.gradle.api.GradleException('A packaged UWU_JAR and UWU_EXPECTED_JAR_SHA256 are required')
+        }
+        project.configurations.getByName(probe.runtimeClasspathConfigurationName)
+                .extendsFrom(project.configurations.getByName(project.sourceSets.main.runtimeClasspathConfigurationName))
+        project.dependencies.add(probe.runtimeOnlyConfigurationName, project.files(candidate))
+        project.dependencies.add(probe.runtimeOnlyConfigurationName, project.fileTree('build/weapon-deps') { include '*.jar' })
+        ['host', 'observer'].each { role ->
+            project.neoForge.runs.create('weapon' + role.capitalize()) {
+                client()
+                sourceSet = probe
+                loadedMods = [fixture]
+                gameDirectory = project.file('build/weapon-check/' + role)
+                jvmArgument(role == 'host' ? '-Xmx2G' : '-Xmx1536M')
+                jvmArgument('-XX:+ExitOnOutOfMemoryError')
+                // Independent JVMs must not extract/delete the same LWJGL native files.
+                jvmArgument('-Djava.io.tmpdir=' + project.file('build/weapon-check/' + role + '/tmp').absolutePath)
+                jvmArgument('-Dorg.lwjgl.system.SharedLibraryExtractPath=' + project.file('build/weapon-check/' + role + '/lwjgl').absolutePath)
+                jvmArgument('-Duwu.check.role=' + role)
+                jvmArgument('-Duwu.check.baseline=' + (System.getenv('UWU_WEAPON_BASELINE') == 'true'))
+                jvmArgument('-Duwu.check.candidateJar=' + candidate.absolutePath)
+                jvmArgument('-Duwu.check.candidateSha256=' + digest)
+                jvmArgument('-Duwu.check.evidence=' + project.file('build/weapon-check/evidence/' + role).absolutePath)
+                jvmArgument('-Duwu.check.control=' + project.file('build/weapon-check/control').absolutePath)
+                programArgument('--username')
+                programArgument(role == 'host' ? 'UwUWeaponHost' : 'UwUObserver')
+            }
+        }
+    }
+}

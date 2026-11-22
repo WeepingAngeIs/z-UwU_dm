@@ -1,0 +1,7 @@
+{
+  "required": true,
+  "package": "dev.uwu.weaponcheck.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "client": ["WeaponDrawObserver", "AttackAnimationObserver", "GuiGlintClock"],
+  "injectors": {"defaultRequire": 1}
+}

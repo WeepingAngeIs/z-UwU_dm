@@ -6,7 +6,10 @@ if [[ ${UWU_CUPID_LANTERN_CHECK:-false} == true && ${UWU_CAVE_CLIENT_CHECK:-fals
 fi
 game_dir=build/lotus-client
 log=build/lotus-client.log
-if [[ ${UWU_CUPID_LANTERN_CHECK:-false} == true ]]; then
+if [[ ${UWU_BLOSSOM_CLIENT_CHECK:-false} == true ]]; then
+    game_dir=build/blossom-client
+    log=build/blossom-client.log
+elif [[ ${UWU_CUPID_LANTERN_CHECK:-false} == true ]]; then
     game_dir=build/cupid-lantern-client
     log=build/cupid-lantern-client.log
 elif [[ ${UWU_CAVE_CLIENT_CHECK:-false} == true ]]; then
@@ -26,6 +29,10 @@ fetch() {
 }
 fetch 'https://cdn.modrinth.com/data/EltpO5cN/versions/ST5FHZnD/lootr-neoforge-1.21.1-1.11.38.125.jar' lootr 091878598fa5cb51cd304bf9324afe46420d328b6f77a9ba38acc15e26945e9e
 fetch 'https://www.cursemaven.com/curse/maven/jade-324717/8591319/jade-324717-8591319.jar' jade 276f1f65a20d04f536989c4f311949d770b52c440c23c2b904a08860f3c93810
+if [[ ${UWU_BLOSSOM_CLIENT_CHECK:-false} == true ]]; then
+    fetch 'https://cdn.modrinth.com/data/yBW8D80W/versions/ksaGCvSu/lambdynamiclights-4.8.11%2B1.21.1.jar' lambdynamiclights 913b0358b1031828f1e060ea0ee361232dc2a1c82464f488a0a920739ce7c763
+    printf 'mode = "fancy"\n' > "$game_dir/config/lambdynlights.toml"
+fi
 printf 'version:3955\nonboardAccessibility:false\ntutorialStep:none\nrenderDistance:3\nsimulationDistance:5\nmaxFps:60\nenableVsync:false\npauseOnLostFocus:false\n' > "$game_dir/options.txt"
 if [[ ${UWU_CUPID_LANTERN_CHECK:-false} == true ]]; then
     printf 'guiScale:1\n' >> "$game_dir/options.txt"
@@ -36,6 +43,12 @@ timeout --kill-after=20s 10m xvfb-run -a -s '-screen 0 800x600x24' bash gradlew 
 if grep -Ei 'OutOfMemoryError|CHECK FAILED|single server tick has taken' "$log"; then exit 1; fi
 if [[ -n ${UWU_JAR:-} ]]; then
     grep -F 'UWU PACKAGED CANDIDATE PASS' "$log"
+fi
+if [[ ${UWU_BLOSSOM_CLIENT_CHECK:-false} == true ]]; then
+    grep -F 'LOTUS COMPANION MOMENTUM PASS' "$log"
+    grep -F 'BLOSSOM WALK RUN TURN STOP PASS' "$log"
+    grep -F 'BLOSSOM RENDER AND LIGHT PASS' "$log"
+    exit 0
 fi
 if [[ ${UWU_CUPID_LANTERN_CHECK:-false} == true ]]; then
     grep -F 'LANTERN COVER CLIENT PASS' "$log"
@@ -63,6 +76,14 @@ fi
 if [[ ${UWU_DIRK_COUNTDOWN_CHECK:-false} == true ]]; then
     grep -F 'DIRK NATIVE PACKET REPLAY' "$log"
     grep -F 'DIRK COUNTDOWN OBSERVED' "$log"
+    exit 0
+fi
+if [[ ${UWU_GUARDIAN_WARNING_CHECK:-false} == true ]]; then
+    grep -F 'GUARDIAN MALE WARNING PASS' "$log"
+    grep -F 'GUARDIAN ORDINARY FALL CONTROL PASS' "$log"
+    grep -F 'GUARDIAN QUIET RESET PASS' "$log"
+    grep -F 'GUARDIAN FEMALE WARNING PASS' "$log"
+    grep -F 'GUARDIAN INDEPENDENT PLAYERS AND REPEAT PASS' "$log"
     exit 0
 fi
 grep -F 'LOTUS FIRST PERSON PASS' build/lotus-client.log
