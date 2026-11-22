@@ -38,6 +38,7 @@ public final class LotusClientProbe {
     private static final boolean SHRINE_ONLY = Boolean.getBoolean("uwu.check.shrine");
     private static final boolean CUPID_LANTERN_ONLY = Boolean.getBoolean("uwu.check.cupidLantern");
     private static final boolean CAVE_ONLY = Boolean.getBoolean("uwu.check.cave");
+    private static final boolean GUARDIAN_ONLY = "true".equals(System.getenv("UWU_GUARDIAN_WARNING_CHECK"));
     private static boolean opening;
     private static DirkCountdownProbe dirk;
     private static JadeFluidProbe jade;
@@ -56,6 +57,10 @@ public final class LotusClientProbe {
     public LotusClientProbe() {
         CandidateJarProbe.verify();
         NeoForge.EVENT_BUS.addListener(LotusClientProbe::tick);
+        if (GUARDIAN_ONLY) {
+            NeoForge.EVENT_BUS.addListener(GuardianWarningProbe::serverTick);
+            return;
+        }
         NeoForge.EVENT_BUS.addListener(LotusClientProbe::frame);
         if (CUPID_LANTERN_ONLY) {
             NeoForge.EVENT_BUS.addListener(CupidLanternVisualProbe::gui);
@@ -81,6 +86,10 @@ public final class LotusClientProbe {
                     break;
                 }
             }
+        }
+        if (GUARDIAN_ONLY) {
+            GuardianWarningProbe.clientTick(client);
+            return;
         }
         if (stage == Stage.DIRK_COUNTDOWN) {
             try {

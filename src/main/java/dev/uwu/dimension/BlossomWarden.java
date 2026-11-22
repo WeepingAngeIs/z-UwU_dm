@@ -57,7 +57,8 @@ public final class BlossomWarden extends PathfinderMob {
     private static final int PATROL_RETURN_RANGE = 50;
     private static final int RESCUE_TICKS = 60;
     private static final double RESCUE_RANGE_SQUARED = 64 * 64;
-    private static final byte IDLE = 0, CHASE = 1, GRIP = 2, THROW = 3;
+    private static final byte IDLE = 0, CHASE = 1, GRIP = 2, THROW = 3, WARNING_LOOK = 4;
+    private static final int WARNING_LOOK_TICKS = 28;
     private static final EntityDataAccessor<Byte> POSE = SynchedEntityData.defineId(BlossomWarden.class, EntityDataSerializers.BYTE);
     private static final EntityDataAccessor<Boolean> FEMALE =
             SynchedEntityData.defineId(BlossomWarden.class, EntityDataSerializers.BOOLEAN);
@@ -115,6 +116,7 @@ public final class BlossomWarden extends PathfinderMob {
     }
 
     private final ArrayDeque<UUID> offenders = new ArrayDeque<>();
+    private final GuardianWarnings warnings = new GuardianWarnings();
     private final Map<UUID, PursuitDelay> unreachableUntil = new HashMap<>();
     private final Map<UUID, Long> rescueAlerts = new LinkedHashMap<>();
     @Nullable private Rescue rescue;
@@ -223,6 +225,7 @@ public final class BlossomWarden extends PathfinderMob {
             case CHASE -> "pursuing";
             case GRIP -> "holding";
             case THROW -> "releasing";
+            case WARNING_LOOK -> "warning";
             default -> "patrolling";
         };
         return phase + ", " + offenders.size() + " queued, pursuit " + (pursueTicks / 20.0)
@@ -305,8 +308,13 @@ public final class BlossomWarden extends PathfinderMob {
     private void alertRescue(LivingEntity culprit) {
         if (!canPursue(culprit) || culprit.isSpectator()) return;
         UUID id = culprit.getUUID();
+        warnings.abandon(id); // Attacking a protected Keeper retains the normal rescue response.
         if (rescue != null && rescue.target.equals(id)) return;
-        if (gripping() || throwing() || rescue != null) {
+        if (gripping() || throwing() || entityData.get(POSE) == WARNING_LOOK || rescue != null) {
+            if (id.equals(offender()) && entityData.get(POSE) == WARNING_LOOK) {
+                beginRescue(id);
+                return;
+            }
             if (!id.equals(offender())) rescueAlerts.putIfAbsent(id, level().getGameTime() + RESCUE_TICKS);
             return;
         }
@@ -351,7 +359,7 @@ public final class BlossomWarden extends PathfinderMob {
                 finish(level, false);
             }
         }
-        if (rescue == null && !gripping() && !throwing() && !rescueAlerts.isEmpty()) {
+        if (rescue == null && !gripping() && !throwing() && entityData.get(POSE) != WARNING_LOOK && !rescueAlerts.isEmpty()) {
             var pending = rescueAlerts.entrySet().iterator();
             while (pending.hasNext()) {
                 var alert = pending.next();
@@ -382,7 +390,15 @@ public final class BlossomWarden extends PathfinderMob {
     @Override public boolean hurt(DamageSource source, float amount) {
         float previous = getHealth();
         boolean hurt = super.hurt(source, amount);
-        if (hurt && getHealth() < previous && !level().isClientSide && source.getEntity() instanceof LivingEntity foe) accuse(foe);
+        if (hurt && getHealth() < previous && level() instanceof ServerLevel server && source.getEntity() instanceof LivingEntity foe) {
+            if (foe instanceof ServerPlayer player) {
+                UUID id = player.getUUID();
+                if (!player.isSpectator() && canPursue(player) && warnings.accept(id, server.getGameTime(), offenders.contains(id))) {
+                    if (id.equals(offender()) && entityData.get(POSE) == WARNING_LOOK) transition(CHASE);
+                    accuse(id);
+                }
+            } else accuse(foe);
+        }
         return hurt;
     }
 
@@ -403,6 +419,7 @@ public final class BlossomWarden extends PathfinderMob {
             }
         }
         if (!(level() instanceof ServerLevel level)) return;
+        if (tickCount % 100 == 0) warnings.prune(level.getGameTime());
         family.tick(this,level);
         resolveVillageHome(level);
         if (court == null) bindPersonalPatrol(blockPosition());
@@ -429,6 +446,10 @@ public final class BlossomWarden extends PathfinderMob {
             return;
         }
         missingTicks = 0;
+        if (culprit.isSpectator() && (warnings.pending(culprit.getUUID()) || entityData.get(POSE) == WARNING_LOOK)) {
+            finish(level, false);
+            return;
+        }
         setTarget(culprit);
         byte phase = entityData.get(POSE);
         if(culprit.getPersistentData().contains(GuardianFlight.STATE)&&phase!=GRIP&&phase!=THROW){finish(level);return;}
@@ -492,11 +513,28 @@ public final class BlossomWarden extends PathfinderMob {
             culprit.fallDistance=0;
             if (motionTicks % 4 == 0) petals(level,hands);
             if (++motionTicks >= 16) {
-                transition(THROW);
-                GuardianFlight.start(culprit,destination);
+                if (culprit instanceof ServerPlayer player && warnings.pending(player.getUUID())) {
+                    warnings.delivered(player.getUUID(), level.getGameTime());
+                    GuardianWarnings.toss(player, takeoffY);
+                    transition(WARNING_LOOK);
+                } else {
+                    transition(THROW);
+                    GuardianFlight.start(culprit,destination);
+                }
                 level.sendParticles(ParticleTypes.GUST_EMITTER_SMALL,getX(),getY()+2,getZ(),1,0,0,0,0);
                 sound(level, SoundEvents.IRON_GOLEM_ATTACK, .72F);
             }
+        } else if (phase == WARNING_LOOK) {
+            getNavigation().stop();
+            double dx = culprit.getX() - getX(), dz = culprit.getZ() - getZ();
+            float bearing = (float) Math.toDegrees(Math.atan2(-dx, dz));
+            setYRot(bearing);
+            setYBodyRot(bearing);
+            setXRot((float)-Math.toDegrees(Math.atan2(culprit.getEyeY() - getEyeY(), Math.max(.01, Math.hypot(dx, dz)))));
+            // The body faces the player while vanilla's tracked head yaw gives two distinct "no" sweeps.
+            float shake = (float)(26 * Math.sin(motionTicks * Math.PI / 6) * Math.min(1, motionTicks / 3.0));
+            setYHeadRot(bearing + (motionTicks < 24 ? shake : 0));
+            if (++motionTicks >= WARNING_LOOK_TICKS) finish(level, false);
         } else if (phase == THROW) {
             // Migrate a saved pre-1.2.2 throw, or hand off the released target immediately.
             if(!culprit.getPersistentData().contains(GuardianFlight.STATE)&&culprit.getY()<destination.y-1)
@@ -509,8 +547,12 @@ public final class BlossomWarden extends PathfinderMob {
     private void relocateFamilyPatrol(ServerLevel level) {
         UUID previous=offender();
         bindPersonalPatrol(blockPosition());
-        offenders.removeIf(id -> !(level.getEntity(id) instanceof LivingEntity foe)
-                || !foe.isAlive() || distanceToSqr(foe) > PATROL_RETURN_RANGE*PATROL_RETURN_RANGE);
+        offenders.removeIf(id -> {
+            if (level.getEntity(id) instanceof LivingEntity foe && foe.isAlive()
+                    && distanceToSqr(foe) <= PATROL_RETURN_RANGE*PATROL_RETURN_RANGE) return false;
+            warnings.abandon(id);
+            return true;
+        });
         unreachableUntil.clear();
         if(previous!=null && !previous.equals(offender())){
             setTarget(null);
@@ -579,7 +621,9 @@ public final class BlossomWarden extends PathfinderMob {
     }
 
     private void finish(ServerLevel level, boolean emergencyReturn) {
-        rescueAlerts.remove(offenders.removeFirst());
+        UUID finished = offenders.removeFirst();
+        rescueAlerts.remove(finished);
+        warnings.abandon(finished);
         rescueGrab = false;
         if (rescueSprinting()) stopRescue();
         setTarget(null);
@@ -623,6 +667,7 @@ public final class BlossomWarden extends PathfinderMob {
             var entry = new CompoundTag(); entry.putUUID("Offender",id); list.add(entry);
         }
         tag.put("Offenders",list); tag.putByte("GripPhase",entityData.get(POSE)); tag.putInt("PursueTicks",pursueTicks);
+        warnings.save(tag, level().getGameTime());
         if (rescueGrab) tag.putBoolean("RescueGrab", true);
         tag.putInt("MotionTicks",motionTicks); tag.putDouble("Takeoff",takeoffY);
         tag.putDouble("TossX",destination.x); tag.putDouble("TossY",destination.y); tag.putDouble("TossZ",destination.z);
@@ -650,6 +695,7 @@ public final class BlossomWarden extends PathfinderMob {
         offenders.clear();
         var list=tag.getList("Offenders",Tag.TAG_COMPOUND);
         for(int i=0;i<list.size();i++) if(list.getCompound(i).hasUUID("Offender")) offenders.add(list.getCompound(i).getUUID("Offender"));
+        warnings.load(tag, offenders, level().getGameTime());
         entityData.set(POSE,offenders.isEmpty()?IDLE:tag.getByte("GripPhase")); pursueTicks=tag.getInt("PursueTicks");
         rescueGrab = (gripping() || throwing()) && tag.getBoolean("RescueGrab");
         motionTicks=tag.getInt("MotionTicks"); takeoffY=tag.getDouble("Takeoff");
