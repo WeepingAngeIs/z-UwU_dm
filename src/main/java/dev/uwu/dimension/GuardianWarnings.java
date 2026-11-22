@@ -97,13 +97,12 @@ public final class GuardianWarnings {
         player.getPersistentData().put(LANDING, landing);
         player.fallDistance = 0;
         player.setOnGround(false);
-        // Vanilla movement covers the remainder of the ten-block arc from the raised hands.
         if (kind == SECOND) {
             // In still air this travels about twenty blocks horizontally before returning to level ground.
-            var horizontal = GuardianWarningMotion.forward(bearing).yRot(left ? .95F : -.95F).scale(2.05);
+            var horizontal = GuardianWarningMotion.forward(bearing).yRot(left ? .95F : -.95F).scale(2.18);
             player.setDeltaMovement(horizontal.x, .94, horizontal.z);
         } else {
-            player.setDeltaMovement(0, 1.30, 0);
+            player.setDeltaMovement(0, 1.39, 0);
         }
         player.hurtMarked = true; // ServerEntity sends the velocity to the player and tracking clients.
     }
