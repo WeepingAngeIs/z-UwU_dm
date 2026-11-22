@@ -301,10 +301,12 @@ public final class WeaponSettingsProbe {
                 if (age() < 22) return;
                 equal(dummy.getMaxHealth() - dummy.getHealth(), 5, "Heart Spin must use its own hit setting once per target");
                 dummy.discard(); dummy = mob(EntityType.COW, START.south(5));
-                run(W + "counter_iron_chakram castCooldownSeconds 1.75");
-                run(W + "counter_iron_chakram abilityDamage 3");
-                run(W + "counter_iron_chakram baseHitDamage 8");
-                archer.setItemInHand(HAND, item("counter_iron_chakram")); next(13);
+                require("chakram".equals(CounterArsenal.entry("counter_iron_twinblade").shape()), "Fixture must use an actual playable chakram");
+                reject(W + "counter_iron_chakram abilityDamage 3", console()); // Retired ring bow answers the enemy chakram.
+                run(W + "counter_iron_twinblade castCooldownSeconds 1.75");
+                run(W + "counter_iron_twinblade abilityDamage 3");
+                run(W + "counter_iron_twinblade baseHitDamage 8");
+                archer.setItemInHand(HAND, item("counter_iron_twinblade")); next(13);
             }
             case 13 -> {
                 if (age() < 3) return;
@@ -316,14 +318,14 @@ public final class WeaponSettingsProbe {
             }
             case 14 -> {
                 if (age() < 35) {
-                    require(archer.getCooldowns().isOnCooldown(item("counter_iron_chakram").getItem()), "Chakram cooldown released early");
+                    require(archer.getCooldowns().isOnCooldown(item("counter_iron_twinblade").getItem()), "Chakram cooldown released early");
                     return;
                 }
-                require(!archer.getCooldowns().isOnCooldown(item("counter_iron_chakram").getItem()), "Chakram cooldown ran long");
+                require(!archer.getCooldowns().isOnCooldown(item("counter_iron_twinblade").getItem()), "Chakram cooldown ran long");
                 equal(dummy.getMaxHealth() - dummy.getHealth(), 3, "Chakram throw used another weapon's hit value");
-                equal(value("counter_gold_chakram", "abilityDamage").get(), 19, "Second chakram leaked balance");
+                equal(value("counter_gold_twinblade", "abilityDamage").get(), 19, "Second chakram leaked balance");
                 var glitch = item("glitch_bow");
-                int form = GlitchBow.FORMS.indexOf("counter_iron_chakram");
+                int form = GlitchBow.FORMS.indexOf("counter_iron_twinblade");
                 CustomData.update(DataComponents.CUSTOM_DATA, glitch, tag -> tag.putInt("uwu_form",form));
                 archer.setItemInHand(HAND, glitch); next(15);
             }
@@ -331,7 +333,7 @@ public final class WeaponSettingsProbe {
                 if (age() < 3) return;
                 equal(archer.getAttributeValue(Attributes.ATTACK_DAMAGE), 8, "Glitch missed the displayed form's melee value");
                 equal(archer.getAttributeValue(Attributes.ATTACK_SPEED), 1.3, "Glitch attack speed changed");
-                run(W + "counter_iron_chakram baseHitDamage 15"); next(16);
+                run(W + "counter_iron_twinblade baseHitDamage 15"); next(16);
             }
             case 16 -> {
                 if (age() < 3) return;
@@ -404,7 +406,11 @@ public final class WeaponSettingsProbe {
     }
     private CommandSourceStack console() { return server.createCommandSourceStack(); }
     private void run(String command) throws Exception {
-        require(server.getCommands().getDispatcher().execute(command, console()) == 1, "Command failed: " + command);
+        try {
+            require(server.getCommands().getDispatcher().execute(command, console()) == 1, "Command failed: " + command);
+        } catch (CommandSyntaxException failure) {
+            throw new AssertionError("Registered command failed: " + command, failure);
+        }
     }
     private void reject(String command, CommandSourceStack source) throws Exception {
         try { server.getCommands().getDispatcher().execute(command, source); }
