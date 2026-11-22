@@ -209,6 +209,12 @@ public final class BlossomWarden extends PathfinderMob {
         return level().dimension().location().equals(villageDimension) ? court : null;
     }
 
+    private void resolveVillageFaction(ServerLevel level, @Nullable BlockPos home) {
+        if (factionKnown || home == null) return;
+        Boolean dusk = GuardianVillageHomes.duskAt(level, home);
+        if (dusk != null) setDuskGuardian(dusk);
+    }
+
     boolean hasOffenders() { return !offenders.isEmpty(); }
 
     private void bindPersonalPatrol(BlockPos center) {
@@ -453,10 +459,7 @@ public final class BlossomWarden extends PathfinderMob {
         else if (family.offspring && distanceToSqr(Vec3.atBottomCenterOf(court)) > PATROL_RETURN_RANGE*PATROL_RETURN_RANGE)
             relocateFamilyPatrol(level);
         BlockPos home = villageHome();
-        if (home != null && !factionKnown && (tickCount == 1 || tickCount % 40 == 0)) {
-            Boolean dusk = GuardianVillageHomes.duskAt(level, home);
-            if (dusk != null) setDuskGuardian(dusk);
-        }
+        if (tickCount == 1 || tickCount % 20 == 0) resolveVillageFaction(level, home);
         if (home != null && !recordedVillage) {
             GuardianVillageHomes.remember(level, home);
             recordedVillage = true;
@@ -780,6 +783,10 @@ public final class BlossomWarden extends PathfinderMob {
                 if (villageDimension != null) clearRestriction();
             }
         }
+        // Resolve a legacy resident before the first tracking packet when its court is already available.
+        // Entity data can also be decoded off-thread during generation; the normal tick retries those cases.
+        if (level() instanceof ServerLevel server && server.getServer().isSameThread())
+            resolveVillageFaction(server, villageHome());
         rescue = null;
         rescueAlerts.clear();
         offenders.clear();
