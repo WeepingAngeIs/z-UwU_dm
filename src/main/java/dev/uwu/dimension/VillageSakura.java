@@ -32,7 +32,14 @@ final class VillageSakura {
         var cache = cache(level);
         if (cache.size() > 4096) cache.clear();
         Key key = new Key(village.site().gx(), village.site().gz(), village.dusk());
-        return cache.computeIfAbsent(key, ignored -> survey(level, village));
+        return cache.computeIfAbsent(key, ignored -> survey(level, village.landmarkLayout()));
+    }
+
+    static boolean reservedForTree(ServerLevel level, BlossomVillage.Plan village, int x1,int z1,int x2,int z2) {
+        var tree=plan(level,village);
+        if(tree.isEmpty())return false;
+        var p=tree.get();
+        return x1<=p.x+RADIUS && x2>=p.x-RADIUS && z1<=p.z+RADIUS && z2>=p.z-RADIUS;
     }
 
     /** Test the exact authored tree at shrine height without asking for a generating chunk. */

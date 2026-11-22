@@ -1,0 +1,19 @@
+gradle.projectsEvaluated {
+    def project = gradle.rootProject
+    def compile = project.tasks.register('compileVillageSizeProbe', JavaCompile) {
+        dependsOn project.tasks.named('classes')
+        source(project.fileTree('village-size-check/java') { include '**/*.java' })
+        source(project.file('weapon-check/java/dev/uwu/weaponcheck/CandidateJarProbe.java'))
+        classpath = project.sourceSets.main.compileClasspath + project.sourceSets.main.output
+        destinationDirectory.set(project.layout.buildDirectory.dir('village-size-check/classes'))
+        javaCompiler.set(project.tasks.named('compileJava', JavaCompile).flatMap { it.javaCompiler })
+        options.release.set(21)
+        options.encoding = 'UTF-8'
+    }
+    project.tasks.register('villageSizeProbeJar', Jar) {
+        archiveFileName.set('village-size-probe.jar')
+        destinationDirectory.set(project.layout.buildDirectory.dir('village-size-check'))
+        from(compile.flatMap { it.destinationDirectory })
+        from(project.file('village-size-check/resources'))
+    }
+}

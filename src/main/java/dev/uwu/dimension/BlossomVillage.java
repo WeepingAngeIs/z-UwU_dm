@@ -27,7 +27,12 @@ public final class BlossomVillage {
         int bedHeadZ(){return z+side*(wallBeds?depth-1:1);}
         int jobX(){return x+(wallBeds&&depth==3?2:1);}
     }
-    public record Plan(GroveSites.Site site,int x,int z,int y,int[] road,int[] bends,List<House> houses,boolean dusk){
+    public record Plan(GroveSites.Site site,int x,int z,int y,int[] road,int[] bends,List<House> houses,boolean dusk,Plan original){
+        public Plan(GroveSites.Site site,int x,int z,int y,int[] road,int[] bends,List<House> houses,boolean dusk){
+            this(site,x,z,y,road,bends,houses,dusk,null);
+        }
+        Plan landmarkLayout(){return original==null?this:original;}
+        boolean sideLane(House h){return original!=null&&!original.houses.contains(h);}
         public BlockPos plaza(){return site.pos(x,y+1,z);}
         public BlockPos bedHead(House h){return bedHead(h,0);}
         public BlockPos bedHead(House h,int slot){
@@ -39,9 +44,10 @@ public final class BlossomVillage {
         public BlockPos doorway(House h){return site.pos(h.x(),h.floor()+1,h.z()-h.side()*h.depth());}
         public BlockPos resident(House h){return site.pos(h.x(),h.floor()+1,h.z());}
     }
-    private record Key(int gx,int gz,boolean dusk,int attempts){}
+    private record Key(int gx,int gz,boolean dusk,int attempts,boolean varied){}
     private static final Map<ServerLevel,Map<Key,Optional<Plan>>> CACHE=new WeakHashMap<>();
     private static synchronized Map<Key,Optional<Plan>> cache(ServerLevel level){return CACHE.computeIfAbsent(level,k->new ConcurrentHashMap<>());}
+    static Block nextJob(int index){return JOBS[index%JOBS.length];}
     private static final Block[] JOBS={Blocks.COMPOSTER,Blocks.LOOM,Blocks.SMOKER,Blocks.BREWING_STAND,Blocks.CARTOGRAPHY_TABLE,Blocks.LECTERN,Blocks.FLETCHING_TABLE,Blocks.STONECUTTER};
     private static final int HALF=32;
     private static int ground(ServerLevel level,GroveSites.Site s,int x,int z){return GroveSites.height(level,s.wx(x,z),s.wz(x,z));}
@@ -89,7 +95,11 @@ public final class BlossomVillage {
      * use this stable envelope so an edit cannot introduce a structure collision. */
     public static Optional<Plan> potentialPlan(ServerLevel level,GroveSites.Site s,boolean dusk){
         if(!GroveSites.settlement(level,s,dusk))return Optional.empty();
-        return survey(level,s,dusk,dusk?SettlementLayout.duskSurveyAttempts(level,s):32);
+        int attempts=dusk?SettlementLayout.duskSurveyAttempts(level,s):32;
+        var original=survey(level,s,dusk,attempts);
+        if(original.isEmpty()||!SettlementLayout.newVillageLots(level,original.get()))return original;
+        return cache(level).computeIfAbsent(new Key(s.gx(),s.gz(),dusk,attempts,true),
+                ignored->Optional.of(VillageHouseLots.layout(level,original.get())));
     }
     // Pure terrain survey used while choosing the arrival site. Never asks whether this
     // region will host a settlement: that decision itself depends on the arrival site.
@@ -98,7 +108,7 @@ public final class BlossomVillage {
     }
     private static Optional<Plan> survey(ServerLevel level,GroveSites.Site s,boolean dusk,int attempts){
         var db=cache(level);if(db.size()>5000)db.clear();
-        return db.computeIfAbsent(new Key(s.gx(),s.gz(),dusk,attempts),k->design(level,s,dusk,attempts));
+        return db.computeIfAbsent(new Key(s.gx(),s.gz(),dusk,attempts,false),k->design(level,s,dusk,attempts));
     }
     public static Plan first(ServerLevel level,boolean dusk){
         var s=GroveSites.first(level);
@@ -153,7 +163,8 @@ public final class BlossomVillage {
         return Optional.empty();
     }
     static void place(HeartwaterFeature.Valley v,Plan p){
-        if(!v.overlaps(p.x()-HALF-3,p.z()-30,p.x()+HALF+3,p.z()+30))return;
+        if(!v.overlaps(p.x()-VillageHouseLots.EXTENT_X,p.z()-VillageHouseLots.EXTENT_Z,
+                p.x()+VillageHouseLots.EXTENT_X,p.z()+VillageHouseLots.EXTENT_Z))return;
         for (int dx=-HALF; dx<=HALF; dx++) for (int dz=-1; dz<=1; dz++) {
             int i=dx+HALF, y=p.road()[i], x=p.x()+dx, z=p.z()+p.bends()[i]+dz;
             road(v,x,y,z,p.dusk());
@@ -163,7 +174,8 @@ public final class BlossomVillage {
         for(House h:p.houses()){
             int za=p.z()+p.bends()[h.x()-p.x()+HALF]+h.side()*2,zb=h.z()-h.side()*h.depth();
             int y0=p.road()[h.x()-p.x()+HALF],n=Math.abs(zb-za);
-            for(int i=0;i<=n;i++)for(int dx=-1;dx<=1;dx++){
+            int pathRadius=p.sideLane(h)?0:1;
+            for(int i=0;i<=n;i++)for(int dx=-pathRadius;dx<=pathRadius;dx++){
                 int y=y0+(int)Math.round((h.floor()-y0)*i/(double)Math.max(1,n));
                 int x = h.x()+dx, z = za+i*h.side();
                 road(v,x,y,z,p.dusk());

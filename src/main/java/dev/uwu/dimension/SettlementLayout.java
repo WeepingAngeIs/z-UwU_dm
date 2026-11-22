@@ -48,6 +48,7 @@ public final class SettlementLayout extends SavedData {
     private final Map<Long,BitSet> beforeCupidShrines=new HashMap<>();
     private final Map<Long,BitSet> beforeDuskFactions=new HashMap<>();
     private final Map<Long,BitSet> beforeDuskFrequency=new HashMap<>();
+    private final Map<Long,BitSet> beforeVillageLots=new HashMap<>();
     private final Map<Long,Integer> duskSiteChances=new java.util.concurrent.ConcurrentHashMap<>();
     private final Map<Long,Boolean> duskFactions=new java.util.concurrent.ConcurrentHashMap<>();
     private final Set<Long> rejectedForest=java.util.concurrent.ConcurrentHashMap.newKeySet();
@@ -88,6 +89,7 @@ public final class SettlementLayout extends SavedData {
         // Existing empty chunks are protected too: never grow half a new village
         // around a footprint that was already generated under the previous policy.
         loadRoomSnapshot(regions,"uwudimension_before_dusk_frequency_v1.dat",data.beforeDuskFrequency);
+        loadRoomSnapshot(regions,"uwudimension_before_variable_village_lots_v1.dat",data.beforeVillageLots);
         data.previous.forEach((key,bits)->{
             var region=new ChunkPos(key);
             for(int i=bits.nextSetBit(0);i>=0;i=bits.nextSetBit(i+1)){
@@ -159,6 +161,12 @@ public final class SettlementLayout extends SavedData {
                 }
             }
         }catch(IOException error){throw new IllegalStateException("Could not read or create the house layout boundary at "+path,error);}
+    }
+    // Freeze a whole village if any chunk in its footprint already existed during upgrade.
+    static boolean newVillageLots(ServerLevel level,BlossomVillage.Plan plan){
+        return untouchedRoom(active(level).beforeVillageLots,plan.site(),
+                plan.x()-VillageHouseLots.EXTENT_X,plan.z()-VillageHouseLots.EXTENT_Z,
+                plan.x()+VillageHouseLots.EXTENT_X,plan.z()+VillageHouseLots.EXTENT_Z);
     }
     // All chunks of one house use the same bedroom, even if only its roof was on disk at upgrade.
     static boolean useWallBeds(ServerLevel level,GroveSites.Site site,int x,int z,int radiusX,int radiusZ){
