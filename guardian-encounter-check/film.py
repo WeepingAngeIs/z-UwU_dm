@@ -123,6 +123,9 @@ def gallery():
                                  key=lambda r:r["subpixelSample"])
                 need(len(samples) == 3 and all(r["texture"].endswith(f"{form}_guardian_male.png") for r in samples),
                      f"Wrong native male model/texture for {form} {angle}")
+                camera_positions=np.array([[r["eyeX"],r["eyeY"],r["eyeZ"]] for r in samples])
+                need(max(np.linalg.norm(a-b) for a in camera_positions for b in camera_positions)<.00075,
+                     f"Gallery camera moved farther than its intended subpixel jog: {form} {distance} {angle}")
                 imgs = []
                 for r in samples:
                     with Image.open(ROOT / "gallery" / r["file"]) as im:
