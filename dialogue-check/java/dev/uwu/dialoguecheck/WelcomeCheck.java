@@ -36,7 +36,7 @@ import net.neoforged.neoforge.event.tick.ServerTickEvent;
 
 /** Walk real visitors up to residents, let the production goal and renderer do all greeting work. */
 public final class WelcomeCheck {
-    private enum Stage { OFF, CONTROL, APPROACH, SHOW, EXIT, RETURN, COMPETE, RECONNECT, INTERRUPT, WARN, DONE }
+    private enum Stage { OFF, CONTROL, APPROACH, SHOW, EXIT, RETURN, LEAVING_APPROACH, OUTSIDE, COMPETE, RECONNECT, NEXT_DAWN, INTERRUPT, WARN, DONE }
     private static Stage stage = Stage.OFF;
     private static final BlockPos COURT = new BlockPos(128, 296, 128);
     private static final Vec3 ARRIVAL = Vec3.atBottomCenterOf(COURT).add(0, 0, -8);
@@ -55,6 +55,9 @@ public final class WelcomeCheck {
     private static long atFirst;
     private static int starts, maxSimultaneous;
     private static boolean wasG1, wasG2, sawApproach;
+    private static long beganSecondVisit;
+    private static CompoundTag firstVisitorReceipt, reconnectReceipt;
+    private static volatile int witnessA = -1, witnessB = -1, witnessFrames;
     private static final EnumSet<GuardianGreeting> males = EnumSet.noneOf(GuardianGreeting.class);
     private static final EnumSet<GuardianGreeting> females = EnumSet.noneOf(GuardianGreeting.class);
     private static final List<Map<String,Object>> trials = new ArrayList<>();
@@ -137,7 +140,8 @@ public final class WelcomeCheck {
         try {
             long age = level.getGameTime() - lastChange;
             if (age == 150 && stage == Stage.APPROACH) reportApproach();
-            require(age < 310, "server timeout " + stage + " trial=" + trial + " gap=" + owner.distanceTo(guard)
+            if (peer != null && (age == 65 || age == 180)) reportPeer();
+            require(age < 460, "server timeout " + stage + " trial=" + trial + " gap=" + owner.distanceTo(guard)
                     + " guard=" + guard.position() + " visitor=" + owner.position() + " greeting=" + guard.greeting());
             switch (stage) {
                 case CONTROL -> {
@@ -189,25 +193,58 @@ public final class WelcomeCheck {
                             "same-day re-entry/second guard greeted");
                     if (age >= 70) { trial++; beginTrial(); }
                 }
+                case LEAVING_APPROACH -> {
+                    require(!visit(peer).contains("Day"), "a distant approach spent the daily greeting");
+                    if (!guard.approachingVisitor() && !rival.approachingVisitor()) return;
+                    require(Math.min(peer.distanceTo(guard),peer.distanceTo(rival)) > 4, "visitor already reached");
+                    peer.setPos(ARRIVAL.add(2,0,-36));
+                    change(Stage.OUTSIDE);
+                }
+                case OUTSIDE -> {
+                    require(!visit(peer).contains("Day"), "interrupted approach spent a greeting");
+                    if (age < 18) return;
+                    require(!guard.approachingVisitor() && !rival.approachingVisitor(), "abandoned approach still reserved");
+                    peer.setPos(ARRIVAL.add(1,0,5));
+                    beganSecondVisit=-1;
+                    witnessA = guard.getId(); witnessB = rival.getId(); witnessFrames=0;
+                    change(Stage.COMPETE);
+                }
                 case COMPETE -> {
                     boolean a = guard.greeting() != GuardianGreeting.NONE, b = rival.greeting() != GuardianGreeting.NONE;
                     starts += (a && !wasG1 ? 1 : 0) + (b && !wasG2 ? 1 : 0);
                     wasG1 = a; wasG2 = b;
                     maxSimultaneous = Math.max(maxSimultaneous, (a?1:0) + (b?1:0));
-                    if (age < 110) return;
-                    require(starts == 1 && maxSimultaneous == 1 && visit(peer).getLong("Day") == lastDay
-                            && visit(owner).getLong("Day") == lastDay, "two Guardians duplicated or stole a player's welcome: " + starts);
+                    require(starts<=1 && maxSimultaneous<=1, "duplicate welcome for the second visitor");
+                    require(visit(owner).equals(firstVisitorReceipt), "watching changed the first visitor's receipt");
+                    if ((a || b) && beganSecondVisit<0) {
+                        var speaker = a ? guard : rival;
+                        require(visit(peer).getLong("Day")==lastDay && speaker.distanceTo(peer)<=3.8, "wrong visitor assigned");
+                        beganSecondVisit=level.getGameTime();
+                    }
+                    if (beganSecondVisit<0 || level.getGameTime()-beganSecondVisit<85) return;
+                    require(starts==1 && witnessFrames>=2, "first player never saw the other visitor's overhead welcome: " + witnessFrames);
+                    witnessA = witnessB = -1;
+                    reconnectReceipt = visit(peer).copy();
                     var saved = peer.saveWithoutId(new CompoundTag());
                     var profile = peer.getGameProfile();
                     ServerSpeechProbe.detach(peer);
                     peer = ServerSpeechProbe.attach(owner, level, profile, ARRIVAL.add(1,0,0), saved);
-                    require(visit(peer).getLong("Day") == lastDay, "real player save/load lost daily receipt");
+                    require(visit(peer).equals(reconnectReceipt), "real player save/load lost daily receipt");
                     change(Stage.RECONNECT);
                 }
                 case RECONNECT -> {
                     require(guard.greeting() == GuardianGreeting.NONE && rival.greeting() == GuardianGreeting.NONE, "reconnect welcomed twice");
                     if (age < 65) return;
+                    owner.setGameMode(GameType.SPECTATOR);
+                    dawn(100 + trial);
+                    change(Stage.NEXT_DAWN);
+                }
+                case NEXT_DAWN -> {
+                    if (visit(peer).getLong("Day") != 100+trial) return;
+                    require(visit(peer).getInt("LastGesture") != reconnectReceipt.getInt("LastGesture")
+                            && visit(owner).equals(firstVisitorReceipt), "new morning did not vary or changed observer");
                     ServerSpeechProbe.detach(peer); peer = null;
+                    owner.setGameMode(GameType.SURVIVAL);
                     rival.discard(); rival = null;
                     guard.discard(); guard = create(false,false,.5,true);
                     dawn(100 + trial);
@@ -223,7 +260,7 @@ public final class WelcomeCheck {
                     if (!guard.warningShake()) return;
                     require(age < 95, "first warning was delayed by the greeting");
                     stage = Stage.DONE;
-                    System.out.println("GUARDIAN DAILY VISITS PASS days=14 tested departures, re-entry, player save/rejoin, two residents, independent visitor and combat preemption");
+                    System.out.println("GUARDIAN DAILY VISITS PASS days=14 tested departures, re-entry, interrupted approach, observer, player save/rejoin, next morning, two residents and combat preemption");
                     Files.createDirectories(OUT);
                     Files.writeString(OUT.resolve("visits.json"), new GsonBuilder().setPrettyPrinting().create().toJson(trials));
                     done = true;
@@ -248,11 +285,20 @@ public final class WelcomeCheck {
         guard = create(false,false,-1.5,true);
         rival = create(true,true,2.5,true);
         lastDay = 100 + trial - 1;
+        firstVisitorReceipt = visit(owner).copy();
         peer = ServerSpeechProbe.attach(owner, level, new GameProfile(UUID.randomUUID(),"WelcomeVisitor"),
-                ARRIVAL.add(1.5,0,0), null);
+                ARRIVAL.add(2,0,-3), null);
         require(!visit(peer).contains("Day"), "independent visitor already spent a greeting");
         starts = 0; maxSimultaneous = 0; wasG1 = wasG2 = false;
-        change(Stage.COMPETE);
+        change(Stage.LEAVING_APPROACH);
+    }
+
+    private static void reportPeer() {
+        System.out.println("WELCOME SECOND VISITOR stage=" + stage + " peer=" + peer.position() + " alive=" + peer.isAlive()
+            + " removed=" + peer.isRemoved() + " sleeping=" + peer.isSleeping() + " spectator=" + peer.isSpectator()
+            + " registered=" + level.players().contains(peer) + " sameLevel=" + (peer.level()==level) + " record=" + visit(peer)
+            + " main=" + visit(owner) + " first=" + guard.position() + "/" + guard.approachingVisitor() + "/" + guard.greeting()
+            + " second=" + rival.position() + "/" + rival.approachingVisitor() + "/" + rival.greeting());
     }
 
     private static CompoundTag visit(ServerPlayer player) {
@@ -281,6 +327,7 @@ public final class WelcomeCheck {
 
     public static void speaker(BlossomWarden entity) { drawing = entity; }
     public static void draw(Component text, String style, float fade) {
+        if (drawing != null && (drawing.getId()==witnessA || drawing.getId()==witnessB) && text.getString().equals("Welcome")) witnessFrames++;
         if (drawing == null || !filming || drawing.getId()!=entityId) return;
         require(text.getString().equals("Welcome"), "wrong overhead words " + text.getString());
         seen=drawing; draws++; frameStyle=style; alpha=fade;
