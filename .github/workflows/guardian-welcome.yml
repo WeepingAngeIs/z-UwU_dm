@@ -1,0 +1,85 @@
+name: Village welcome playtest
+on:
+  push:
+    branches: ['codex/guardian-village-welcome']
+permissions:
+  contents: read
+concurrency:
+  group: guardian-welcome-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  package:
+    if: github.repository == 'WeepingAngeIs/z-UwU_dm' && github.event.repository.private == false
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    outputs:
+      hash: ${{ steps.seal.outputs.hash }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with: {persist-credentials: false, fetch-depth: 0}
+      - uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880
+        with: {distribution: temurin, java-version: '21'}
+      - name: Build the cumulative product with its original village dialogue
+        id: seal
+        run: |
+          git merge-base --is-ancestor c7288c1510e85b2d1ec2e8dfd8dc8abfbfbf3baa HEAD
+          git diff --exit-code c7288c1510e85b2d1ec2e8dfd8dc8abfbfbf3baa HEAD -- src/main/resources/assets/uwudimension/geometry src/main/java/dev/uwu/dimension/{Keeper,KeeperSpeech,SakuraAmbientDialogue,GuardianWarnings,GuardianWarningMotion}.java
+          bash weapon-release/bootstrap.sh
+          bash gradlew --no-daemon --max-workers=2 jar
+          mkdir -p build/welcome-candidate
+          cp build/libs/*-guardians.3.jar build/welcome-candidate/
+          cd build/welcome-candidate
+          sha256sum *.jar > SHA256SUMS.txt
+          echo "hash=$(cut -d' ' -f1 SHA256SUMS.txt)" >> "$GITHUB_OUTPUT"
+          echo "$GITHUB_SHA" > source.txt
+          if unzip -Z1 *.jar | grep -Ei 'chatbubbles|dialoguecheck|dev/jvitor'; then exit 1; fi
+          if unzip -p *.jar META-INF/neoforge.mods.toml | grep -qi chatbubbles; then exit 1; fi
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: village-welcome-candidate-${{ github.sha }}
+          path: build/welcome-candidate/
+          retention-days: 14
+          compression-level: 0
+          if-no-files-found: error
+  village:
+    needs: package
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      matrix: {mode: [with-reference, without-reference]}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with: {persist-credentials: false}
+      - uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880
+        with: {distribution: temurin, java-version: '21'}
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
+        with:
+          name: village-welcome-candidate-${{ github.sha }}
+          path: build/welcome-candidate
+          digest-mismatch: error
+      - name: Visit both villages on the sealed product and capture the overhead lettering
+        env:
+          UWU_EXPECTED_JAR_SHA256: ${{ needs.package.outputs.hash }}
+          UWU_GUARDIAN_WELCOME_CHECK: 'true'
+          MODE: ${{ matrix.mode }}
+        run: |
+          (cd build/welcome-candidate && sha256sum -c SHA256SUMS.txt)
+          export UWU_JAR=$(realpath build/welcome-candidate/*-guardians.3.jar)
+          bash weapon-release/bootstrap.sh
+          if ! command -v xvfb-run >/dev/null || ! /usr/bin/python3 -c 'import PIL,numpy'; then
+            sudo apt-get update -qq && sudo apt-get install -y xvfb xauth libgl1-mesa-dri libopenal1 python3-pil python3-numpy
+          fi
+          bash dialogue-check/run-client.sh "$MODE"
+          grep -F 'GUARDIAN DAILY VISITS PASS' "build/dialogue-$MODE.log"
+          /usr/bin/python3 dialogue-check/welcome_pictures.py "build/dialogue-evidence/$MODE"
+      - if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: village-welcome-gameplay-${{ matrix.mode }}-${{ github.sha }}
+          path: |
+            build/dialogue-evidence/
+            build/dialogue-*.log
+          retention-days: 10
+          compression-level: 1
+          if-no-files-found: warn

@@ -186,10 +186,7 @@ final class ServerSpeechProbe {
 
     void cleanup(ServerPlayer owner) throws Exception {
         for (Peer peer : peers) {
-            online(owner.server.getPlayerList()).remove(peer.player);
-            byUuid(owner.server.getPlayerList()).remove(peer.player.getUUID());
-            peer.player.serverLevel().removePlayerImmediately(peer.player, Entity.RemovalReason.DISCARDED);
-            peer.wire.channel.finishAndReleaseAll();
+            detach(peer.player);
         }
         peers.clear();
         if (petal != null) petal.discard();
@@ -205,15 +202,29 @@ final class ServerSpeechProbe {
     }
 
     private void peer(ServerPlayer owner, ServerLevel level, String name, Vec3 offset, boolean expected) throws Exception {
-        var player = new ServerPlayer(owner.server, level, new GameProfile(UUID.randomUUID(), "Sp" + name), ClientInformation.createDefault());
-        var wire = new RecordingListener(player);
+        var player = attach(owner, level, new GameProfile(UUID.randomUUID(), "Sp" + name), petal.position().add(offset), null);
+        peers.add(new Peer(name, player, (RecordingListener) player.connection, offset, expected));
+    }
+
+    static ServerPlayer attach(ServerPlayer owner, ServerLevel level, GameProfile profile, Vec3 pos,
+                               net.minecraft.nbt.CompoundTag saved) throws Exception {
+        var player = new ServerPlayer(owner.server, level, profile, ClientInformation.createDefault());
+        new RecordingListener(player);
         player.setGameMode(GameType.SURVIVAL); player.setNoGravity(true); player.setInvulnerable(true);
-        player.setPos(petal.position().add(offset));
+        if (saved != null) player.load(saved);
+        player.setPos(pos);
         online(owner.server.getPlayerList()).add(player);
         byUuid(owner.server.getPlayerList()).put(player.getUUID(), player);
         level.addNewPlayer(player);
         require(level.players().contains(player), "Recorder is not in the real level player list");
-        peers.add(new Peer(name, player, wire, offset, expected));
+        return player;
+    }
+
+    static void detach(ServerPlayer player) throws Exception {
+        online(player.server.getPlayerList()).remove(player);
+        byUuid(player.server.getPlayerList()).remove(player.getUUID());
+        player.serverLevel().removePlayerImmediately(player, Entity.RemovalReason.DISCARDED);
+        ((RecordingListener)player.connection).channel.finishAndReleaseAll();
     }
 
     @SuppressWarnings("unchecked")

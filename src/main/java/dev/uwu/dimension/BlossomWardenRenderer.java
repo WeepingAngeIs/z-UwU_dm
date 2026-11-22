@@ -30,6 +30,8 @@ public final class BlossomWardenRenderer extends MobRenderer<BlossomWarden,Bloss
     }
     private static final ResourceLocation[] FEMALE_TEXTURES=expressionFrames("female_uwu_guardian");
     private static final ResourceLocation[] DUSK_FEMALE_TEXTURES=expressionFrames("dusk_guardian_female");
+    private static final ResourceLocation DUSK_MALE_WINK = skin("dusk_guardian_male_wink");
+    private static final ResourceLocation DUSK_FEMALE_WINK = skin("dusk_guardian_female_wink");
     private final Model maleModel;
     private final Model femaleModel;
 
@@ -46,6 +48,10 @@ public final class BlossomWardenRenderer extends MobRenderer<BlossomWarden,Bloss
     }
     @Override public ResourceLocation getTextureLocation(BlossomWarden entity) {
         if (entity.warningWink() && !entity.duskGuardian()) return entity.female()?FEMALE_WINK:MALE_WINK;
+        if (entity.greeting().winking(entity.greetingTicks(0))) {
+            if (entity.female()) return entity.duskGuardian() ? DUSK_FEMALE_WINK : FEMALE_WINK;
+            return entity.duskGuardian() ? DUSK_MALE_WINK : MALE_WINK;
+        }
         if (!entity.female()) return entity.duskGuardian()?DUSK_MALE:PETAL_MALE;
         boolean standingIdle = entity.idlePose() && entity.isAlive() && entity.onGround()
                 && !entity.isPassenger() && !entity.isInWaterOrBubble() && !entity.walkAnimation.isMoving();
@@ -54,6 +60,9 @@ public final class BlossomWardenRenderer extends MobRenderer<BlossomWarden,Bloss
     }
     @Override protected void setupRotations(BlossomWarden entity,PoseStack poses,float age,float bodyYaw,float partial,float scale) {
         super.setupRotations(entity,poses,age,bodyYaw,partial,scale);
+        if (entity.greeting() != GuardianGreeting.NONE) {
+            GuardianGreetingMotion.body(entity.greeting(), entity.greetingTicks(partial), poses, entity.getScale());
+        }
         if (!entity.warningFlip()) return;
         float elapsed=entity.flipAnimationTicks(partial);
         float size=entity.getAgeScale(); // Generic entity scale is already on the incoming pose stack.
@@ -66,6 +75,7 @@ public final class BlossomWardenRenderer extends MobRenderer<BlossomWarden,Bloss
             MultiBufferSource buffers, int light) {
         model = entity.female() ? femaleModel : maleModel;
         super.render(entity, yaw, partial, poses, buffers, light);
+        dev.uwu.dimension.client.VillageSpeechFrame.welcome(entity, partial, poses, buffers);
     }
     @SubscribeEvent public static void model(EntityRenderersEvent.RegisterLayerDefinitions e) { e.registerLayerDefinition(LAYER,MaleGuardianModel::layer); e.registerLayerDefinition(FEMALE_LAYER,FemaleGuardianModel::layer); }
     @SubscribeEvent public static void renderer(EntityRenderersEvent.RegisterRenderers e) {
@@ -91,9 +101,7 @@ public final class BlossomWardenRenderer extends MobRenderer<BlossomWarden,Bloss
         }
         @Override public void setupAnim(BlossomWarden w,float walk,float speed,float age,float yaw,float pitch) {
             boolean female = w.female();
-            if (female) {
-                OwlGuardianGaits.reset(gaitParts);
-            }
+            OwlGuardianGaits.reset(gaitParts);
             head.yRot=yaw*Mth.DEG_TO_RAD*.85F;head.xRot=pitch*Mth.DEG_TO_RAD*.55F;
             if (w.warningShake()) {
                 float partial=Mth.clamp(age-w.tickCount,0F,1F);
@@ -113,7 +121,10 @@ public final class BlossomWardenRenderer extends MobRenderer<BlossomWarden,Bloss
                 left.zRot=Mth.lerp(settle, .28F, .08F);right.zRot=-left.zRot;
                 footL.xRot=footR.xRot=Mth.lerp(settle, -.20F, 0F);
             }
-            if (female) {
+            if (w.greeting() != GuardianGreeting.NONE) {
+                float partial = Mth.clamp(age - w.tickCount, 0F, 1F);
+                GuardianGreetingMotion.limbs(w.greeting(), w.greetingTicks(partial), head, left, right, footL, footR);
+            } else if (female) {
                 boolean grounded = w.onGround() && !w.isPassenger() && !w.isInWaterOrBubble();
                 var clip = OwlGuardianGaits.select(grounded, w.gripping() || w.throwing() || w.warningShake() || w.warningWink() || w.warningFlip(), w.chasing(), speed);
                 if (clip != null) {

@@ -152,6 +152,12 @@ function remapSmall(name,destination,swatches){
     }
     save(destination,base);
 }
+// This option emits only the two greeting expressions and never rebakes the model.
+if (process.argv.includes('--greeting-eyes')) {
+    save('entity/dusk_guardian_male_wink',paintMale(true,true));
+    save('entity/dusk_guardian_female_wink',femaleDusk(femaleWink()));
+    process.exit(0);
+}
 bake();
 save('entity/petal_guardian_male',paintMale(false,false));
 save('entity/petal_guardian_male_wink',paintMale(false,true));

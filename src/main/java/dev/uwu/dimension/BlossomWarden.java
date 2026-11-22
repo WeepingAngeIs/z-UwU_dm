@@ -69,6 +69,8 @@ public final class BlossomWarden extends PathfinderMob {
     private static final EntityDataAccessor<Boolean> DUSK = SynchedEntityData.defineId(BlossomWarden.class, EntityDataSerializers.BOOLEAN);
     private static final EntityDataAccessor<Long> WARNING_STARTED = SynchedEntityData.defineId(BlossomWarden.class, EntityDataSerializers.LONG);
     private static final EntityDataAccessor<Integer> HELD_PLAYER = SynchedEntityData.defineId(BlossomWarden.class, EntityDataSerializers.INT);
+    private static final EntityDataAccessor<Byte> GREETING = SynchedEntityData.defineId(BlossomWarden.class, EntityDataSerializers.BYTE);
+    private static final EntityDataAccessor<Long> GREETING_STARTED = SynchedEntityData.defineId(BlossomWarden.class, EntityDataSerializers.LONG);
     private boolean factionKnown;
     private float warningBearing;
     private long clientFlipPhaseBegan = -1;
@@ -173,6 +175,8 @@ public final class BlossomWarden extends PathfinderMob {
         builder.define(DUSK, false);
         builder.define(WARNING_STARTED, 0L);
         builder.define(HELD_PLAYER, -1);
+        builder.define(GREETING, (byte) 0);
+        builder.define(GREETING_STARTED, 0L);
     }
 
     @Override protected PathNavigation createNavigation(Level level) {
@@ -193,6 +197,7 @@ public final class BlossomWarden extends PathfinderMob {
         goalSelector.addGoal(2, new GuardianDoorGoal(this));
         departure = new GuardianDepartureGoal(this);
         goalSelector.addGoal(2, departure);
+        goalSelector.addGoal(2, new GuardianGreetingGoal(this));
         villagePatrol = new GuardianPatrolGoal(this);
         goalSelector.addGoal(3, villagePatrol);
         goalSelector.addGoal(4, new MoveTowardsRestrictionGoal(this, .85) {
@@ -245,6 +250,15 @@ public final class BlossomWarden extends PathfinderMob {
             if (nearest != null) bindVillage(nearest);
         }
     }
+    public GuardianGreeting greeting() { return GuardianGreeting.byId(entityData.get(GREETING)); }
+    public float greetingTicks(float partial) { return level().getGameTime() - entityData.get(GREETING_STARTED) + partial; }
+    void beginGreeting(GuardianGreeting greeting) {
+        entityData.set(GREETING_STARTED, level().getGameTime());
+        entityData.set(GREETING, (byte) greeting.ordinal());
+    }
+    void endGreeting() { entityData.set(GREETING, (byte) 0); }
+    void walkAwayFrom(float bearing) { departure.afterToss(bearing); }
+
     public boolean chasing() { return entityData.get(POSE) == CHASE; }
     boolean idlePose() { return entityData.get(POSE) == IDLE; }
     private boolean facingForWarning() {
@@ -451,6 +465,7 @@ public final class BlossomWarden extends PathfinderMob {
     }
 
     private void transition(byte phase) {
+        if (phase != IDLE) endGreeting();
         if (phase == IDLE || phase == CHASE) rescueGrab = false;
         entityData.set(POSE, phase);
         if (phase != WARNING_FLIP) entityData.set(HELD_PLAYER, -1);

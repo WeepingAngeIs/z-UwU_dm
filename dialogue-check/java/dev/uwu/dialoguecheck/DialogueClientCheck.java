@@ -53,7 +53,7 @@ public final class DialogueClientCheck {
     private enum Stage { LOAD, READY, PETAL, PETAL_CAMERA, PETAL_FRAME, DUSK_READY, DUSK,
         DUSK_CAMERA, DUSK_FRAME, TALK_READY, TALK, TALK_CAMERA, TALK_FRAME,
         REPLY_READY, REPLY, REPLY_CAMERA, REPLY_FRAME, EXPIRE, REFRESH, SWITCH,
-        SWITCHED, REFERENCE, CLEANUP, DONE }
+        SWITCHED, REFERENCE, CLEANUP, WELCOME, DONE }
     private static final String MODE = System.getProperty("uwu.check.dialogueMode", "without-reference");
     private static final boolean REFERENCE = MODE.equals("with-reference");
     private static final String PLAYER_CONTROL = "UwU reference player control";
@@ -84,6 +84,7 @@ public final class DialogueClientCheck {
         NeoForge.EVENT_BUS.addListener(DialogueClientCheck::frame);
         NeoForge.EVENT_BUS.addListener(DialogueClientCheck::nativeKeeper);
         NeoForge.EVENT_BUS.addListener(DialogueClientCheck::chat);
+        if (WelcomeCheck.enabled()) WelcomeCheck.register();
     }
 
     private static void tick(ClientTickEvent.Post event) {
@@ -105,7 +106,7 @@ public final class DialogueClientCheck {
             }
             if (client.player == null || client.level == null) return;
             if (renderFailure != null) throw new AssertionError("Render evidence failed", renderFailure);
-            require(System.nanoTime() - stageStarted < 180_000_000_000L, "Timed out stage=" + stage);
+            require(System.nanoTime() - stageStarted < (stage == Stage.WELCOME ? 420_000_000_000L : 180_000_000_000L), "Timed out stage=" + stage);
             if (serverWork != null) {
                 if (!serverWork.isDone()) return;
                 serverWork.join(); serverWork = null;
@@ -215,7 +216,14 @@ public final class DialogueClientCheck {
                 case CLEANUP -> {
                     writeReport(client);
                     System.out.println("KEEPER SPEECH RENDER PASS native Keeper model and overhead bubble observed together; five actual screenshots mode=" + MODE);
-                    next(Stage.DONE);
+                    if (WelcomeCheck.enabled()) {
+                        action(client, WelcomeCheck::start);
+                        next(Stage.WELCOME);
+                    } else next(Stage.DONE);
+                }
+                case WELCOME -> {
+                    if (WelcomeCheck.problem != null) throw new AssertionError("Guardian visit", WelcomeCheck.problem);
+                    if (WelcomeCheck.done) next(Stage.DONE);
                 }
                 default -> { }
             }
@@ -366,7 +374,7 @@ public final class DialogueClientCheck {
     }
 
     @SuppressWarnings("unchecked")
-    private static List<String> referenceMessages(Entity entity) throws Exception {
+    static List<String> referenceMessages(Entity entity) throws Exception {
         var supplier = (Supplier<?>) Class.forName("dev.jvitor.chatbubbles.data.ModAttachments").getField("BUBBLES").get(null);
         var type = (AttachmentType<Object>) supplier.get();
         if (!entity.hasData(type)) return List.of();
