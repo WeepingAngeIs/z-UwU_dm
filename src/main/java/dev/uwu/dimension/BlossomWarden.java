@@ -272,6 +272,8 @@ public final class BlossomWarden extends PathfinderMob {
         if (clientFlipPhaseBegan < 0) return elapsed;
         float local = Math.max(0, level().getGameTime() - clientFlipPhaseBegan + partial);
         if (warningFollowThrough()) return Math.min(WARNING_FLIP_TICKS, FLIP_RELEASE_TICK + local);
+        // The female rig keeps its original timing relative to the player's standing first-person eye.
+        if (female()) return Math.min(FLIP_RELEASE_TICK, elapsed);
         // Start a normally received grip when it arrives. A new viewer tracking a flip already
         // in progress uses its server age. The held body never passes the actual release cue.
         long delay = clientFlipPhaseBegan - entityData.get(WARNING_STARTED);
