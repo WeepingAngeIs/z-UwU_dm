@@ -4,7 +4,6 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import dev.uwu.dimension.BlossomWarden;
 import dev.uwu.dimension.GuardianGreeting;
-import dev.uwu.dimension.UwUDimension;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.renderer.LightTexture;
@@ -23,7 +22,7 @@ public final class VillageSpeechFrame {
         Style(int border, int paper) { this.border = border; this.paper = paper; }
     }
 
-    private static final ResourceLocation TRIM = UwUDimension.id("textures/gui/village_speech_trim.png");
+    private static final ResourceLocation TRIM = ResourceLocation.fromNamespaceAndPath("uwudimension", "textures/gui/village_speech_trim.png");
     private static final Component WELCOME = Component.translatable("message.uwudimension.guardian_welcome");
     private static final int LIGHT = LightTexture.FULL_BRIGHT;
 
