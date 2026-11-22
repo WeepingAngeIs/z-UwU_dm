@@ -32,18 +32,20 @@ import net.neoforged.neoforge.common.NeoForge;
 /** Opens a disposable world and samples real owner-camera geometry and block light. */
 @Mod("uwu_lotus_client_check")
 public final class LotusClientProbe {
-    private enum Stage { LOAD, POSITION, DIRK_COUNTDOWN, REPLAY, JADE, CUPID, LANTERN, CUPID_SHRINE, DONE }
+    private enum Stage { LOAD, POSITION, DIRK_COUNTDOWN, REPLAY, JADE, CUPID, LANTERN, CUPID_SHRINE, BLOSSOM, DONE }
     private static Stage stage = Stage.LOAD;
     private static final boolean DIRK_ONLY = Boolean.getBoolean("uwu.check.dirkCountdown");
     private static final boolean SHRINE_ONLY = Boolean.getBoolean("uwu.check.shrine");
     private static final boolean CUPID_LANTERN_ONLY = Boolean.getBoolean("uwu.check.cupidLantern");
     private static final boolean CAVE_ONLY = Boolean.getBoolean("uwu.check.cave");
+    private static final boolean BLOSSOM_ONLY = Boolean.getBoolean("uwu.check.blossom");
     private static boolean opening;
     private static DirkCountdownProbe dirk;
     private static JadeFluidProbe jade;
     private static CupidBowProbe cupid;
     private static LanternOpeningProbe lantern;
     private static CupidShrineClientProbe shrine;
+    private static BlossomFollowProbe blossom;
     private static int stageTick;
     private static volatile Vec3 testPosition;
     private static volatile long reviveTick = -1;
@@ -132,6 +134,17 @@ public final class LotusClientProbe {
                 stage = Stage.DONE;
             }
         }
+        if (stage == Stage.BLOSSOM) {
+            try {
+                if (serverError != null) throw new AssertionError("Companion server action failed", serverError);
+                if (blossom.tick(client)) stage = Stage.DONE;
+            } catch (Throwable failure) {
+                BlossomFollowProbe.release(client);
+                System.err.println("BLOSSOM FOLLOW CHECK FAILED");
+                failure.printStackTrace();
+                stage = Stage.DONE;
+            }
+        }
         if (stage == Stage.DONE) client.stop();
     }
 
@@ -140,7 +153,7 @@ public final class LotusClientProbe {
         var player = client.player;
         if (player == null || client.level == null || client.screen != null
                 || stage == Stage.DIRK_COUNTDOWN || stage == Stage.JADE || stage == Stage.CUPID
-                || stage == Stage.LANTERN || stage == Stage.CUPID_SHRINE || stage == Stage.DONE) return;
+                || stage == Stage.LANTERN || stage == Stage.CUPID_SHRINE || stage == Stage.BLOSSOM || stage == Stage.DONE) return;
         try {
             if (serverError != null) throw new AssertionError("Server action failed", serverError);
             if (stage != Stage.LOAD) {
@@ -150,6 +163,12 @@ public final class LotusClientProbe {
             switch (stage) {
                 case LOAD -> {
                     if (player.tickCount < 85) return;
+                    if (BLOSSOM_ONLY) {
+                        CompanionMotionProbe.verify();
+                        blossom = new BlossomFollowProbe(client, action -> serverAction(client, action));
+                        stage = Stage.BLOSSOM;
+                        return;
+                    }
                     if (CUPID_LANTERN_ONLY) {
                         LanternCoverProbe.verify(client);
                         CupidHeldScaleProbe.verify(client);
@@ -254,7 +273,7 @@ public final class LotusClientProbe {
                             + ", block light " + baseLight + " -> " + peakLight + " -> " + current);
                     stage = Boolean.getBoolean("uwu.check.decor") ? Stage.CUPID : Stage.JADE;
                 }
-                case DIRK_COUNTDOWN, JADE, CUPID, LANTERN, CUPID_SHRINE, DONE -> {}
+                case DIRK_COUNTDOWN, JADE, CUPID, LANTERN, CUPID_SHRINE, BLOSSOM, DONE -> {}
             }
         } catch (Throwable failure) {
             System.err.println("LOTUS CLIENT CHECK FAILED");

@@ -1,0 +1,84 @@
+name: UwU Revival Blossom follow
+on:
+  push:
+    branches: ['codex/integration/uwu-blossom-follow']
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: uwu-blossom-follow-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  verify:
+    if: github.repository == 'WeepingAngeIs/z-UwU_dm' && github.event.repository.private == false
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      BASE_COMMIT: '1f489c5308b686a30672ec19b671a64534eb28a4'
+      BASE_DIGEST: '0e865bbe4cf695144b70889138d82ad36ed8288a019bcb0e6b8b4851a6f1a04f'
+      UWU_JAR: build/libs/UwU-Dimension-1.21.1-1.5.0-beta.13-combined-rc.2-playtest.9-integrated.1-blossom.1.jar
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Bootstrap pinned Gradle
+        run: bash integration-check/bootstrap.sh
+      - name: Build and compare with the exact integrated Playtest 9 JAR
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git merge-base --is-ancestor "$BASE_COMMIT" "$GITHUB_SHA"
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          gh api 'repos/WeepingAngeIs/z-UwU_dm/actions/artifacts/14723910544/zip' > "$RUNNER_TEMP/integrated-playtest-9.jar"
+          printf '%s  %s\n' "$BASE_DIGEST" "$RUNNER_TEMP/integrated-playtest-9.jar" | sha256sum --check
+          bash ./gradlew --no-daemon --no-build-cache --max-workers=2 jar
+          python3 - "$RUNNER_TEMP/integrated-playtest-9.jar" "$UWU_JAR" <<'PY'
+          import sys
+          from zipfile import ZipFile
+
+          with ZipFile(sys.argv[1]) as baseline, ZipFile(sys.argv[2]) as candidate:
+              members = {n for n in baseline.namelist() if not n.endswith("/")}
+              assert members == {n for n in candidate.namelist() if not n.endswith("/")}, "JAR membership changed"
+              changed = {n for n in members if baseline.read(n) != candidate.read(n)}
+          expected = {"META-INF/neoforge.mods.toml",
+                      "dev/uwu/dimension/RevivalBlossomClient.class",
+                      "dev/uwu/dimension/RevivalBlossomMotion.class"}
+          assert changed == expected, f"unexpected packaged changes: {sorted(changed ^ expected)}"
+          print("BLOSSOM PACKAGED SCOPE PASS: only companion motion and version metadata changed")
+          PY
+          sha256sum "$UWU_JAR" > build/blossom.sha256
+          echo "UWU_EXPECTED_JAR_SHA256=$(cut -d' ' -f1 build/blossom.sha256)" >> "$GITHUB_ENV"
+      - name: Check walking, sprinting, turning, settling and moving light in the client
+        env:
+          UWU_BLOSSOM_CLIENT_CHECK: 'true'
+        run: |
+          if ! command -v xvfb-run >/dev/null || ! command -v xauth >/dev/null || ! dpkg-query -W libgl1-mesa-dri libopenal1 >/dev/null 2>&1; then
+            sudo apt-get update -qq
+            sudo apt-get install -y xvfb xauth libgl1-mesa-dri libopenal1
+          fi
+          sha256sum --check build/blossom.sha256
+          bash lotus-client-check/run.sh
+          sha256sum --check build/blossom.sha256
+      - name: Return the verified test JAR
+        id: jar
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          path: ${{ env.UWU_JAR }}
+          archive: false
+          retention-days: 7
+          if-no-files-found: error
+      - name: Verify artifact identity and record the in-game results
+        env:
+          UPLOADED_SHA: ${{ steps.jar.outputs.artifact-digest }}
+        run: |
+          test "$UWU_EXPECTED_JAR_SHA256" = "${UPLOADED_SHA#sha256:}"
+          {
+            echo "Commit: $GITHUB_SHA"
+            echo "JAR SHA-256: $UWU_EXPECTED_JAR_SHA256"
+            grep -E 'BLOSSOM (WALK RUN TURN STOP|RENDER AND LIGHT) PASS' build/blossom-client.log
+          } >> "$GITHUB_STEP_SUMMARY"
