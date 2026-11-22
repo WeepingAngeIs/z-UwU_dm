@@ -123,20 +123,22 @@ def intersects(a,b):
                 if crossed(target[i],target[(i+1)%3],tri[None,:]):return True
     return False
 
-def separated(q,ids,names):
+def separated(q,ids,names,forearm_mask):
     # Lower forearms, hands and feet must not pass through the opposing body or head. Deltoids deliberately join the chest at their pivot.
     p,group=tris(q,ids)
     def take(predicate):
         mask=np.array([predicate(s) for s in names])
         return p[mask[group]]
     hands=take(lambda s:s.endswith(("_hand","_thumb","_inner_bracer")))
+    forearms=np.concatenate((hands,tris(q[forearm_mask],ids[forearm_mask])[0]))
+    arms=take(lambda s:s.endswith(("_arm","_hand","_thumb","_inner_bracer","_biceps","_leaf_pauldron")) or s.startswith("shoulder_blossom"))
     feet=take(lambda s:s.endswith(("_shin_leaf","_boot")))
     head=take(lambda s:s.startswith(("crown","nose")) or s.endswith(("temple_leaf","crown_fold")) or s in ("face_and_double_chin","moss_cap"))
     torso=take(lambda s:s in ("living_bark_torso","leaf_belt") or s.endswith(("_pectoral","_hip_petal","_waist_oblique")) or "_rib_" in s)
     lhand=take(lambda s:s.startswith("left") and s.endswith(("_hand","_thumb")))
     rhand=take(lambda s:s.startswith("right") and s.endswith(("_hand","_thumb")))
     lfoot=take(lambda s:s=="left_boot");rfoot=take(lambda s:s=="right_boot")
-    pairs=[("hands/body",hands,torso),("hands/head or crown",hands,head),("feet/head or crown",feet,head),("hands/feet",hands,feet),
+    pairs=[("distal forearms and hands/body",forearms,torso),("entire arms/head or crown",arms,head),("feet/head or crown",feet,head),("hands/feet",hands,feet),
            ("left/right hand",lhand,rhand),("left/right foot",lfoot,rfoot)]
     return [name for name,a,b in pairs if intersects(a,b)]
 
@@ -168,6 +170,10 @@ def palette_checks():
 def verify(out):
     data=source();old=coincident(*boxes())
     assert abs(old["basket x lower cuff"]-28)<.001,old
+    assert any("brooch petal" in name for name in old), "The old overlapping flower petals were not detected"
+    # Select the integrated arm surfaces below the elbow in their original local coordinates.
+    raw=np.concatenate(data[0])
+    selectors=np.r_[np.all(raw[:,:,1]>=7.58,axis=1),np.zeros(10,dtype=bool)]
     full=[]; failures=[]
     cached={}
     for frame,stage,options in physical_poses():
@@ -176,7 +182,8 @@ def verify(out):
         key="held-rigid" if stage=="flip" else frame
         if key not in cached:
             p=q[:,:,:3]
-            cached[key]=(coincident(p,ids,names),separated(p,ids,names))
+            forearm_mask=selectors & np.array([names[i] in ("left_arm","right_arm") for i in ids])
+            cached[key]=(coincident(p,ids,names),separated(p,ids,names,forearm_mask))
         planes,clipping=cached[key]
         if planes or clipping:failures.append((frame,planes,clipping))
         full.append({"frame":frame,"overlappingCoplanarSurfaces":planes,"unrelatedLimbIntersections":clipping})
