@@ -4,6 +4,7 @@ import com.mojang.authlib.GameProfile;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import dev.uwu.dimension.AcquisitionPolicy;
 import dev.uwu.dimension.CounterArsenal;
+import dev.uwu.dimension.GlitchBow;
 import dev.uwu.dimension.RevivalBlossoms;
 import dev.uwu.weaponcheck.CandidateJarProbe;
 import io.netty.channel.embedded.EmbeddedChannel;
@@ -22,6 +23,7 @@ import net.minecraft.network.Connection;
 import net.minecraft.network.PacketSendListener;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.PacketFlow;
+import net.minecraft.network.protocol.game.ClientboundContainerSetSlotPacket;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ClientInformation;
@@ -71,6 +73,7 @@ public final class WeaponSettingsProbe {
     private ItemStack bow, dirk;
     private Path config;
     private double attackSpeed;
+    private final List<Double> sentDirkAdjustments = new ArrayList<>();
 
     public WeaponSettingsProbe() { NeoForge.EVENT_BUS.addListener(this::tick); }
     private void tick(ServerTickEvent.Post event) {
@@ -84,6 +87,8 @@ public final class WeaponSettingsProbe {
                 since = now();
             }
             require(now() - since < 400, "Timed out at stage " + stage + " shot " + shot);
+            // These connected actors have an in-memory channel without a listener tick loop.
+            for (ServerPlayer player : players) player.doTick();
             step();
         } catch (Throwable failure) {
             stage = -1;
@@ -205,6 +210,7 @@ public final class WeaponSettingsProbe {
                 require(archer.getMainHandItem() == dirk, "Edited held item required a replacement");
                 equal(archer.getAttributeValue(Attributes.ATTACK_DAMAGE), 7, "Already-equipped Dirk was stale");
                 equal(archer.getAttributeValue(Attributes.ATTACK_SPEED), attackSpeed, "Attack speed changed");
+                require(sentDirkAdjustments.contains(-8d), "Owner did not receive the changed held Dirk over its inventory channel");
                 require(archer.getAttackStrengthScale(.5f) > .99, "Fixture melee swing was not charged");
                 dummy = mob(EntityType.COW, START.east(2));
                 dummy.setYHeadRot(-90); // Looking east, away from the archer.
@@ -225,6 +231,7 @@ public final class WeaponSettingsProbe {
             case 6 -> {
                 if (age() < 3) return;
                 equal(archer.getAttributeValue(Attributes.ATTACK_DAMAGE), 13, "Editor-style write did not reach held equipment");
+                require(sentDirkAdjustments.contains(-2d), "Companion edit did not resynchronize held-slot contents");
                 dummy = mob(EntityType.COW, START.east(5));
                 archer.lookAt(Anchor.EYES, dummy.getBoundingBox().getCenter());
                 ability(1);
@@ -274,6 +281,62 @@ public final class WeaponSettingsProbe {
                 require(!archer.getCooldowns().isOnCooldown(item("heart_launcher").getItem()), "Launcher cooldown ran long");
                 equal(dummy.getMaxHealth() - dummy.getHealth(), 6, "Separate launcher blast damage");
                 log("Real Heart Launcher direct use, 30-tick cooldown and six-point blast");
+                dummy.discard();
+                archer.moveTo(Vec3.atBottomCenterOf(START));
+                archer.setDeltaMovement(Vec3.ZERO);
+                dummy = mob(EntityType.COW, START.east(3));
+                archer.setItemInHand(HAND, item("dawnpetal_axe"));
+                run(W + "dawnpetal_axe heartSpinDamage 5");
+                run(W + "dawnpetal_axe heartSpinCooldownSeconds 12.5");
+                next(11);
+            }
+            case 11 -> {
+                if (age() < 3) return;
+                ability(2);
+                equal(archer.getPersistentData().getCompound(Player.PERSISTED_NBT_TAG).getLong("uwu.dawnpetal_heart_spin_until") - now(),
+                        250, "Heart Spin deadline longer than the shipped window");
+                next(12);
+            }
+            case 12 -> {
+                if (age() < 22) return;
+                equal(dummy.getMaxHealth() - dummy.getHealth(), 5, "Heart Spin must use its own hit setting once per target");
+                dummy.discard(); dummy = mob(EntityType.COW, START.south(5));
+                run(W + "counter_iron_chakram castCooldownSeconds 1.75");
+                run(W + "counter_iron_chakram abilityDamage 3");
+                run(W + "counter_iron_chakram baseHitDamage 8");
+                archer.setItemInHand(HAND, item("counter_iron_chakram")); next(13);
+            }
+            case 13 -> {
+                if (age() < 3) return;
+                equal(archer.getAttributeValue(Attributes.ATTACK_DAMAGE), 8, "Counter's tuned melee base");
+                archer.lookAt(Anchor.EYES, dummy.getBoundingBox().getCenter());
+                archer.getMainHandItem().use(level, archer, HAND);
+                require(archer.getMainHandItem().isEmpty(), "Actual chakram did not leave the hand");
+                next(14);
+            }
+            case 14 -> {
+                if (age() < 35) {
+                    require(archer.getCooldowns().isOnCooldown(item("counter_iron_chakram").getItem()), "Chakram cooldown released early");
+                    return;
+                }
+                require(!archer.getCooldowns().isOnCooldown(item("counter_iron_chakram").getItem()), "Chakram cooldown ran long");
+                equal(dummy.getMaxHealth() - dummy.getHealth(), 3, "Chakram throw used another weapon's hit value");
+                equal(value("counter_gold_chakram", "abilityDamage").get(), 19, "Second chakram leaked balance");
+                var glitch = item("glitch_bow");
+                int form = GlitchBow.FORMS.indexOf("counter_iron_chakram");
+                CustomData.update(DataComponents.CUSTOM_DATA, glitch, tag -> tag.putInt("uwu_form",form));
+                archer.setItemInHand(HAND, glitch); next(15);
+            }
+            case 15 -> {
+                if (age() < 3) return;
+                equal(archer.getAttributeValue(Attributes.ATTACK_DAMAGE), 8, "Glitch missed the displayed form's melee value");
+                equal(archer.getAttributeValue(Attributes.ATTACK_SPEED), 1.3, "Glitch attack speed changed");
+                run(W + "counter_iron_chakram baseHitDamage 15"); next(16);
+            }
+            case 16 -> {
+                if (age() < 3) return;
+                equal(archer.getAttributeValue(Attributes.ATTACK_DAMAGE), 15, "Held Glitch retained balance after reset");
+                log("Independent Heart Spin damage and long deadline, real chakram throw, separate counter rows, held Glitch form and reset");
                 run(C + " 7");
                 require(configText().contains("cupidBowCharmSeconds = 7"), "Command did not persist seconds");
                 finish();
@@ -317,7 +380,14 @@ public final class WeaponSettingsProbe {
         var player = new ServerPlayer(server, level, new GameProfile(UUID.randomUUID(), name), ClientInformation.createDefault());
         var link = new Connection(PacketFlow.SERVERBOUND);
         new ServerGamePacketListenerImpl(server, link, player, CommonListenerCookie.createInitial(player.getGameProfile(), false)) {
-            @Override public void send(Packet<?> packet, PacketSendListener listener) {}
+            @Override public void send(Packet<?> packet, PacketSendListener listener) {
+                if (packet instanceof ClientboundContainerSetSlotPacket slot && player == archer && slot.getSlot() == 36
+                        && slot.getItem().is(RevivalBlossoms.DIRK.get())) {
+                    var mods = slot.getItem().get(DataComponents.ATTRIBUTE_MODIFIERS);
+                    if (mods != null) mods.modifiers().stream().filter(m -> m.modifier().id().toString().equals("uwudimension:configured_base_hit"))
+                            .forEach(m -> sentDirkAdjustments.add(m.modifier().amount()));
+                }
+            }
         };
         channels.add(new EmbeddedChannel(link));
         player.setGameMode(GameType.SURVIVAL); player.setNoGravity(true);
@@ -326,7 +396,7 @@ public final class WeaponSettingsProbe {
         ((List<ServerPlayer>) list.get(server.getPlayerList())).add(player);
         var byId = PlayerList.class.getDeclaredField("playersByUUID"); byId.setAccessible(true);
         ((Map<UUID,ServerPlayer>) byId.get(server.getPlayerList())).put(player.getUUID(), player);
-        level.addNewPlayer(player); players.add(player); return player;
+        level.addNewPlayer(player); player.initInventoryMenu(); players.add(player); return player;
     }
 
     private static ModConfigSpec.DoubleValue value(String weapon, String key) {
