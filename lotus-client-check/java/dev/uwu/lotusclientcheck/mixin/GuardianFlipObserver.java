@@ -18,7 +18,10 @@ abstract class GuardianFlipObserver {
     @Unique private Matrix4f uwu$incoming;
     @Inject(method="setupRotations(Ldev/uwu/dimension/BlossomWarden;Lcom/mojang/blaze3d/vertex/PoseStack;FFFF)V",at=@At("HEAD"))
     private void uwu$before(BlossomWarden guard, PoseStack stack, float age, float yaw, float partial,float scale,CallbackInfo ci) {
-        if (GuardianCamera.recording(guard)) uwu$incoming=new Matrix4f(stack.last().pose());
+        if (GuardianCamera.recording(guard)) {
+            uwu$incoming=new Matrix4f(stack.last().pose());
+            dev.uwu.lotusclientcheck.GuardianGripFrame.vertical(uwu$incoming);
+        }
     }
     @Inject(method="setupRotations(Ldev/uwu/dimension/BlossomWarden;Lcom/mojang/blaze3d/vertex/PoseStack;FFFF)V",at=@At("RETURN"))
     private void uwu$after(BlossomWarden guard, PoseStack stack, float age, float yaw, float partial,float scale,CallbackInfo ci) {

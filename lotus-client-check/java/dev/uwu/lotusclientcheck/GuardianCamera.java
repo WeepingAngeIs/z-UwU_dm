@@ -50,7 +50,7 @@ public final class GuardianCamera {
         return new View(eye,(float)Math.toDegrees(Math.atan2(-direction.x,direction.z)),
                 (float)-Math.toDegrees(Math.atan2(direction.y,direction.horizontalDistance())));
     }
-    static void before(RenderFrameEvent.Pre event){guardDraw=false;playerDraw=false;texture="";up=Float.NaN;}
+    static void before(RenderFrameEvent.Pre event){guardDraw=false;playerDraw=false;texture="";up=Float.NaN;GuardianGripFrame.reset();}
     static void gallerySubject(RenderLivingEvent.Pre<?,?> event){
         var t=GuardianWarningProbe.trial;
         if(t!=null&&GuardianGallery.pending(t)&&event.getEntity()==Minecraft.getInstance().player)
@@ -93,6 +93,14 @@ public final class GuardianCamera {
             row.addProperty("hurtOverlay",g.hurtTime>0||g.deathTime>0);
             row.addProperty("height",a.getY()-t.floor());row.addProperty("cameraToPlayer",camera.getPosition().distanceTo(a.getEyePosition()));
             row.addProperty("cameraType",mc.options.getCameraType().name());
+            GuardianGripFrame.evidence(row);
+            if(!observer()&&g.warningFlip()){
+                float partial=mc.getTimer().getGameTimeDeltaPartialTick(false);
+                row.addProperty("cameraYaw",camera.getYRot());
+                row.addProperty("ownerYawError",Math.abs(Mth.wrapDegrees(camera.getYRot()-a.getViewYRot(partial))));
+                row.addProperty("ownerPitchError",Math.abs(camera.getXRot()-a.getViewXRot(partial)));
+                row.addProperty("ownerRoll",camera.getRoll());
+            }
             String name=String.format(java.util.Locale.ROOT,"%02d-%04d.png",t.number(),sequence++);
             row.addProperty("frame",name);var folder=OUT.resolve("frames");Files.createDirectories(folder);
             try(var image=Screenshot.takeScreenshot(mc.getMainRenderTarget())){

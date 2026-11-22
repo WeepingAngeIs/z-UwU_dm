@@ -111,6 +111,11 @@ final class GuardianWarningProbe {
                 player.setYRot((float)Math.toDegrees(Math.atan2(-aim.x,aim.z)));
                 player.setXRot((float)-Math.toDegrees(Math.atan2(aim.y,aim.horizontalDistance())));
             }
+            if(t.number()==3 && mob.warningFlip()&&!GuardianCamera.observer()){
+                float elapsed=mob.warningPhaseTicks(0);
+                player.setYRot(148F+18F*(float)Math.sin(elapsed*Math.PI/12.0));
+                player.setXRot(6F+8F*(float)Math.sin(elapsed*Math.PI/16.0));
+            }
             if(t==fired||player.tickCount-clientStart<13||!player.onGround())return;
             if(t.arrow()){
                 if(!player.getMainHandItem().is(Items.BOW))return;

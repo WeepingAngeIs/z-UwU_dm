@@ -60,6 +60,23 @@ def camera_checks():
                 need(min(abs(r["bodyUp"]) for r in flip) < .72, f"Flip skipped its side-on rotation: {k}")
                 need(max(r["minArmRaise"] for r in flip) > 36, f"Hands never held the attacker during flip: {k}")
                 need(min(r["tick"] for r in wink) < min(r["tick"] for r in flip), "Wink occurred after grasp")
+                contact=[r for r in flip if r["actorDraw"] and "actorBodyUp" in r]
+                need(len(contact)>=4, f"No independent dual-model draw samples during flip {k}")
+                need(max(r["palmToPlayerAnchor"] for r in contact)<.22,
+                     f"Drawn palms missed the player's waist in case {k}: {[(r['phaseTick'],round(r['palmToPlayerAnchor'],3)) for r in contact]}")
+                need(min(r["actorBodyUp"] for r in contact)<-.72 and max(r["actorBodyUp"] for r in contact)>.64
+                     and min(r["actorGuardAlignment"] for r in contact)>.93,
+                     f"Attacker failed to turn with the actual Guardian mesh in {k}")
+                after=[r for r in rows if r["tick"]>max(s["tick"] for s in flip) and r["action"]=="free" and "actorBodyUp" in r]
+                need(bool(after) and min(r["actorBodyUp"] for r in after)>.93,
+                     f"Attacker remained visually rotated after release in {k}")
+            else:
+                attached=[r for r in rows if r["action"]=="flip" and "ownerRoll" in r]
+                need(len(attached)>=4 and all(abs(r["ownerRoll"])<1 and r["ownerYawError"]<2 and r["ownerPitchError"]<2 for r in attached),
+                     f"First-person camera was rotated away from the player's own look in {k}")
+                if k==3:
+                    need(max(r["cameraYaw"] for r in attached)-min(r["cameraYaw"] for r in attached)>15,
+                         "Player could not look around during the second female Petal warning")
         else:
             held = [r for r in rows if r["action"] == "grip"]
             need(bool(held), f"Missing native grip in case {k}")
@@ -71,11 +88,20 @@ def camera_checks():
                 need(not any(r["action"]=="shake" and r["tick"]>=first_grab for r in rows),
                      f"First warning repeated after the grab: {k}")
             # Case four also films a second player's independent first warning after the first release.
+            if ROLE=="observer":
+                neutral=[r for r in rows if r["actorDraw"] and "actorBodyUp" in r]
+                need(len(neutral)>=8 and min(r["actorBodyUp"] for r in neutral)>.93,
+                     f"Non-flip player acquired a body tilt in {k}")
         rec = OUTCOMES[k]
         CHECKED.append({"trial": k, "faction": rec["variant"], "sex": rec["sex"], "warning": rec["warning"],
                         "frames": len(rows), "actualGuardianDraws": len(seen),
                         "actorsDrawnTogether": sum(r["actorDraw"] and r["guardianDraw"] for r in rows),
                         "headRange": [round(f(seen_row["headYaw"] for seen_row in seen), 1) for f in (min, max)]})
+        if ROLE=="observer" and rec["warning"]==2:
+            CHECKED[-1].update({"measuredDualModelFrames":len(contact),
+                                "largestPalmToWaistGap":max(r["palmToPlayerAnchor"] for r in contact),
+                                "minimumPlayerUp":min(r["actorBodyUp"] for r in contact),
+                                "minimumAlignment":min(r["actorGuardAlignment"] for r in contact)})
 
 def gallery():
     records = json.loads((ROOT / "gallery.json").read_text())
