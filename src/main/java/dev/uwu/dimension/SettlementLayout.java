@@ -285,7 +285,7 @@ public final class SettlementLayout extends SavedData {
     /** The first 32 attempts are the original survey; additional attempts only
      * recover new Dusk sites within exactly the same road, house and footprint limits. */
     public static int duskSurveyAttempts(ServerLevel level,GroveSites.Site site){
-        return ReefLife.isSettlementRealm(level) && active(level).frequencyApplies(level,site)?256:32;
+        return ReefLife.isSettlementRealm(level) && active(level).frequencyApplies(level,site)?1024:32;
     }
     private boolean frequencyApplies(ServerLevel level,GroveSites.Site site){
         return legacyMask(level,site)==0 && untouchedRoom(beforeDuskFrequency,site,-211,-205,211,35);

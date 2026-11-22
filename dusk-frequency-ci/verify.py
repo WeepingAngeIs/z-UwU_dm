@@ -98,13 +98,97 @@ def verify(candidate, baseline, classes):
     for signature in unchanged_methods:
         require(method(before, signature) == method(after, signature),
                 "Existing faction, spacing or historical rule changed: " + signature.decode())
+    require(method(after, b"public static int duskSurveyAttempts(") ==
+            b"public static int duskSurveyAttempts(ServerLevel level,GroveSites.Site site){\r\n"
+            b"        return ReefLife.isSettlementRealm(level) && active(level).frequencyApplies(level,site)?1024:32;\r\n"
+            b"    }", "Expanded survey budget escaped the new Sakura Reach site policy")
+    require(method(after, b"public static int duskSiteRoll(") ==
+            b"public static int duskSiteRoll(ServerLevel level,GroveSites.Site site){\r\n"
+            b"        return Math.floorMod(HeartwaterFeature.Valley.mix(site.gx(),site.gz(),level.getSeed()^0x4455534B5F534954L),100);\r\n"
+            b"    }", "The fixed Dusk percentage roll changed")
     village = NATIVE + "BlossomVillage.java"
     before, after = git("show", BASELINE + ":" + village), Path(village).read_bytes()
     old_design = method(before, b"private static Optional<Plan> design(")
-    old_design = old_design.replace(b"boolean dusk){", b"boolean dusk,int attempts){", 1)
-    old_design = old_design.replace(b"attempt<32;", b"attempt<attempts;", 1)
+    design_edits = (
+        (b"boolean dusk){\r\n",
+         b"boolean dusk,int attempts){\r\n        var terrain=new SurveyTerrain(level,site,dusk&&attempts>32);\r\n"),
+        (b"attempt<32;", b"attempt<attempts;"),
+        (b"ground(level,site,x,z)", b"terrain.ground(x,z)"),
+        (b"ground(level,site,x-HALF,z)", b"terrain.ground(x-HALF,z)"),
+        (b"ground(level,site,x+HALF,z)", b"terrain.ground(x+HALF,z)"),
+        (b"ground(level,site,x+i-HALF,z+bends[i])", b"terrain.ground(x+i-HALF,z+bends[i])"),
+        (b"ground(level,site,hx,hz-side*depth)", b"terrain.ground(hx,hz-side*depth)"),
+        (b"ground(level,site,hx+ex,hz+ez)", b"terrain.ground(hx+ex,hz+ez)"),
+        (b"GroveSites.cherry(level,site.wx(x,z),center+1,site.wz(x,z))", b"terrain.cherry(x,center+1,z)"),
+        (b"GroveSites.cherry(level,site.wx(hx+ex,hz+ez),earth+1,site.wz(hx+ex,hz+ez))",
+         b"terrain.cherry(hx+ex,earth+1,hz+ez)"),
+    )
+    for original, replacement in design_edits:
+        require(old_design.count(original) == 1, "Ambiguous terrain survey edit: " + original.decode())
+        old_design = old_design.replace(original, replacement, 1)
     require(method(after, b"private static Optional<Plan> design(") == old_design,
             "Terrain survey safety or original random sequence changed")
+    require(method(after, b"public static Optional<Plan> potentialPlan(") ==
+            b"public static Optional<Plan> potentialPlan(ServerLevel level,GroveSites.Site s,boolean dusk){\r\n"
+            b"        if(!GroveSites.settlement(level,s,dusk))return Optional.empty();\r\n"
+            b"        return survey(level,s,dusk,dusk?SettlementLayout.duskSurveyAttempts(level,s):32);\r\n"
+            b"    }", "Expanded survey changed Petal or faction admission")
+    require(method(after, b"static Optional<Plan> survey(ServerLevel level,GroveSites.Site s,boolean dusk){") ==
+            b"static Optional<Plan> survey(ServerLevel level,GroveSites.Site s,boolean dusk){\r\n"
+            b"        return survey(level,s,dusk,32);\r\n    }",
+            "Historical, arrival or faction survey no longer uses its original 32 attempts")
+
+    # The only terrain-cache instance belongs to one design invocation. The
+    # existing class prefix must match baseline after removing the reviewed
+    # nested helper and the explicit imports/cache-key extension.
+    terrain = method(after, b"private static final class SurveyTerrain")
+    require(after.count(b"SurveyTerrain") == 3 and after.count(b"new SurveyTerrain(") == 1
+            and b"ThreadLocal" not in after, "Terrain memoization escaped its one-call lifetime")
+    prefix_end = b"    public static Optional<Plan> plan("
+    prefix = after[:after.index(prefix_end)]
+    memo_start = prefix.index(b"    /** Immutable seed queries")
+    memo_code = prefix.index(terrain)
+    memo_comment = prefix[memo_start:memo_code]
+    require(memo_comment.count(b"/*") == 1 and memo_comment.count(b"*/") == 1
+            and not memo_comment[memo_comment.index(b"*/") + 2:].strip(),
+            "Extra state appeared before the local terrain helper")
+    prefix = prefix[:memo_start] + prefix[memo_code + len(terrain) + len(b"\r\n"):]
+    for original, replacement in (
+        (b"import net.minecraft.core.QuartPos;\r\n", b""),
+        (b"import net.minecraft.world.level.ChunkPos;\r\n", b""),
+        (b"private record Key(int gx,int gz,boolean dusk,int attempts){}",
+         b"private record Key(int gx,int gz,boolean dusk){}"),
+    ):
+        require(prefix.count(original) == 1, "Ambiguous terrain-cache declaration edit")
+        prefix = prefix.replace(original, replacement, 1)
+    require(prefix == before[:before.index(prefix_end)], "New global terrain state or plan fields appeared")
+    declarations = terrain[:terrain.index(b"        SurveyTerrain(")]
+    require(declarations ==
+            b"private static final class SurveyTerrain {\r\n"
+            b"        private static final int MAX_SAMPLES=32768;\r\n"
+            b"        private record BiomeCell(int x,int y,int z){}\r\n"
+            b"        private final ServerLevel level;\r\n"
+            b"        private final GroveSites.Site site;\r\n"
+            b"        private final Map<Long,Integer> heights;\r\n"
+            b"        private final Map<BiomeCell,Boolean> land;\r\n",
+            "Terrain cache is unbounded, shared or has an incomplete biome key")
+    require(method(terrain, b"SurveyTerrain(ServerLevel") ==
+            b"SurveyTerrain(ServerLevel level,GroveSites.Site site,boolean memoize){\r\n"
+            b"            this.level=level;this.site=site;\r\n"
+            b"            heights=memoize?new HashMap<>():null;\r\n"
+            b"            land=memoize?new HashMap<>():null;\r\n        }",
+            "Terrain cache allocation changed the non-memoized original path")
+    height_query = method(terrain, b"int ground(")
+    biome_query = method(terrain, b"boolean cherry(")
+    require(height_query.count(b"BlossomVillage.ground(level,site,x,z)") == 2
+            and b"long key=ChunkPos.asLong(x,z);" in height_query
+            and b"if(heights.size()<MAX_SAMPLES)heights.put(key,height);" in height_query,
+            "Height memoization changed its exact query coordinates or bounded fallback")
+    require(biome_query.count(b"GroveSites.cherry(level,wx,y,wz)") == 2
+            and b"int wx=site.wx(x,z),wz=site.wz(x,z);" in biome_query
+            and b"new BiomeCell(QuartPos.fromBlock(wx),QuartPos.fromBlock(y),QuartPos.fromBlock(wz))" in biome_query
+            and b"if(land.size()<MAX_SAMPLES)land.put(key,fits);" in biome_query,
+            "Biome memoization changed the exact world quart query or bounded fallback")
     marker = b"    static void place(HeartwaterFeature.Valley v,Plan p){"
     require(before[before.index(marker):] == after[after.index(marker):], "Village architecture or residents changed")
 
@@ -150,6 +234,9 @@ def verify(candidate, baseline, classes):
         "approved_production_files": sorted(PRODUCTION), "changed_jar_entries": altered,
         "unchanged_entries_outside_dusk_generation": len(preserved),
         "original_faction_spacing_history_and_survey_safety_preserved": True,
+        "new_dusk_survey_attempts": 1024, "original_petal_and_historical_survey_attempts": 32,
+        "terrain_memoization": {"scope": "one extended Dusk survey", "max_entries_per_map": 32768,
+                                "height_key": "local x,z", "biome_key": "world quart x,y,z"},
         "architecture_residents_assets_weapons_books_dialogue_unchanged": True,
         "companion_patch_is_separate_and_not_bundled": True,
     }

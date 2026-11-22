@@ -37,6 +37,7 @@ import net.neoforged.fml.config.ModConfigs;
 final class FrequencySupport {
     static final Path OUTPUT=Path.of(System.getProperty("uwu.check.evidence"));
     static final int RADIUS=10;
+    static final int EXPANDED_DUSK_ATTEMPTS=1024;
     static void require(boolean condition,String message){if(!condition)throw new AssertionError(message);}
     static String signature(BlossomVillage.Plan plan){
         return "grid="+plan.site().gx()+","+plan.site().gz()+" site="+plan.site().x()+","+plan.site().z()+","+plan.site().turns()
@@ -82,6 +83,8 @@ final class FrequencySupport {
         value.addProperty("stage",stage);value.addProperty("seed",level.getSeed());
         value.addProperty("sourceSha",System.getenv("GITHUB_SHA"));
         value.addProperty("loadedUwuJarSha256",System.getProperty("uwu.check.candidateSha256"));
+        String fixture=System.getProperty("uwu.check.fixtureSha256");
+        if(fixture!=null)value.addProperty("loadedFixtureJarSha256",fixture);
         value.addProperty("dimension",level.dimension().location().toString());
         return value;
     }

@@ -32,10 +32,10 @@ final class UiWorldProbe {
         level=owner.getServer().getLevel(ReefLife.REACH);require(level!=null,"Sakura Reach missing");
         require(AcquisitionPolicy.duskVillageChancePercent()==75,"GUI fixture did not start at default75");
         var source=read("survey-candidate-"+level.getSeed()+".json").getAsJsonArray("cells");
-        var a=choose(source,r->has(r,"expanded256")&&!has(r,"original32")&&r.get("accepted75").getAsBoolean()
+        var a=choose(source,r->has(r,"expanded")&&!has(r,"original32")&&r.get("accepted75").getAsBoolean()
                 &&r.get("plazaBiome").getAsString().equals("uwudimension:velvet_highlands"),"GUI recovered Velvet75 site");
-        var z=choose(source,r->has(r,"expanded256")&&r.get("roll").getAsInt()>=75,"GUI zero-denial site");
-        var h=choose(source,r->has(r,"expanded256")&&r.get("roll").getAsInt()>=75&&!r.equals(z),"GUI untouched100 site");
+        var z=choose(source,r->has(r,"expanded")&&r.get("roll").getAsInt()>=75,"GUI zero-denial site");
+        var h=choose(source,r->has(r,"expanded")&&r.get("roll").getAsInt()>=75&&!r.equals(z),"GUI untouched100 site");
         var p=choose(source,r->has(r,"petal"),"GUI Petal control");
         accepted=BlossomVillage.potentialPlan(level,site(level,a),true).orElseThrow();
         zero=BlossomVillage.potentialPlan(level,site(level,z),true).orElseThrow();

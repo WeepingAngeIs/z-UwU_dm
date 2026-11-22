@@ -55,7 +55,7 @@ final class FrequencyServer {
     private int phase,index;
     private long started;
     private long nextSurveyNanos,totalSurveyNanos,longestSurveyNanos,idleSurveyTicks,lastSurveyEndNanos,totalSurveyQuietNanos;
-    private int usable,assignedDusk,viable32,viable256,accepted75,petalCount;
+    private int usable,assignedDusk,viable32,viableExpanded,accepted75,petalCount;
 
     FrequencyServer(){NeoForge.EVENT_BUS.addListener(this::onChunkLoad);}
     private void onChunkLoad(ChunkEvent.Load event){
@@ -83,7 +83,7 @@ final class FrequencyServer {
     private boolean nativeSample()throws Exception{
         if(phase==0){
             var source=read("survey-candidate-"+level.getSeed()+".json").getAsJsonArray("cells");
-            var row=choose(source,r->has(r,"expanded256")&&r.get("accepted75").getAsBoolean(),"native accepted75 sample on seed"+level.getSeed());
+            var row=choose(source,r->has(r,"expanded")&&r.get("accepted75").getAsBoolean(),"native accepted75 sample on seed"+level.getSeed());
             percent(75,true);accepted=BlossomVillage.plan(level,site(level,row),true).orElseThrow();
             require(!SettlementLayout.duskChanceFrozen(level,accepted.site()),"Fresh sample was already frozen");
             chunks(accepted).forEach(c->request(level,tickets,c));entityTicket(level,accepted);phase=1;return false;
@@ -109,7 +109,7 @@ final class FrequencyServer {
             int stride=Math.ceilDiv(SettlementLayout.minimum(level)+600,GroveSites.SPACING);
             var site=GroveSites.site(level,origin.gx()+dx*stride,origin.gz()+dz*stride);
             var row=cell(site);row.addProperty("lattice",true);
-            row.addProperty("petal","");row.addProperty("original32","");row.addProperty("expanded256","");
+            row.addProperty("petal","");row.addProperty("original32","");row.addProperty("expanded","");
             row.addProperty("assignedDusk",false);row.addProperty("accepted75",false);row.addProperty("roll",-1);
             if(site.usable()){
                 usable++;
@@ -121,10 +121,10 @@ final class FrequencyServer {
                     old.ifPresent(v->row.addProperty("originalPlazaBiome",biome(level,v.plaza().below())));
                     if(candidate){
                         require(!SettlementLayout.duskChanceFrozen(level,site),"Survey unexpectedly touched/froze site");
-                        require(SettlementLayout.duskSurveyAttempts(level,site)==256,"Fresh Dusk survey budget not256");
+                        require(SettlementLayout.duskSurveyAttempts(level,site)==EXPANDED_DUSK_ATTEMPTS,"Fresh Dusk survey budget is not the declared1024");
                         var expanded=BlossomVillage.potentialPlan(level,site,true);
                         if(old.isPresent())require(signature(old).equals(signature(expanded)),"Expanded survey changed an existing first32 success");
-                        row.addProperty("expanded256",signature(expanded));if(expanded.isPresent())viable256++;
+                        row.addProperty("expanded",signature(expanded));if(expanded.isPresent())viableExpanded++;
                         int roll=SettlementLayout.duskSiteRoll(level,site);row.addProperty("roll",roll);
                         require(roll>=0&&roll<100,"Roll out of range");
                         percent(0,false);require(BlossomVillage.plan(level,site,true).isEmpty(),"Zero admitted new Dusk site");
@@ -151,10 +151,11 @@ final class FrequencyServer {
         }
         var report=metadata(stage,level);report.addProperty("originGx",origin.gx());report.addProperty("originGz",origin.gz());
         report.addProperty("windowRadiusInLatticeCells",RADIUS);report.addProperty("latticeCells",rows.size());
+        report.addProperty("surveyAttemptBudget",candidate?EXPANDED_DUSK_ATTEMPTS:32);
         report.addProperty("minimumSpacingBlocks",SettlementLayout.minimum(level));
         report.addProperty("latticeSpacingBlocks",GroveSites.SPACING*Math.ceilDiv(SettlementLayout.minimum(level)+600,GroveSites.SPACING));
         report.addProperty("usableGroves",usable);report.addProperty("assignedDusk",assignedDusk);
-        report.addProperty("viableOriginal32",viable32);report.addProperty("viableExpanded256",candidate?viable256:viable32);
+        report.addProperty("viableOriginal32",viable32);report.addProperty("viableExpanded",candidate?viableExpanded:viable32);
         report.addProperty("accepted75",candidate?accepted75:0);report.addProperty("petalPlans",petalCount);
         report.addProperty("previewGeneratedChunks",fresh.size());report.addProperty("actualNativePlacementsInThisSurvey",0);
         report.addProperty("surveyMinimumCooldownMillis",250);report.addProperty("surveyCooldownShareOfPreviousCall",0.5);
@@ -167,20 +168,22 @@ final class FrequencyServer {
             if(row.has("originalPlazaBiome")&&row.get("originalPlazaBiome").getAsString().equals("uwudimension:velvet_highlands"))velvetOriginal++;
             if(row.has("plazaBiome")&&row.get("plazaBiome").getAsString().equals("uwudimension:velvet_highlands")){velvetExpanded++;if(row.get("accepted75").getAsBoolean())velvetAccepted++;}
         }
-        report.addProperty("velvetOriginal32",velvetOriginal);report.addProperty("velvetExpanded256",velvetExpanded);report.addProperty("velvetAccepted75",velvetAccepted);
+        report.addProperty("velvetOriginal32",velvetOriginal);report.addProperty("velvetExpanded",velvetExpanded);report.addProperty("velvetAccepted75",velvetAccepted);
         require(fresh.isEmpty(),"Terrain survey unexpectedly generated chunks");
         report.add("cells",rows);write(stage+"-"+level.getSeed()+".json",report);
         System.out.println("DUSK FREQUENCY SURVEY PASS stage="+stage+" seed="+level.getSeed()+" cells="+rows.size()+" usable="+usable
-                +" assigned="+assignedDusk+" original32="+viable32+" expanded256="+viable256+" accepted75="+accepted75+" petal="+petalCount);
+                +" assigned="+assignedDusk+" original32="+viable32+" expanded="+viableExpanded+" accepted75="+accepted75+" petal="+petalCount
+                +" velvetOriginal32="+velvetOriginal+" velvetExpanded="+velvetExpanded+" velvetAccepted75="+velvetAccepted
+                +" surveyAttemptBudget="+(candidate?EXPANDED_DUSK_ATTEMPTS:32));
         return true;
     }
     private boolean freshWorld(MinecraftServer server)throws Exception{
         if(phase==0){
             var source=read("survey-candidate-"+level.getSeed()+".json").getAsJsonArray("cells");
-            var a=choose(source,r->has(r,"expanded256")&&!has(r,"original32")&&r.get("roll").getAsInt()<75
+            var a=choose(source,r->has(r,"expanded")&&!has(r,"original32")&&r.get("roll").getAsInt()<75
                     &&r.get("plazaBiome").getAsString().equals("uwudimension:velvet_highlands"),"expanded-only accepted75 Velvet Highlands site");
-            var r=choose(source,v->has(v,"expanded256")&&v.get("roll").getAsInt()>=75,"rejected75/accepted100 site");
-            var h=choose(source,v->has(v,"expanded256")&&v.get("roll").getAsInt()>=75&&!v.equals(r),"second high-roll site");
+            var r=choose(source,v->has(v,"expanded")&&v.get("roll").getAsInt()>=75,"rejected75/accepted100 site");
+            var h=choose(source,v->has(v,"expanded")&&v.get("roll").getAsInt()>=75&&!v.equals(r),"second high-roll site");
             var p=choose(source,v->has(v,"petal"),"Petal control");
             accepted=BlossomVillage.potentialPlan(level,site(level,a),true).orElseThrow();
             rejected=BlossomVillage.potentialPlan(level,site(level,r),true).orElseThrow();
@@ -244,7 +247,7 @@ final class FrequencyServer {
             require(AcquisitionPolicy.duskVillageChancePercent()==saved.getInt("GlobalChance"),"Server TOML did not survive restart");
             for(var tag:saved.getList("Plans",Tag.TAG_COMPOUND)){
                 var row=(CompoundTag)tag;var plan=plan(level,row);plans.add(plan);
-                if(plan.dusk()){frozen(plan,row.getInt("Chance"));require(SettlementLayout.duskSurveyAttempts(level,plan.site())==256,"New saved site was misclassified as pre-upgrade");}
+                if(plan.dusk()){frozen(plan,row.getInt("Chance"));require(SettlementLayout.duskSurveyAttempts(level,plan.site())==EXPANDED_DUSK_ATTEMPTS,"New saved site was misclassified as pre-upgrade");}
                 chunks(plan).forEach(c->request(level,tickets,c));entityTicket(level,plan);
             }
             var site=GroveSites.site(level,saved.getInt("RejectedGx"),saved.getInt("RejectedGz"));
@@ -269,7 +272,7 @@ final class FrequencyServer {
             var d=choose(baseline,r->has(r,"original32"),"baseline Dusk site");
             var p=choose(baseline,r->has(r,"petal"),"baseline Petal site");
             plans.add(BlossomVillage.plan(level,site(level,d),true).orElseThrow());plans.add(BlossomVillage.plan(level,site(level,p),false).orElseThrow());
-            var blank=choose(candidate,r->has(r,"expanded256")&&!has(r,"original32"),"old empty expanded-only footprint");
+            var blank=choose(candidate,r->has(r,"expanded")&&!has(r,"original32"),"old empty expanded-only footprint");
             saved=new CompoundTag();saved.putInt("BlankGx",blank.get("gx").getAsInt());saved.putInt("BlankGz",blank.get("gz").getAsInt());
             var blankPos=new BlockPos(blank.get("plazaX").getAsInt(),blank.get("plazaY").getAsInt(),blank.get("plazaZ").getAsInt());
             saved.putLong("BlankPos",blankPos.asLong());saved.putLong("BlankChunk",new ChunkPos(blankPos).toLong());

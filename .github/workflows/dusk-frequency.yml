@@ -9,15 +9,17 @@ permissions:
 concurrency:
   group: uwu-dusk-frequency-${{ github.ref }}
   cancel-in-progress: true
+env:
+  VERSION: '1.5.0-beta.13-combined-rc.2-playtest.9-integrated.1-dusk-frequency.1'
+  UWU_JAR: build/dusk-frequency-candidate/UwU-Dimension-1.21.1-1.5.0-beta.13-combined-rc.2-playtest.9-integrated.1-dusk-frequency.1.jar
+  UWU_BASELINE_JAR: build/dusk-frequency-ci/baseline.jar
+  UWU_COMPANION_JAR: build/dusk-frequency-ci/companion/UnyieldingQuests-1.6.9.jar
+  UWU_PROBE_JAR: build/dusk-frequency-check/dusk-frequency-probe.jar
 jobs:
-  verify:
+  build:
     if: github.repository == 'WeepingAngeIs/z-UwU_dm' && github.event.repository.private == false
     runs-on: ubuntu-24.04
-    timeout-minutes: 90
-    env:
-      VERSION: '1.5.0-beta.13-combined-rc.2-playtest.9-integrated.1-dusk-frequency.1'
-      UWU_JAR: build/dusk-frequency-candidate/UwU-Dimension-1.21.1-1.5.0-beta.13-combined-rc.2-playtest.9-integrated.1-dusk-frequency.1.jar
-      UWU_COMPANION_JAR: build/dusk-frequency-ci/companion/UnyieldingQuests-1.6.9.jar
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
@@ -29,30 +31,138 @@ jobs:
           java-version: '21'
       - name: Bootstrap the pinned UwU build transport
         run: bash integration-check/bootstrap.sh
-      - name: Recover the passing integrated Playtest 9 baseline
+      - name: Check syntax of the hosted verification scripts
+        run: |
+          python3 -m py_compile dusk-frequency-ci/verify.py dusk-frequency-ci/provenance.py dusk-frequency-ci/inputs.py dusk-frequency-check/compare.py
+          for script in dusk-frequency-ci/recover-baseline-surveys.sh dusk-frequency-check/run-server.sh; do
+            bash -n "$script"
+          done
+      - name: Recover the exact integrated baseline and completed baseline controls
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          mkdir -p build/dusk-frequency-ci
           bash dusk-frequency-ci/recover-baseline.sh
-          echo "UWU_BASELINE_JAR=$RUNNER_TEMP/uwu-integrated-playtest9.jar" >> "$GITHUB_ENV"
-      - name: Build once and freeze the Dusk candidate
+          cp "$RUNNER_TEMP/uwu-integrated-playtest9.jar" "$UWU_BASELINE_JAR"
+          bash dusk-frequency-ci/recover-baseline-surveys.sh
+      - name: Build once and freeze the Dusk candidate and native probe
         run: |
           test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
           git merge-base --is-ancestor 1f489c5308b686a30672ec19b671a64534eb28a4 HEAD
           bash ./gradlew --no-daemon --no-build-cache --max-workers=2 jar
-          mkdir -p build/dusk-frequency-candidate build/dusk-frequency-ci
+          mkdir -p build/dusk-frequency-candidate
           cp "build/libs/UwU-Dimension-1.21.1-$VERSION.jar" "$UWU_JAR"
           sha256sum "$UWU_JAR" > build/dusk-frequency-ci/candidate.sha256
           echo "UWU_EXPECTED_JAR_SHA256=$(cut -d' ' -f1 build/dusk-frequency-ci/candidate.sha256)" >> "$GITHUB_ENV"
+          bash ./gradlew --no-daemon --no-build-cache --max-workers=2 -I dusk-frequency-check/probe.gradle duskFrequencyProbeJar
       - name: Verify the bounded Dusk generation scope
         run: python3 dusk-frequency-ci/verify.py "$UWU_JAR" "$UWU_BASELINE_JAR"
       - name: Build the explicit companion patch from pinned public Unyielding source
         run: bash dusk-frequency-ci/build-companion.sh
-      - name: Check fresh seed frequency, native placement and preservation
+      - name: Seal exact inputs for the hosted checks
+        run: python3 dusk-frequency-ci/inputs.py seal
+      - name: Stage frozen inputs for checks, not final delivery
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: uwu-dusk-ci-inputs-${{ github.sha }}
+          path: |
+            build/dusk-frequency-candidate/
+            build/classes/java/main/
+            build/dusk-frequency-check/dusk-frequency-probe.jar
+            build/dusk-frequency-check/survey-baseline-*.log
+            build/dusk-frequency-evidence/survey-baseline-*.json
+            build/dusk-frequency-ci/
+          retention-days: 7
+          if-no-files-found: error
+      - name: Preserve build and control-source evidence
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: uwu-dusk-build-evidence-${{ github.sha }}
+          path: |
+            build/dusk-frequency-ci/*.json
+            build/dusk-frequency-ci/*.sha256
+            build/dusk-frequency-ci/companion/*.json
+            build/dusk-frequency-ci/companion/*.log
+            build/dusk-frequency-ci/companion/SHA256SUMS
+          retention-days: 7
+          if-no-files-found: warn
+  survey:
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        seed: [152045, 20261121, 8675309]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Restore the single frozen build
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: uwu-dusk-ci-inputs-${{ github.sha }}
+          path: build
+          digest-mismatch: error
+      - name: Verify exact source, candidate and fixture inputs
+        run: python3 dusk-frequency-ci/inputs.py verify
+      - name: Survey every predeclared lattice cell on this fresh seed
+        env:
+          UWU_SURVEY_SEED: ${{ matrix.seed }}
+        run: bash dusk-frequency-check/run-server.sh survey "$UWU_SURVEY_SEED"
+      - name: Preserve this seed's native survey and logs
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: uwu-dusk-survey-${{ matrix.seed }}-${{ github.sha }}
+          path: |
+            build/dusk-frequency-evidence/survey-candidate-${{ matrix.seed }}.json
+            build/dusk-frequency-check/survey-candidate-${{ matrix.seed }}.log
+            build/dusk-frequency-check/survey-pass-${{ matrix.seed }}.log
+            build/dusk-frequency-check/crash-reports-*/
+          retention-days: 7
+          if-no-files-found: warn
+  verify:
+    needs: [build, survey]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Restore the single frozen build
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: uwu-dusk-ci-inputs-${{ github.sha }}
+          path: build
+          digest-mismatch: error
+      - name: Collect all three freshly measured candidate surveys
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: uwu-dusk-survey-*-${{ github.sha }}
+          path: build
+          merge-multiple: true
+          digest-mismatch: error
+      - name: Verify exact source, candidate and fixture inputs
+        run: python3 dusk-frequency-ci/inputs.py verify
+      - name: Verify gain, native placement and preservation
         run: |
           sha256sum --check build/dusk-frequency-ci/candidate.sha256
-          bash dusk-frequency-check/run-server.sh "$UWU_JAR" "$UWU_BASELINE_JAR"
+          bash dusk-frequency-check/run-server.sh placement
           sha256sum --check build/dusk-frequency-ci/candidate.sha256
+      - name: Bootstrap the pinned client fixture transport
+        run: bash integration-check/bootstrap.sh
       - name: Prepare a disposable hosted display
         run: |
           if ! command -v xvfb-run >/dev/null || ! command -v xauth >/dev/null || ! dpkg-query -W libgl1-mesa-dri libopenal1 >/dev/null 2>&1; then
@@ -67,6 +177,7 @@ jobs:
       - name: Record source, settings path, measurements and test provenance
         id: packet
         run: |
+          python3 dusk-frequency-ci/inputs.py verify
           python3 dusk-frequency-ci/verify.py "$UWU_JAR" "$UWU_BASELINE_JAR"
           python3 dusk-frequency-ci/provenance.py
           echo "sha=$UWU_EXPECTED_JAR_SHA256" >> "$GITHUB_OUTPUT"
