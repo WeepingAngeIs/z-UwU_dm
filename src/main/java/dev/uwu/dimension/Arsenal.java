@@ -31,15 +31,15 @@ import net.neoforged.neoforge.registries.DeferredRegister;
 
 public final class Arsenal {
     public enum Relic {
-        CUPID_BOW("Cupid Bow", 14, 1.4, 0, "A pink heart befriends any eligible target for 40 seconds. Left-click while holding the bow to send your charmed allies after the target in your sights. Crouch and left-click two charmed targets to make a wish."),
+        CUPID_BOW("Cupid Bow", 14, 1.4, 0, "A pink heart befriends an eligible target. Use /sakura cupid help to see this server's charm time. Left-click while holding the bow to send your charmed allies after the target in your sights. Crouch and left-click two charmed targets to make a wish."),
         RIPPLE_BOW("Rippleglass Bow", 17, 1.25, 24, "Draw and release. On impact, a ripple marks and slows nearby creatures."),
         RIBBONHARE_SCEPTER("Ribbonhare Scepter", 14, 1.6, 200, "Send a glowing pink orb to solid ground to call a pink hare. Its thumps draw monsters."),
         BLOSSOM_GREATSWORD("Blossom Great Axe", 30, 0.85, 44, "Throw the blossom axe for a ranged strike. Fully charged melee hits still scatter petals."),
         BELLHEART_AXE("Bellheart Axe", 22, 0.95, 105, "Throw the bell axe. Its impact draws the struck foe toward you."),
         LOCKKEEPER_AXE("Lockkeeper's Axe", 21, 1.05, 85, "Throw the turquoise axe to drive the struck foe backward."),
         VESPER_SCYTHE("Vesper Scythe", 20, 1.15, 105, "Attack to launch an elemental crescent. Hold use for 0.6 seconds and release to throw. Till soil like a hoe."),
-        AXOLOTL_WHIP("Twinfin Whip", 16, 1.6, 160, "Lash a foe to call exactly two axolotl companions for 30 seconds."),
-        FROST_WHIP("Snowkiss Whip", 17, 1.6, 70, "Extend a frosted ribbon to freeze a target for three seconds."),
+        AXOLOTL_WHIP("Twinfin Whip", 16, 1.6, 160, "Lash a foe to call exactly two axolotl companions."),
+        FROST_WHIP("Snowkiss Whip", 17, 1.6, 70, "Extend a frosted ribbon to freeze and slow a target."),
         RIFT_WHIP("Ribbonstep Whip", 18, 1.6, 80, "Lash to mark a foe. Sneak-use to teleport beside that marked foe within 24 blocks, when there is safe footing."),
         ROSE_DAGGER("Roseflight Dagger", 15, 2.2, 25, "Throw a rose blade. Its hit briefly reveals the target."),
         SATIN_WHIP("Satin Switch", 15, 2.1, 40, "Use to catch a creature up to eleven blocks away and pull it toward you."),
@@ -98,6 +98,8 @@ public final class Arsenal {
                 e.accept(smooth);
             }
         });
+        NeoForge.EVENT_BUS.addListener(WeaponBalanceCommands::register);
+        NeoForge.EVENT_BUS.addListener(WeaponBalanceEquipment::tick);
         NeoForge.EVENT_BUS.addListener(HeartMagic::tick);
         NeoForge.EVENT_BUS.addListener(HeartMagic::filterTarget);
         NeoForge.EVENT_BUS.addListener(HeartMagic::protectKeeper);
@@ -168,7 +170,7 @@ public final class Arsenal {
             }
             if (player.getCooldowns().isOnCooldown(this)) return InteractionResultHolder.fail(stack);
             if (level instanceof ServerLevel server && RangedRelics.activate(server, player, relic, hand)) {
-                player.getCooldowns().addCooldown(this, relic.cooldown);
+                player.getCooldowns().addCooldown(this, WeaponBalance.cast(relic));
                 if (!relic.throwable()) stack.hurtAndBreak(1, player, LivingEntity.getSlotForHand(hand));
                 return InteractionResultHolder.sidedSuccess(player.getItemInHand(hand), false);
             }
@@ -205,7 +207,7 @@ public final class Arsenal {
                 if (getUseDuration(stack, user) - left >= 12
                         && player.getPersistentData().getLong("uwu.scythe_flight") <= level.getGameTime()
                         && RelicFlight.castWeapon(server, player, relic, player.getUsedItemHand()))
-                    player.getCooldowns().addCooldown(this, 60);
+                    player.getCooldowns().addCooldown(this, WeaponBalance.scytheThrow(null));
                 return;
             }
             if (!relic.bow() || !(level instanceof ServerLevel server) || !(user instanceof Player player)) return;
@@ -216,7 +218,8 @@ public final class Arsenal {
             }
             if (draw < 0.15F) return;
             HeartArrow.fire(server, player, relic, draw);
-            if (relic.cooldown > 0) player.getCooldowns().addCooldown(this, relic.cooldown);
+            int cooldown = WeaponBalance.cast(relic);
+            if (cooldown > 0) player.getCooldowns().addCooldown(this, cooldown);
             stack.hurtAndBreak(1, player, LivingEntity.getSlotForHand(player.getUsedItemHand()));
         }
         @Override public boolean hurtEnemy(ItemStack stack, LivingEntity target, LivingEntity attacker) {

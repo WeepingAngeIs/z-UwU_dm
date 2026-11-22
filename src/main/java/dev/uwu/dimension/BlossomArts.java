@@ -101,7 +101,11 @@ public final class BlossomArts {
     static void launched(Player owner, ItemStack stack, RelicFlight flight) {
         flight.getPersistentData().putLong("uwu.art_launched", owner.level().getGameTime());
         if (flight.relic() == Arsenal.Relic.VESPER_SCYTHE && flight.counter().isEmpty() && flight.physical())
-            saved(owner).putLong(THROW_GATE, owner.level().getServer().overworld().getGameTime() + 60);
+        {
+            int delay = WeaponBalance.scytheThrow(null);
+            saved(owner).putLong(THROW_GATE, owner.level().getServer().overworld().getGameTime() + delay);
+            flight.getPersistentData().putInt("uwu.art_throw_delay", delay);
+        }
         if (!flowerCredit(owner, stack)) return;
         owner.getPersistentData().getCompound(FLOWER).putBoolean("spent", true);
         CustomData.update(DataComponents.CUSTOM_DATA, stack, data -> data.remove("uwu.flower_credit_until"));
@@ -118,7 +122,7 @@ public final class BlossomArts {
         CompoundTag field = field(level, at, 80);
         field.putUUID("stack", identity(flight.getItem()));
         field.putUUID("cast", flight.getUUID());
-        field.putLong("normalReady", flight.getPersistentData().getLong("uwu.art_launched") + 60);
+        field.putLong("normalReady", flight.getPersistentData().getLong("uwu.art_launched") + (flight.getPersistentData().contains("uwu.art_throw_delay") ? flight.getPersistentData().getInt("uwu.art_throw_delay") : 60));
         owner.getPersistentData().put(FLOWER, field);
         RelicReturns.deferGlitch(owner, flight, 80);
         level.playSound(null, at.x, at.y, at.z, SoundEvents.AMETHYST_BLOCK_CHIME, SoundSource.PLAYERS, .7F, 1.5F);

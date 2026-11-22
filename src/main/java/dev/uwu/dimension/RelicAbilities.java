@@ -58,7 +58,7 @@ final class RelicAbilities {
                 int count = 0;
                 for (Mob foe : nearby(level, player, reaping ? 4.5 : 5.5)) {
                     if (!inFront(player, foe)) continue;
-                    if (foe.hurt(player.damageSources().playerAttack(player), relic.damage)) count++;
+                    if (foe.hurt(player.damageSources().playerAttack(player), WeaponBalance.damage(relic))) count++;
                     if (!reaping) pushToward(foe, player.position(), -1.45);
                 }
                 if (reaping) player.heal(Math.min(count, 3) * 2);
@@ -71,11 +71,13 @@ final class RelicAbilities {
                     e instanceof Mob mob && mob.isAlive() && !HeartMagic.friendly(player, mob));
                 if (hit != null && hit.getEntity() instanceof Mob foe) {
                     end = hit.getLocation();
-                    foe.hurt(player.damageSources().playerAttack(player), relic.damage);
+                    foe.hurt(player.damageSources().playerAttack(player), WeaponBalance.damage(relic));
                     if (whip) pushToward(foe, player.position(), 1.55);
                     else {
-                        if(GlitchCompletions.applyEffect(foe,new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN,80,2)))GlitchCompletions.track(level,glitchStack,foe,"slow",80);
-                        if(GlitchCompletions.applyEffect(foe,new MobEffectInstance(MobEffects.GLOWING,140)))GlitchCompletions.track(level,glitchStack,foe,"glow",140);
+                        int slow = WeaponBalance.ticks(Arsenal.Relic.BLUE_HOUR_WAND.id(), "slowSeconds");
+                        int glow = WeaponBalance.ticks(Arsenal.Relic.BLUE_HOUR_WAND.id(), "glowSeconds");
+                        if(GlitchCompletions.applyEffect(foe,new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN,slow,2)))GlitchCompletions.track(level,glitchStack,foe,"slow",slow);
+                        if(GlitchCompletions.applyEffect(foe,new MobEffectInstance(MobEffects.GLOWING,glow)))GlitchCompletions.track(level,glitchStack,foe,"glow",glow);
                     }
                 }
                 line(level, start, end, whip ? ParticleTypes.CHERRY_LEAVES : ParticleTypes.GLOW);
@@ -137,7 +139,7 @@ final class RelicAbilities {
         Vec3 at = event.getRayTraceResult().getLocation();
         if (event.getRayTraceResult() instanceof EntityHitResult hit && hit.getEntity() instanceof LivingEntity foe
             && !HeartMagic.friendly(player, foe) && (!(foe instanceof Player other) || player.canHarmPlayer(other))) {
-            foe.hurt(ball.damageSources().thrown(ball, player), tide ? Arsenal.Relic.TIDELACE_TRIDENT.damage : Arsenal.Relic.LANTERN_SPEAR.damage);
+            foe.hurt(ball.damageSources().thrown(ball, player), WeaponBalance.damage(tide ? Arsenal.Relic.TIDELACE_TRIDENT : Arsenal.Relic.LANTERN_SPEAR));
             if (!tide) foe.addEffect(new MobEffectInstance(MobEffects.GLOWING, 200));
         }
         if (tide) {

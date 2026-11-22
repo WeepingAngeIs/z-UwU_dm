@@ -6,6 +6,8 @@ public final class AcquisitionPolicy {
  public static final ModConfigSpec SPEC;
  public static final ModConfigSpec.IntValue SETTLEMENT_DISTANCE;
  public static final ModConfigSpec.IntValue DUSK_SITE_CHANCE;
+ public static final int MAX_CUPID_BOW_CHARM_SECONDS = Integer.MAX_VALUE / 20;
+ public static final ModConfigSpec.IntValue CUPID_BOW_CHARM_SECONDS;
  public static final ModConfigSpec.BooleanValue GUARDIAN_FAMILY;
  public static final ModConfigSpec.IntValue GUARDIAN_COOLDOWN,GUARDIAN_GROWTH,GUARDIAN_READY,GUARDIAN_PAIR_RADIUS,
          GUARDIAN_POPULATION_RADIUS,GUARDIAN_POPULATION_CAP,GUARDIAN_PERMISSION;
@@ -24,6 +26,8 @@ public final class AcquisitionPolicy {
   AREA_MINING=b.comment("Allow deliberate 9 by 9 Bell Hammer mining. Block permissions and harvest rules still apply.").define("bellHammerAreaMiningEnabled",true);
   LOOTR_FOR_NEW_PERSONAL_CHESTS=b.comment("Opt in to compatible Lootr rewards at eligible new personal chest sites in Sakura Reach. Native rewards are the default. The Mirror Court seal uses the native menu. Existing rewards retain their assigned backend.")
           .worldRestart().define("useLootrForNewPersonalChests",false);
+  CUPID_BOW_CHARM_SECONDS=b.comment("Cupid Bow enemy charm duration in whole seconds. Each eligible arrow impact starts a new timer with the current value. Active charms keep their deadline.").defineInRange("cupidBowCharmSeconds",40,1,MAX_CUPID_BOW_CHARM_SECONDS);
+  WeaponBalance.define(b);
   b.push("cupidWishes");
   CUPID_WISHES=b.comment("Allow two selected charmed targets to summon a young creature.").define("enabled",true);
   CUPID_PLAYER_WITNESSES=b.comment("Allow a player who opts in to witness a creature wish.").define("playerWitnesses",true);
@@ -43,6 +47,7 @@ public final class AcquisitionPolicy {
   SPEC=b.build();
  }
  /** Stable server-policy API used by the optional Unyielding configuration adapter. */
+ public static int cupidBowCharmSeconds(){return SPEC.isLoaded()?CUPID_BOW_CHARM_SECONDS.get():40;}
  public static int duskVillageChancePercent(){return SPEC.isLoaded()?DUSK_SITE_CHANCE.get():75;}
  public static boolean heartLocketCraftingEnabled(){return !SPEC.isLoaded()||HEART_LOCKET_CRAFTING.get();}
  public static boolean weaponAcquisitionEnabled(){return !SPEC.isLoaded()||WEAPON_ACQUISITION.get();}

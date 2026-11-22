@@ -53,7 +53,7 @@ public final class RibbonLash extends Entity {
                 if(counter().isEmpty()) {
                     if(RangedRelics.strike(s,p,target,relic(),p.position(),this) && getPersistentData().hasUUID("uwu.glitch_token")) {
                         if(relic()==Arsenal.Relic.RIFT_WHIP)GlitchCompletions.track(this,p,"rift_mark");
-                        int effect=switch(relic()){case RIFT_WHIP -> 160;default -> 0;};
+                        int effect=switch(relic()){case RIFT_WHIP -> WeaponBalance.ticks(relic().id(), "markDurationSeconds");default -> 0;};
                         getPersistentData().putInt("uwu.glitch_effect_ticks",effect);
                     }
                 } else {

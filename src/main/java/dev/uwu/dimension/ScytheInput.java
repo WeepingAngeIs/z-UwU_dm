@@ -25,7 +25,7 @@ public final class ScytheInput {
             }
             else if(counter==null)RelicFlight.cast(level,p,Arsenal.Relic.VESPER_SCYTHE,true);
             else {CounterEffects.ward(level,p,counter);RelicFlight.castCounter(level,p,counter,true);}
-            p.getCooldowns().addCooldown(item,14);
+            p.getCooldowns().addCooldown(item,WeaponBalance.wave(counter));
             p.getMainHandItem().hurtAndBreak(1,p,net.minecraft.world.entity.EquipmentSlot.MAINHAND);
         }));
     }

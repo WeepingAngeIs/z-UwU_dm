@@ -67,18 +67,19 @@ public final class RangedRelics {
     static boolean strike(ServerLevel level, Player player, LivingEntity target, Arsenal.Relic relic, Vec3 attackPosition, Entity abilitySource) {
         if (!enemy(player,target) || !BlossomArts.allowedTarget(level, player, target)) return false;
         boolean rear = relic == Arsenal.Relic.ROSE_DAGGER && DaggerBackstab.isBehind(target, attackPosition);
-        if (!target.hurt(player.damageSources().playerAttack(player), rear ? relic.damage * 2F : relic.damage + BlossomArts.lightningBonus(player, target, relic, abilitySource))) return false;
+        if (!target.hurt(player.damageSources().playerAttack(player), rear ? WeaponBalance.damage(relic) * 2F : WeaponBalance.damage(relic) + BlossomArts.lightningBonus(player, target, relic, abilitySource))) return false;
         if (rear) player.crit(target);
         switch(relic) {
             case FROST_WHIP -> {
+                int slow = WeaponBalance.ticks(relic.id(), "slowSeconds");
                 target.setTicksFrozen(160);
                 if(abilitySource!=null)GlitchCompletions.track(abilitySource,target,"freeze",160);
-                if(GlitchCompletions.applyEffect(target,new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN,60,10)) && abilitySource!=null)
-                    GlitchCompletions.track(abilitySource,target,"slow",60);
+                if(GlitchCompletions.applyEffect(target,new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN,slow,10)) && abilitySource!=null)
+                    GlitchCompletions.track(abilitySource,target,"slow",slow);
             }
             case RIFT_WHIP -> {
                 CompoundTag n=player.getPersistentData();n.putUUID("uwu.rift_target",target.getUUID());
-                n.putLong("uwu.rift_until",level.getGameTime()+160);
+                n.putLong("uwu.rift_until",level.getGameTime()+WeaponBalance.ticks(relic.id(), "markDurationSeconds"));
                 n.putString("uwu.rift_world",level.dimension().location().toString());
             }
             case AXOLOTL_WHIP -> summonPair(level,player,target,abilitySource);
@@ -118,7 +119,7 @@ public final class RangedRelics {
             Axolotl a=EntityType.AXOLOTL.create(level);if(a==null)continue;
             a.setVariant(side<0?Axolotl.Variant.LUCY:Axolotl.Variant.BLUE);
             a.moveTo(player.getX()+side*.6,player.getY(),player.getZ(),0,0);
-            CompoundTag n=a.getPersistentData();n.putUUID("uwu.twin_owner",player.getUUID());n.putUUID("uwu.twin_target",target.getUUID());n.putLong("uwu.twin_end",level.getGameTime()+600);
+            CompoundTag n=a.getPersistentData();n.putUUID("uwu.twin_owner",player.getUUID());n.putUUID("uwu.twin_target",target.getUUID());n.putLong("uwu.twin_end",level.getGameTime()+WeaponBalance.ticks(Arsenal.Relic.AXOLOTL_WHIP.id(), "companionLifetimeSeconds"));
             a.addTag("uwu.twin");a.setPersistenceRequired();
             if(level.addFreshEntity(a) && abilitySource!=null)GlitchCompletions.track(abilitySource,a,"exists");
         }
@@ -131,7 +132,7 @@ public final class RangedRelics {
         if(!(level.getEntity(n.getUUID("uwu.twin_owner")) instanceof Player owner)){a.discard();return;}
         if(level.getEntity(n.getUUID("uwu.twin_target")) instanceof LivingEntity target && enemy(owner,target)) {
             a.getNavigation().moveTo(target,1.3);
-            if(a.tickCount%20==0&&a.distanceToSqr(target)<6&&a.hasLineOfSight(target))target.hurt(a.damageSources().mobAttack(a),4);
+            if(a.tickCount%20==0&&a.distanceToSqr(target)<6&&a.hasLineOfSight(target))target.hurt(a.damageSources().mobAttack(a),WeaponBalance.amount(Arsenal.Relic.AXOLOTL_WHIP.id(), "companionHitDamage"));
         } else a.getNavigation().moveTo(owner,1.2);
     }
 }

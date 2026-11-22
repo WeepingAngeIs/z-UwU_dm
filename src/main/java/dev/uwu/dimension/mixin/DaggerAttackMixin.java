@@ -28,7 +28,7 @@ abstract class DaggerAttackMixin {
         Player attacker = (Player) (Object) this;
         if (victim instanceof LivingEntity target && DaggerBackstab.isDagger(attacker)
                 && DaggerBackstab.isBehind(target, attacker.position())) {
-            amount *= 2.0F;
+            amount *= DaggerBackstab.meleeMultiplier(attacker);
         }
         float damage = amount;
         return ReturnbloomTurnBack.damage(attacker, victim, source, () -> original.call(victim, source, damage));

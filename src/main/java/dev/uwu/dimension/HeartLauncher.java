@@ -96,7 +96,7 @@ final class HeartLauncher {
                 player.push(recoil.x, 0, recoil.z);
                 player.hurtMarked = true;
                 held.hurtAndBreak(1, player, LivingEntity.getSlotForHand(hand));
-                player.getCooldowns().addCooldown(this, 12);
+                player.getCooldowns().addCooldown(this, WeaponBalance.ticks("heart_launcher", WeaponBalance.CAST));
             }
             // Consume without SUCCESS: vanilla SUCCESS triggers the arm attack/throw swing.
             return InteractionResultHolder.consume(held);
@@ -107,7 +107,7 @@ final class HeartLauncher {
             return true;
         }
         @Override public void appendHoverText(ItemStack stack, TooltipContext context, java.util.List<Component> tips, TooltipFlag flag) {
-            tips.add(Component.literal("Fires a heart with a 12-tick recoil. Server owners can enable rock excavation."));
+            tips.add(Component.literal("Fires an explosive heart. Server owners can enable rock excavation."));
         }
     }
 
@@ -151,7 +151,7 @@ final class HeartLauncher {
                 for (LivingEntity target : level.getEntitiesOfClass(LivingEntity.class, bounds,
                         e -> e.position().distanceToSqr(at) <= radius * radius && RangedRelics.enemy(owner, e))) {
                     if (level.hasChunkAt(target.blockPosition()) && SakuraAccess.mayInteract(owner, target.blockPosition()))
-                        target.hurt(owner.damageSources().playerAttack(owner), 8);
+                        target.hurt(owner.damageSources().playerAttack(owner), WeaponBalance.amount("heart_launcher", WeaponBalance.ABILITY));
                 }
                 if (excavationEnabled(level)) queue(level, owner, BlockPos.containing(at), radius);
             }

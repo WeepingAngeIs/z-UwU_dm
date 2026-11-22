@@ -52,7 +52,7 @@ final class ReachLife {
         return 1;
     }
     private static int cupidHelp(ServerPlayer player) {
-        player.sendSystemMessage(Component.literal("Cupid Bow: shoot an eligible creature or survival player to charm them for 40 seconds. Hold the bow in your main hand. Left-click a foe to command your allies."));
+        player.sendSystemMessage(Component.literal("Cupid Bow: shoot an eligible creature or survival player to charm them for " + AcquisitionPolicy.cupidBowCharmSeconds() + " seconds. Hold the bow in your main hand. Left-click a foe to command your allies."));
         player.sendSystemMessage(Component.literal("For a wish, use your configured crouch control and left-click two different charmed adults within 24 blocks of you and "
             +AcquisitionPolicy.CUPID_WISH_RADIUS.get()+" blocks of each other. Hearts appear, then one young creature may arrive after a second. Crouch-click empty air to cancel."));
         player.sendSystemMessage(Component.literal("A player participant must opt in: /sakura cupid witness on. A player plus a creature can summon that creature's young; two players cannot. Two creatures can summon a viable young of either kind. This is a magical companion wish."));

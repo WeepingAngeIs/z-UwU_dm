@@ -36,6 +36,11 @@ public final class DaggerBackstab {
                 || GlitchBow.relic(stack) == Arsenal.Relic.ROSE_DAGGER || form != null && form.shape().equals("dagger");
     }
 
+    public static float meleeMultiplier(Player player) {
+        return player.getMainHandItem().is(RevivalBlossoms.DIRK.get())
+                ? WeaponBalance.amount(WeaponBalance.DIRK, WeaponBalance.BACKSTAB) : 2F;
+    }
+
     @SubscribeEvent(priority = EventPriority.LOWEST)
     public static void critical(CriticalHitEvent event) {
         Player player = event.getEntity();

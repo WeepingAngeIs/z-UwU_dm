@@ -194,7 +194,7 @@ public final class RelicFlight extends ThrowableItemProjectile {
         if (flight == null) return false;
         flight.getPersistentData().putUUID("uwu.glitch_id", stackId);
         flight.getPersistentData().putUUID("uwu.glitch_token", token);
-        GlitchBow.begin(stack, level, counter == null ? 14 : 160, token);
+        GlitchBow.begin(stack, level, counter == null ? WeaponBalance.wave(null) : Math.max(160, WeaponBalance.wave(counter)), token);
         return true;
     }
 
@@ -253,7 +253,7 @@ public final class RelicFlight extends ThrowableItemProjectile {
         }
         if (cycleScythe && !wave) {
             owner.getPersistentData().putInt("uwu.scythe_element", element);
-            owner.getPersistentData().putLong("uwu.scythe_flight", level.getGameTime() + 60);
+            owner.getPersistentData().putLong("uwu.scythe_flight", level.getGameTime() + WeaponBalance.scytheThrow(CounterArsenal.entry(counter)));
         }
         if (physical) {
             BlossomArts.launched(owner, display, flight);
@@ -424,7 +424,8 @@ public final class RelicFlight extends ThrowableItemProjectile {
             if (RevivalBlossoms.isWeapon(getItem())) {
                 if (!(target instanceof Player) || server.getServer().isPvpAllowed()) {
                     if (target.isAttackable() && target != player
-                            && target.hurt(server.damageSources().trident(this, player), 10F)) {
+                            && target.hurt(server.damageSources().trident(this, player), WeaponBalance.amount(
+                                    getItem().is(RevivalBlossoms.DIRK.get()) ? WeaponBalance.DIRK : WeaponBalance.AXE, WeaponBalance.THROW_DAMAGE))) {
                         recoveredHit = RelicCatchRecovery.supports(getItem());
                         double radius = getItem().is(RevivalBlossoms.AXE.get()) ? 1.1 : .9;
                         HeartCombatGlow.dawnpetalImpact(server, impact, radius, 0, player);
@@ -451,7 +452,7 @@ public final class RelicFlight extends ThrowableItemProjectile {
                 }
             }
             if (applied && relic() == Arsenal.Relic.RIBBONHARE_SCEPTER && summonHare(server, player, target.blockPosition()))
-                effectTicks=Math.max(effectTicks,160);
+                effectTicks=Math.max(effectTicks,WeaponBalance.ticks(relic().id(), "hareLifetimeSeconds"));
             if (applied && relic() == Arsenal.Relic.VESPER_SCYTHE) {
                 switch (element()) {
                     case 1 -> {if(GlitchCompletions.applyEffect(target,new net.minecraft.world.effect.MobEffectInstance(
@@ -478,7 +479,7 @@ public final class RelicFlight extends ThrowableItemProjectile {
         }
         if (relic() == Arsenal.Relic.RIBBONHARE_SCEPTER && level() instanceof ServerLevel server
                 && getOwner() instanceof Player player && summonHare(server, player, hit.getBlockPos().relative(hit.getDirection())))
-            RelicReturns.deferGlitch(player,this,160);
+            RelicReturns.deferGlitch(player,this,WeaponBalance.ticks(relic().id(), "hareLifetimeSeconds"));
         if (physicalWeapon && level() instanceof ServerLevel server) {
             landOnBlock(server, hit);
             return;

@@ -105,7 +105,7 @@ public final class CounterArsenal {
             tips.add(Component.literal("Answers "+entry.sourceName()).withStyle(ChatFormatting.GOLD));
             tips.add(Component.literal(CounterEffects.description(entry.school())).withStyle(entry.theme().equals("dusk")?ChatFormatting.DARK_PURPLE:ChatFormatting.LIGHT_PURPLE));
             if(!entry.shape().equals("whip"))tips.add(Component.literal("Innate Swift Loyalty III • returns to your hand").withStyle(ChatFormatting.AQUA));
-            tips.add(Component.literal("Use to cast • "+entry.damage()+" damage • 8-second matching ward").withStyle(ChatFormatting.GRAY));
+            tips.add(Component.literal("Use to cast • 8-second matching ward").withStyle(ChatFormatting.GRAY));
             tips.add(Component.literal("Retune to another target: /sakura counter").withStyle(ChatFormatting.GRAY));
             if(entry.runic())tips.add(Component.literal("Also cleanses rolled runic ailments during the ward.").withStyle(ChatFormatting.AQUA));
             if(entry.shape().equals("hammer"))tips.add(Component.literal("Crouch and mine for a 9 × 9 plane when server area mining is enabled.").withStyle(ChatFormatting.GRAY));
@@ -118,12 +118,12 @@ public final class CounterArsenal {
             if(world instanceof ServerLevel level){
                 if(entry.shape().equals("whip")){
                     fire(level,p,entry);
-                    p.getCooldowns().addCooldown(this,60);
+                    p.getCooldowns().addCooldown(this,WeaponBalance.counterCast(entry));
                     stack.hurtAndBreak(1,p,LivingEntity.getSlotForHand(hand));
                 }else{
                     CounterEffects.ward(level,p,entry);
                     if(!RelicFlight.castCounterWeapon(level,p,entry,hand))return InteractionResultHolder.fail(stack);
-                    p.getCooldowns().addCooldown(this,60);
+                    p.getCooldowns().addCooldown(this,WeaponBalance.counterCast(entry));
                     return InteractionResultHolder.sidedSuccess(p.getItemInHand(hand),false);
                 }
             }
@@ -136,7 +136,7 @@ public final class CounterArsenal {
             if(p.getPersistentData().getLong("uwu.scythe_flight")>level.getGameTime())return;
             CounterEffects.ward(level,p,entry);
             if(RelicFlight.castCounterWeapon(level,p,entry,p.getUsedItemHand())){
-                p.getCooldowns().addCooldown(this,60);
+                p.getCooldowns().addCooldown(this,WeaponBalance.counterCast(entry));
             }
         }
     }

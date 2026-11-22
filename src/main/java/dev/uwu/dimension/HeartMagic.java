@@ -153,7 +153,7 @@ final class HeartMagic {
         CompoundTag data = rabbit.getPersistentData();
         rabbit.addTag(CALLER);
         data.putUUID(CALLER, keeper.getUUID());
-        data.putLong(THUMP_END, level.getGameTime() + 160);
+        data.putLong(THUMP_END, level.getGameTime() + WeaponBalance.ticks(Arsenal.Relic.RIBBONHARE_SCEPTER.id(), "hareLifetimeSeconds"));
         rabbit.setInvulnerable(true);
         rabbit.setPersistenceRequired();
         level.addFreshEntity(rabbit);

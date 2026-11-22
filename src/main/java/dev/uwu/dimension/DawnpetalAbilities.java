@@ -111,7 +111,7 @@ public final class DawnpetalAbilities {
                     if (player.level().isClientSide) {
                         heartCooldownOwner = new WeakReference<>(player);
                         heartCooldownEnd = player.level().getGameTime()
-                                + Math.clamp(cooldown.ticks, 0, DawnpetalAbility.HEART_SPIN.cooldown);
+                                + Math.max(0, cooldown.ticks);
                     }
                 }));
         NeoForge.EVENT_BUS.addListener(DawnpetalAbilities::tick);
@@ -169,7 +169,7 @@ public final class DawnpetalAbilities {
         if (!(actor instanceof ServerPlayer player) || player.connection == null) return;
         long now = player.serverLevel().getServer().overworld().getGameTime();
         long ticks = Math.clamp(persisted(player).getLong(HEART_SPIN_COOLDOWN) - now,
-                0, DawnpetalAbility.HEART_SPIN.cooldown);
+                0, Integer.MAX_VALUE);
         PacketDistributor.sendToPlayer(player, new HeartCooldown((int) ticks));
     }
 
@@ -209,9 +209,16 @@ public final class DawnpetalAbilities {
                     : RelicFlight.castDawnpetal(p.serverLevel(), p, InteractionHand.MAIN_HAND);
             if (!launched) return;
         }
-        persisted(p).putLong(cooldown, now + ability.cooldown);
+        String weaponId = dirk ? WeaponBalance.DIRK : WeaponBalance.AXE;
+        String setting = switch (ability) {
+            case THROW -> WeaponBalance.THROW;
+            case SPIN -> "spinCooldownSeconds";
+            case HEART_SPIN -> "heartSpinCooldownSeconds";
+        };
+        int delay = WeaponBalance.ticks(weaponId, setting);
+        persisted(p).putLong(cooldown, now + delay);
         if (hearts) updateHeartCooldown(p);
-        else p.getCooldowns().addCooldown(weapon.getItem(), ability.cooldown);
+        else p.getCooldowns().addCooldown(weapon.getItem(), delay);
         if (spin != null) PacketDistributor.sendToPlayersTrackingEntityAndSelf(p, spin.cue);
     }
 
@@ -304,7 +311,7 @@ public final class DawnpetalAbilities {
         var hit = new SweepHit(attacker.damageSources().playerAttack(attacker), target);
         SWEEP_DAMAGE.set(hit);
         try {
-            if (target.hurt(hit.source, 8F) && hearts && hit.didDamage && target.isAlive()
+            if (target.hurt(hit.source, WeaponBalance.amount(WeaponBalance.AXE, hearts ? "heartSpinDamage" : "spinDamage")) && hearts && hit.didDamage && target.isAlive()
                     && target.level() == attacker.level()) {
                 Vec3 movement = target.getDeltaMovement();
                 target.setDeltaMovement(movement.x, HEART_SPIN_LIFT, movement.z);

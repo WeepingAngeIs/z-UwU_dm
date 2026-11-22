@@ -11,7 +11,6 @@ import net.neoforged.neoforge.event.entity.living.LivingShieldBlockEvent;
 
 @EventBusSubscriber(modid = "uwudimension")
 public final class PetalfoldCharm {
-    private static final int CHARM_TICKS = 6 * 20;
 
     private PetalfoldCharm() {}
 
@@ -28,7 +27,7 @@ public final class PetalfoldCharm {
         LivingEntity attacker = event.getDamageSource().getEntity() instanceof LivingEntity living
             ? living : null;
         var impact = PetalfoldImpact.capture(blocker, event.getDamageSource());
-        long until = level.getGameTime() + CHARM_TICKS;
+        long until = level.getGameTime() + WeaponBalance.ticks("petalfold_shield", "blockCharmSeconds");
 
         // The event announces a proposed block. Its container records the actual
         // damage blocked only after every listener has returned. Capturing the

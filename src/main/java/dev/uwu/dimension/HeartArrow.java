@@ -79,10 +79,10 @@ public final class HeartArrow extends Arrow {
                 && pet.isOwnedBy(owner) && CupidWishes.enabled(owner)) {
             if(HeartMagic.charm(server,owner,pet,true)) GlitchCompletions.track(this,pet,"charm");
         } else if (hit.getEntity() instanceof LivingEntity creature && !HeartMagic.friendly(player, creature)) {
-            boolean charmed = !ripple && HeartMagic.charm(server, player, creature, true);
+            boolean charmed = !ripple && HeartMagic.charm(server, player, creature, true, AcquisitionPolicy.cupidBowCharmSeconds() * 20);
             if(charmed)GlitchCompletions.track(this,creature,"charm");
             if (!charmed && (!(creature instanceof Player other) || player.canHarmPlayer(other)))
-                creature.hurt(damageSources().arrow(this, player), (ripple ? Arsenal.Relic.RIPPLE_BOW.damage : Arsenal.Relic.CUPID_BOW.damage) * getPersistentData().getFloat("strength"));
+                creature.hurt(damageSources().arrow(this, player), WeaponBalance.damage(ripple ? Arsenal.Relic.RIPPLE_BOW : Arsenal.Relic.CUPID_BOW) * getPersistentData().getFloat("strength"));
         }
         if (ripple) HeartCombatGlow.burst(server, hit.getLocation(), 1.5, 1);
         else {
@@ -108,10 +108,12 @@ public final class HeartArrow extends Arrow {
     private void burst(ServerLevel level, Vec3 spot, Player player) {
         if (!rippleBow()) return;
         BlossomArts.waterImpact(level, player, spot);
+        int glow = WeaponBalance.ticks(Arsenal.Relic.RIPPLE_BOW.id(), "glowSeconds");
+        int slow = WeaponBalance.ticks(Arsenal.Relic.RIPPLE_BOW.id(), "slowSeconds");
         for (LivingEntity mob : level.getEntitiesOfClass(Mob.class, new AABB(spot, spot).inflate(3.5), m -> !HeartMagic.friendly(player, m) && BlossomArts.allowedTarget(level, player, m))) {
             BlossomArts.waterRecipient(level, mob);
-            if(GlitchCompletions.applyEffect(mob,new MobEffectInstance(MobEffects.GLOWING,140)))GlitchCompletions.track(this,mob,"glow",140);
-            if(GlitchCompletions.applyEffect(mob,new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN,75,1)))GlitchCompletions.track(this,mob,"slow",75);
+            if(GlitchCompletions.applyEffect(mob,new MobEffectInstance(MobEffects.GLOWING,glow)))GlitchCompletions.track(this,mob,"glow",glow);
+            if(GlitchCompletions.applyEffect(mob,new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN,slow,1)))GlitchCompletions.track(this,mob,"slow",slow);
         }
     }
 

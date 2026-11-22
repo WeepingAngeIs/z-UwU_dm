@@ -129,9 +129,10 @@ public final class GlitchBow extends Item {
         if(pending(s)&&r==Arsenal.Relic.RIFT_WHIP&&p.isShiftKeyDown()&&!p.getCooldowns().isOnCooldown(this)){
             if(!(world instanceof ServerLevel level))return InteractionResultHolder.sidedSuccess(s,true);
             if(!RangedRelics.activate(level,p,r,hand))return InteractionResultHolder.fail(s);
-            long ready=level.getServer().overworld().getGameTime()+r.cooldown;
+            int delay=WeaponBalance.cast(r);
+            long ready=level.getServer().overworld().getGameTime()+delay;
             CustomData.update(DataComponents.CUSTOM_DATA,s,n->n.putLong("uwu_glitch_ready",Math.max(n.getLong("uwu_glitch_ready"),ready)));
-            p.getCooldowns().addCooldown(this,r.cooldown);s.hurtAndBreak(1,p,LivingEntity.getSlotForHand(hand));
+            p.getCooldowns().addCooldown(this,delay);s.hurtAndBreak(1,p,LivingEntity.getSlotForHand(hand));
             return InteractionResultHolder.sidedSuccess(s,false);
         }
         boolean fishingForm=c!=null&&c.shape().equals("spear") || r==Arsenal.Relic.LANTERN_SPEAR || r==Arsenal.Relic.TIDELACE_TRIDENT;
@@ -153,7 +154,7 @@ public final class GlitchBow extends Item {
         boolean draw=r!=null&&(r.bow()||r==Arsenal.Relic.VESPER_SCYTHE)||c!=null&&c.shape().equals("scythe");
         if(draw){p.startUsingItem(hand);return InteractionResultHolder.consume(s);}
         if(!(world instanceof ServerLevel level))return InteractionResultHolder.sidedSuccess(s,true);
-        int cooldown=c!=null?60:r.cooldown;
+        int cooldown=c!=null?WeaponBalance.counterCast(c):WeaponBalance.cast(r);
         // Every counter cast grants an eight-second matching ward. Retain the
         // form through that active ability even though its item cooldown is shorter.
         int formDuration=c!=null?Math.max(160,cooldown):cooldown;
@@ -195,9 +196,10 @@ public final class GlitchBow extends Item {
             // The real scythe item cooldown is 60 ticks; counter scythes also
             // retain their form through the matching 160-tick ward.
             var beforeCast=stack.getOrDefault(DataComponents.CUSTOM_DATA,CustomData.EMPTY).copyTag();
-            begin(stack,level,c!=null?160:60,UUID.randomUUID());
+            int delay=WeaponBalance.scytheThrow(c);
+            begin(stack,level,c!=null?Math.max(160,delay):delay,UUID.randomUUID());
             if(c!=null)trackWard(level,stack,p,resistance);
-            if(RelicFlight.castGlitchWeapon(level,p,hand,r,c))p.getCooldowns().addCooldown(this,60);
+            if(RelicFlight.castGlitchWeapon(level,p,hand,r,c))p.getCooldowns().addCooldown(this,delay);
             else stack.set(DataComponents.CUSTOM_DATA,CustomData.of(beforeCast));
             return;
         }
@@ -206,7 +208,8 @@ public final class GlitchBow extends Item {
         if(draw<.15F)return;
         UUID token=UUID.randomUUID();UUID stackId=identity(stack);
         if(!HeartArrow.fire(level,p,r,draw,stackId,token))return;
-        begin(stack,level,r.cooldown,token);if(r.cooldown>0)p.getCooldowns().addCooldown(this,r.cooldown);
+        int delay=WeaponBalance.cast(r);
+        begin(stack,level,delay,token);if(delay>0)p.getCooldowns().addCooldown(this,delay);
         stack.hurtAndBreak(1,p,LivingEntity.getSlotForHand(hand));
     }
     @Override public boolean hurtEnemy(ItemStack stack,LivingEntity target,LivingEntity attacker){

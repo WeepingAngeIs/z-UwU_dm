@@ -18,7 +18,6 @@ import net.neoforged.neoforge.event.entity.living.LivingDamageEvent;
 
 /** Collects accepted melee damage for one native attack or one Better Combat attack request. */
 public final class ReturnbloomTurnBack {
-    static final int COOLDOWN_TICKS = 120;
     private static final String COOLDOWN = "uwu.returnbloom_turn_back_until";
 
     private record Swing(ServerPlayer player, ItemStack weapon, float yaw, Set<Mob> targets) {}
@@ -84,7 +83,7 @@ public final class ReturnbloomTurnBack {
                 CompoundTag data = player.getPersistentData();
                 if (!data.contains(Player.PERSISTED_NBT_TAG, Tag.TAG_COMPOUND))
                     data.put(Player.PERSISTED_NBT_TAG, new CompoundTag());
-                data.getCompound(Player.PERSISTED_NBT_TAG).putLong(COOLDOWN, now + COOLDOWN_TICKS);
+                data.getCompound(Player.PERSISTED_NBT_TAG).putLong(COOLDOWN, now + WeaponBalance.ticks(WeaponBalance.DIRK, "turnBackCooldownSeconds"));
                 for (Mob target : swing.targets) {
                     if (target.isAlive() && target.level() == player.serverLevel())
                         ReturnbloomFacing.turnAway(target, swing.yaw);

@@ -101,8 +101,11 @@ public final class RevivalBlossoms {
     }
 
     private static void refresh(ServerPlayer owner, ItemStack stack) {
-        long left = remaining(owner, stack);
-        int phase = left == 0 ? 0 : 1 + (int)((COOLDOWN_TICKS - left) / 240);
+        Ledger charges = ledger(owner.serverLevel());
+        UUID id = identity(stack);
+        long left = charges.remaining(owner.getUUID(), id, now(owner.serverLevel()));
+        int duration = charges.duration(owner.getUUID(), id);
+        int phase = left == 0 ? 0 : 1 + (int) Math.clamp((duration - left) * 5 / duration, 0, 4);
         CompoundTag data = stack.getOrDefault(DataComponents.CUSTOM_DATA, CustomData.EMPTY).copyTag();
         if (data.getInt(PHASE) == phase && data.getLong(LEFT) == left) return;
         CustomData.update(DataComponents.CUSTOM_DATA, stack, tag -> {
@@ -121,7 +124,7 @@ public final class RevivalBlossoms {
         tips.add(Component.literal("A ready sakura restores full health when a fatal blow lands.").withStyle(ChatFormatting.LIGHT_PURPLE));
         long left = stack.getOrDefault(DataComponents.CUSTOM_DATA, CustomData.EMPTY).copyTag().getLong(LEFT);
         tips.add(Component.literal(left > 0 ? "Blossom recharging: " + (left + 19) / 20 + "s"
-                : "Blossom ready • shared 60s revival cooldown").withStyle(left > 0 ? ChatFormatting.GRAY : ChatFormatting.GREEN));
+                : "Blossom ready • shares its revival recharge with the other blossom weapon").withStyle(left > 0 ? ChatFormatting.GRAY : ChatFormatting.GREEN));
     }
     private static void preventDeath(LivingDeathEvent event) {
         if (!(event.getEntity() instanceof ServerPlayer player) || player.isRemoved() || player.deathTime != 0
@@ -156,20 +159,37 @@ public final class RevivalBlossoms {
 
     private static final class Ledger extends SavedData {
         private final Map<UUID,Long> owners = new HashMap<>(), stacks = new HashMap<>();
+        // Older saves have only deadlines. Those activations used the original 60 seconds.
+        private final Map<UUID,Long> ownerLengths = new HashMap<>(), stackLengths = new HashMap<>();
         private long prunedAt = Long.MIN_VALUE;
         private void prune(long time) {
             if (time == prunedAt) return;
             prunedAt = time;
-            if (owners.values().removeIf(end -> end <= time) | stacks.values().removeIf(end -> end <= time)) setDirty();
+            if (owners.values().removeIf(end -> end <= time) | stacks.values().removeIf(end -> end <= time)) {
+                ownerLengths.keySet().retainAll(owners.keySet());
+                stackLengths.keySet().retainAll(stacks.keySet());
+                setDirty();
+            }
         }
         long remaining(UUID owner, UUID stack, long time) {
             prune(time);
             return Math.max(0, Math.max(owners.getOrDefault(owner,0L), stacks.getOrDefault(stack,0L)) - time);
         }
+        int duration(UUID owner, UUID stack) {
+            long duration = owners.getOrDefault(owner, 0L) >= stacks.getOrDefault(stack, 0L)
+                    ? ownerLengths.getOrDefault(owner, (long) COOLDOWN_TICKS)
+                    : stackLengths.getOrDefault(stack, (long) COOLDOWN_TICKS);
+            return (int) Math.clamp(duration, 1, Integer.MAX_VALUE);
+        }
         boolean claim(UUID owner, UUID stack, long time) {
             if (remaining(owner, stack, time) > 0) return false;
-            owners.put(owner, time + COOLDOWN_TICKS);
-            stacks.put(stack, time + COOLDOWN_TICKS);
+            int delay = WeaponBalance.ticks(WeaponBalance.SHARED, "rechargeSeconds");
+            owners.put(owner, time + delay);
+            stacks.put(stack, time + delay);
+            if (delay != COOLDOWN_TICKS) {
+                ownerLengths.put(owner, (long) delay);
+                stackLengths.put(stack, (long) delay);
+            }
             setDirty();
             return true;
         }
@@ -177,6 +197,8 @@ public final class RevivalBlossoms {
             Ledger result = new Ledger();
             read(nbt.getCompound("Owners"), result.owners);
             read(nbt.getCompound("Stacks"), result.stacks);
+            read(nbt.getCompound("OwnerRechargeTicks"), result.ownerLengths);
+            read(nbt.getCompound("StackRechargeTicks"), result.stackLengths);
             return result;
         }
         private static void read(CompoundTag source, Map<UUID,Long> target) {
@@ -189,6 +211,16 @@ public final class RevivalBlossoms {
             CompoundTag people = new CompoundTag(), items = new CompoundTag();
             owners.forEach((id,end) -> people.putLong(id.toString(), end));
             stacks.forEach((id,end) -> items.putLong(id.toString(), end));
+            if (!ownerLengths.isEmpty()) {
+                CompoundTag lengths = new CompoundTag();
+                ownerLengths.forEach((id,ticks) -> lengths.putLong(id.toString(), ticks));
+                tag.put("OwnerRechargeTicks", lengths);
+            }
+            if (!stackLengths.isEmpty()) {
+                CompoundTag lengths = new CompoundTag();
+                stackLengths.forEach((id,ticks) -> lengths.putLong(id.toString(), ticks));
+                tag.put("StackRechargeTicks", lengths);
+            }
             tag.put("Owners",people);tag.put("Stacks",items);
             return tag;
         }

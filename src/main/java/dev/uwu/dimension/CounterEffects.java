@@ -95,7 +95,7 @@ public final class CounterEffects {
             if(applied && rear)owner.crit(target);
             return applied;
         }
-        boolean applied = target.hurt(owner.damageSources().playerAttack(owner),rear ? e.damage()*2F : e.damage());
+        boolean applied = target.hurt(owner.damageSources().playerAttack(owner),WeaponBalance.counterDamage(e) * (rear ? 2F : 1F));
         if(applied && rear)owner.crit(target);
         return applied;
     }
@@ -140,7 +140,7 @@ public final class CounterEffects {
             var e=CounterArsenal.entry(n.getString("uwu.echo_counter"));
             if(e!=null&&level.getEntity(n.getUUID("uwu.echo_owner")) instanceof Player p&&RangedRelics.enemy(p,l)&&p.distanceToSqr(l)<1024){
                 boolean rear=n.getBoolean("uwu.echo_backstab");
-                if(l.hurt(p.damageSources().playerAttack(p),rear ? e.damage()*2F : e.damage())) {
+                if(l.hurt(p.damageSources().playerAttack(p),WeaponBalance.counterDamage(e) * (rear ? 2F : 1F))) {
                     if(rear)p.crit(l);
                     BlossomArts.counterHit(level,p,l,e);
                 }
