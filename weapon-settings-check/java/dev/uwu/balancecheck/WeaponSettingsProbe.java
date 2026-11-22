@@ -33,6 +33,7 @@ import net.minecraft.server.network.CommonListenerCookie;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.server.players.PlayerList;
 import net.minecraft.world.InteractionHand;
+import net.minecraft.world.damagesource.DamageTypes;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
@@ -52,6 +53,7 @@ import net.neoforged.fml.config.ModConfigs;
 import net.neoforged.neoforge.common.ModConfigSpec;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
+import net.neoforged.neoforge.event.entity.living.LivingDamageEvent;
 
 @Mod("uwu_weapon_settings_check")
 public final class WeaponSettingsProbe {
@@ -75,7 +77,15 @@ public final class WeaponSettingsProbe {
     private double attackSpeed;
     private final List<Double> sentDirkAdjustments = new ArrayList<>();
 
-    public WeaponSettingsProbe() { NeoForge.EVENT_BUS.addListener(this::tick); }
+    private final List<Float> counterHits = new ArrayList<>();
+
+    public WeaponSettingsProbe() {
+        NeoForge.EVENT_BUS.addListener(this::tick);
+        NeoForge.EVENT_BUS.addListener((LivingDamageEvent.Post event) -> {
+            if (stage == 14 && event.getEntity() == dummy && event.getSource().getEntity() == archer
+                    && event.getSource().is(DamageTypes.PLAYER_ATTACK)) counterHits.add(event.getNewDamage());
+        });
+    }
     private void tick(ServerTickEvent.Post event) {
         if (stage < 0) return;
         try {
@@ -322,7 +332,8 @@ public final class WeaponSettingsProbe {
                     return;
                 }
                 require(!archer.getCooldowns().isOnCooldown(item("counter_iron_twinblade").getItem()), "Chakram cooldown ran long");
-                equal(dummy.getMaxHealth() - dummy.getHealth(), 3, "Chakram throw used another weapon's hit value");
+                require(counterHits.equals(List.of(3F)), "Expected one tuned three-point direct chakram hit, saw " + counterHits);
+                require(dummy.getMaxHealth() - dummy.getHealth() >= 3, "Direct chakram hit did not reduce health");
                 equal(value("counter_gold_twinblade", "abilityDamage").get(), 19, "Second chakram leaked balance");
                 var glitch = item("glitch_bow");
                 int form = GlitchBow.FORMS.indexOf("counter_iron_twinblade");
