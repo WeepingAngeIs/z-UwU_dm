@@ -1,0 +1,170 @@
+name: Petal and Dusk Guardian playtest
+on:
+  push:
+    branches: ['codex/guardian-petal-dusk']
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: guardian-petal-dusk-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  build:
+    if: github.repository == 'WeepingAngeIs/z-UwU_dm' && github.event.repository.private == false
+    runs-on: ubuntu-24.04
+    timeout-minutes: 32
+    outputs:
+      hash: ${{ steps.seal.outputs.hash }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with: {persist-credentials: false}
+      - uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880
+        with: {distribution: temurin, java-version: '21'}
+      - name: Build the cumulative JAR and separate village verifier
+        run: |
+          bash weapon-release/bootstrap.sh
+          bash gradlew --no-daemon --max-workers=2 -I village-size-check/probe.gradle jar villageSizeProbeJar
+      - name: Compare scope and seal the exact candidate
+        id: seal
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p build/guardian-input
+          cp build/libs/*-guardians.1.jar build/guardian-input/
+          cp build/village-size-check/village-size-probe.jar build/guardian-input/
+          jar=$(realpath build/guardian-input/*-guardians.1.jar)
+          python3 guardian-encounter-check/scope.py "$jar" build/guardian-input/scope.json
+          printf '%s\n' "$GITHUB_SHA" > build/guardian-input/source.txt
+          echo "hash=$(sha256sum "$jar" | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
+          (cd build/guardian-input && sha256sum *.jar scope.json source.txt > SHA256SUMS.txt)
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: guardian-sealed-input-${{ github.sha }}
+          path: build/guardian-input/
+          compression-level: 0
+          retention-days: 2
+          if-no-files-found: error
+  film:
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 32
+    strategy:
+      fail-fast: false
+      matrix: {view: [player, observer]}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with: {persist-credentials: false}
+      - uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880
+        with: {distribution: temurin, java-version: '21'}
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
+        with:
+          name: guardian-sealed-input-${{ github.sha }}
+          path: build/guardian-input
+          digest-mismatch: error
+      - name: Film the Survival encounter and check the observed movement
+        env:
+          VIEW: ${{ matrix.view }}
+          UWU_EXPECTED_JAR_SHA256: ${{ needs.build.outputs.hash }}
+        run: |
+          (cd build/guardian-input && sha256sum -c SHA256SUMS.txt)
+          export UWU_JAR=$(realpath build/guardian-input/*-guardians.1.jar)
+          bash weapon-release/bootstrap.sh
+          if ! command -v xvfb-run >/dev/null || ! command -v ffmpeg >/dev/null || ! /usr/bin/python3 -c 'import numpy, PIL'; then
+            sudo apt-get update -qq && sudo apt-get install -y xvfb xauth libgl1-mesa-dri libopenal1 ffmpeg python3-pil python3-numpy fonts-dejavu-core
+          fi
+          bash guardian-encounter-check/run.sh "$VIEW"
+      - name: Keep native screenshots, exact positions and logs
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: guardian-native-${{ matrix.view }}-${{ github.sha }}
+          path: |
+            build/guardian-evidence/
+            build/lotus-client.log
+          retention-days: 5
+          compression-level: 1
+          if-no-files-found: warn
+      - name: Save the finished review media and numbers
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: guardian-review-${{ matrix.view }}-${{ github.sha }}
+          path: |
+            build/guardian-evidence/${{ matrix.view }}/*.mp4
+            build/guardian-evidence/${{ matrix.view }}/*.png
+            build/guardian-evidence/${{ matrix.view }}/outcomes.json
+            build/guardian-evidence/${{ matrix.view }}/camera-checks.json
+            build/guardian-evidence/${{ matrix.view }}/surface-stability.json
+            build/guardian-evidence/${{ matrix.view }}/candidate.sha256
+          retention-days: 7
+          if-no-files-found: error
+  villages:
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with: {persist-credentials: false}
+      - uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880
+        with: {distribution: temurin, java-version: '21'}
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
+        with:
+          name: guardian-sealed-input-${{ github.sha }}
+          path: build/guardian-input
+          digest-mismatch: error
+      - name: Check the native guardians in fresh Petal and Dusk villages
+        env: {UWU_EXPECTED_JAR_SHA256: '${{ needs.build.outputs.hash }}'}
+        run: |
+          (cd build/guardian-input && sha256sum -c SHA256SUMS.txt)
+          export UWU_JAR=$(realpath build/guardian-input/*-guardians.1.jar)
+          bash guardian-encounter-check/villages.sh
+      - if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: guardian-village-evidence-${{ github.sha }}
+          path: |
+            build/village-evidence/layouts-8675309.json
+            build/village-evidence/*.log
+          retention-days: 7
+          if-no-files-found: warn
+  delivery:
+    needs: [build,film,villages]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
+        with:
+          name: guardian-sealed-input-${{ github.sha }}
+          path: build/guardian-input
+          digest-mismatch: error
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
+        with:
+          name: guardian-review-player-${{ github.sha }}
+          path: build/guardian-delivery/player
+          digest-mismatch: error
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
+        with:
+          name: guardian-review-observer-${{ github.sha }}
+          path: build/guardian-delivery/observer
+          digest-mismatch: error
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
+        with:
+          name: guardian-village-evidence-${{ github.sha }}
+          path: build/guardian-villages
+          digest-mismatch: error
+      - name: Package the tested candidate and its films
+        env: {HASH: '${{ needs.build.outputs.hash }}'}
+        run: |
+          (cd build/guardian-input && sha256sum -c SHA256SUMS.txt)
+          grep -Fx "$HASH" build/guardian-delivery/player/candidate.sha256
+          grep -Fx "$HASH" build/guardian-delivery/observer/candidate.sha256
+          grep -Fx "$GITHUB_SHA" build/guardian-input/source.txt
+          cp build/guardian-input/*-guardians.1.jar build/guardian-input/{scope.json,source.txt} build/guardian-delivery/
+          cp build/guardian-villages/layouts-8675309.json build/guardian-delivery/
+          (cd build/guardian-delivery && sha256sum *.jar > SHA256SUMS.txt)
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: uwu-guardians-playtest-${{ github.sha }}
+          path: build/guardian-delivery/
+          retention-days: 14
+          compression-level: 1
+          if-no-files-found: error

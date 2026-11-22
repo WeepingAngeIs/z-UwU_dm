@@ -39,7 +39,14 @@ if [[ ${UWU_CUPID_LANTERN_CHECK:-false} == true ]]; then
 fi
 printf 'earlyWindowControl = false\n' > "$game_dir/config/fml.toml"
 export LIBGL_ALWAYS_SOFTWARE=1 ALSOFT_DRIVERS=null
-timeout --kill-after=20s 10m xvfb-run -a -s '-screen 0 800x600x24' bash gradlew --no-daemon --max-workers=2 -I lotus-client-check/client.gradle runLotusClient 2>&1 | tee "$log"
+screen=800x600x24
+limit=10m
+if [[ ${UWU_GUARDIAN_WARNING_CHECK:-false} == true ]]; then
+    screen=1280x800x24
+    limit=16m
+    printf 'guiScale:2\ngamma:0.75\nrenderClouds:false\nbobView:false\n' >> "$game_dir/options.txt"
+fi
+timeout --kill-after=20s "$limit" xvfb-run -a -s "-screen 0 $screen" bash gradlew --no-daemon --max-workers=2 -I lotus-client-check/client.gradle runLotusClient 2>&1 | tee "$log"
 if grep -Ei 'OutOfMemoryError|CHECK FAILED|single server tick has taken' "$log"; then exit 1; fi
 if [[ -n ${UWU_JAR:-} ]]; then
     grep -F 'UWU PACKAGED CANDIDATE PASS' "$log"
@@ -79,11 +86,10 @@ if [[ ${UWU_DIRK_COUNTDOWN_CHECK:-false} == true ]]; then
     exit 0
 fi
 if [[ ${UWU_GUARDIAN_WARNING_CHECK:-false} == true ]]; then
-    grep -F 'GUARDIAN MALE WARNING PASS' "$log"
+    grep -F 'GUARDIAN LEGACY PETAL AND DUSK PLAZA PASS' "$log"
     grep -F 'GUARDIAN ORDINARY FALL CONTROL PASS' "$log"
-    grep -F 'GUARDIAN QUIET RESET PASS' "$log"
-    grep -F 'GUARDIAN FEMALE WARNING PASS' "$log"
-    grep -F 'GUARDIAN INDEPENDENT PLAYERS AND REPEAT PASS' "$log"
+    grep -F 'GUARDIAN DUSK PRIOR REPEAT PASS' "$log"
+    grep -F 'GUARDIAN NATIVE ENCOUNTERS PASS' "$log"
     exit 0
 fi
 grep -F 'LOTUS FIRST PERSON PASS' build/lotus-client.log

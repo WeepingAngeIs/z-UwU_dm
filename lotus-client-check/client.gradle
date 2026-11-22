@@ -47,6 +47,9 @@ gradle.beforeProject { project ->
                     (shrineCheck ? 'build/shrine-client' :
                     (dirkCountdown ? 'build/dirk-countdown-client' : 'build/lotus-client')))))
             jvmArgument('-Xmx3G')
+            if (System.getenv('UWU_GUARDIAN_WARNING_CHECK') == 'true') {
+                ['--width','896','--height','504'].each { programArgument(it) }
+            }
             if (blossomCheck) jvmArgument('-Duwu.check.blossom=true')
             if (dirkCountdown) jvmArgument('-Duwu.check.dirkCountdown=true')
             if (shrineCheck) jvmArgument('-Duwu.check.shrine=true')

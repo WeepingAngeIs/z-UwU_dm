@@ -3,6 +3,6 @@
   "minVersion": "0.8",
   "package": "dev.uwu.lotusclientcheck.mixin",
   "compatibilityLevel": "JAVA_21",
-  "client": ["BloomDrawObserver", "BlossomDrawObserver", "DirkHandObserver", "DirkItemDrawObserver", "DirkSlotPacketObserver", "ShrineCircleObserver"],
+  "client": ["BloomDrawObserver", "BlossomDrawObserver", "DirkHandObserver", "DirkItemDrawObserver", "DirkSlotPacketObserver", "GuardianFlipObserver", "GuardianObserverCamera", "ShrineCircleObserver"],
   "injectors": {"defaultRequire": 1}
 }
