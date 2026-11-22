@@ -198,7 +198,8 @@ public final class VillageSizeProbe {
     private void request(ChunkPos cp){tickets.add(cp);level.getChunkSource().addRegionTicket(TicketType.FORCED,cp,0,cp,true);}
     private boolean loaded(ChunkPos cp){return level.getChunkSource().getChunkNow(cp.x,cp.z)!=null;}
     private boolean ready(BlossomVillage.Plan p){return tickets.stream().allMatch(this::loaded)
-            &&!level.getEntitiesOfClass(Keeper.class,new AABB(p.plaza()).inflate(78)).isEmpty();}
+            &&!level.getEntitiesOfClass(Keeper.class,new AABB(p.plaza()).inflate(78)).isEmpty()
+            &&(!GuardianVillageWitness.ENABLED || !GuardianVillageWitness.residents(level,p).isEmpty());}
     private void release(BlossomVillage.Plan p){
         for(var cp:tickets)level.getChunkSource().removeRegionTicket(TicketType.FORCED,cp,0,cp,true);tickets.clear();
         var cp=new ChunkPos(p.plaza());level.getChunkSource().removeRegionTicket(TicketType.FORCED,cp,2,cp,true);

@@ -89,6 +89,7 @@ final class PlacedVillage {
         var post=site.pos(plan.x()+gate-plan.road().length/2,plan.road()[gate]+2,plan.z()+plan.bends()[gate]+3);
         require(!level.getBlockState(post).isAir(),"Missing street gate at "+post);
         var row=new JsonObject(); row.addProperty("seed",level.getSeed());row.addProperty("gx",site.gx());row.addProperty("gz",site.gz());
+        if (GuardianVillageWitness.ENABLED) row.addProperty("guardianTranslationKey",GuardianVillageWitness.verify(level,plan));
         row.addProperty("faction",plan.dusk()?"Dusk":"Petal");row.addProperty("actualHouses",found.size());row.addProperty("residentsSeen",keepers.size());
         row.addProperty("beds",beds);row.addProperty("walkablePathColumns",paths);row.addProperty("plaza",plan.plaza().toShortString());
         var bends=new JsonArray();for(int z:plan.bends())bends.add(z);row.add("bends",bends);row.add("houses",houses);return row;
