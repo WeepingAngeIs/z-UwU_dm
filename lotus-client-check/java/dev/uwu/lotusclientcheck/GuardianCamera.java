@@ -84,6 +84,8 @@ public final class GuardianCamera {
             row.addProperty("headYaw",guardDraw?head:0);row.addProperty("minArmRaise",guardDraw?arms:0);
             if(guardDraw&&Float.isFinite(up))row.addProperty("bodyUp",up);
             row.addProperty("texture",texture);row.addProperty("playerGround",a.onGround());
+            // This is the exact hurt/death predicate used by LivingEntityRenderer.getOverlayCoords.
+            row.addProperty("hurtOverlay",g.hurtTime>0||g.deathTime>0);
             row.addProperty("height",a.getY()-t.floor());row.addProperty("cameraToPlayer",camera.getPosition().distanceTo(a.getEyePosition()));
             row.addProperty("cameraType",mc.options.getCameraType().name());
             String name=String.format(java.util.Locale.ROOT,"%02d-%04d.png",t.number(),sequence++);

@@ -2,6 +2,7 @@
 import csv
 import json
 import math
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -48,6 +49,9 @@ def camera_checks():
         if k in (1, 3):
             wink = [r for r in seen if r["action"] == "wink" and "_wink.png" in r["texture"] and r["playerGround"]]
             need(bool(wink), f"Missing visible single-eye Petal texture before lift in {k}")
+            if os.environ.get("UWU_REVIEW_PRE_TELEGRAPH") != "1":
+                need(any(r.get("hurtOverlay") is False for r in wink),
+                     f"Every actually drawn wink had the red Minecraft hurt overlay in case {k}")
             flip = [r for r in seen if r["action"] == "flip" and "bodyUp" in r]
             if ROLE == "observer":
                 need(len(flip) >= 4, f"Missing flip frames in case {k}")
@@ -57,12 +61,16 @@ def camera_checks():
                 need(max(r["minArmRaise"] for r in flip) > 36, f"Hands never held the attacker during flip: {k}")
                 need(min(r["tick"] for r in wink) < min(r["tick"] for r in flip), "Wink occurred after grasp")
         else:
-            shake = [r for r in seen if r["action"] == "shake" and r["playerGround"]]
-            need(len(shake) >= 4 and min(r["headYaw"] for r in shake) < -13 and max(r["headYaw"] for r in shake) > 13,
-                 f"No clearly rendered left and right head turns before launch: {k}, {[(r['tick'],r['headYaw']) for r in shake]}")
             held = [r for r in rows if r["action"] == "grip"]
-            need(bool(held) and max(r["tick"] for r in shake) <= min(r["tick"] for r in held),
-                 f"First warning overlapped the grab: {k}")
+            need(bool(held), f"Missing native grip in case {k}")
+            first_grab = held[0]["tick"]
+            shake = [r for r in seen if r["action"] == "shake" and r["playerGround"] and r["tick"] < first_grab]
+            need(len(shake) >= 4 and min(r["headYaw"] for r in shake) < -13 and max(r["headYaw"] for r in shake) > 13,
+                 f"No clearly rendered left and right head turns before the first grab: {k}, {[(r['tick'],r['headYaw']) for r in shake]}")
+            if k!=4:
+                need(not any(r["action"]=="shake" and r["tick"]>=first_grab for r in rows),
+                     f"First warning repeated after the grab: {k}")
+            # Case four also films a second player's independent first warning after the first release.
         rec = OUTCOMES[k]
         CHECKED.append({"trial": k, "faction": rec["variant"], "sex": rec["sex"], "warning": rec["warning"],
                         "frames": len(rows), "actualGuardianDraws": len(seen),

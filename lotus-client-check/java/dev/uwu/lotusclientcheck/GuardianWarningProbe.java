@@ -94,6 +94,9 @@ final class GuardianWarningProbe {
         }
         if(mc.player==null||mc.level==null||mc.gameMode==null||mc.screen!=null)return;
         joined=true;
+        mc.getToasts().clear();
+        mc.gui.getChat().clearMessages(false);
+        mc.options.hideGui=GuardianCamera.observer();
         mc.options.setCameraType(GuardianCamera.observer()?CameraType.THIRD_PERSON_BACK:CameraType.FIRST_PERSON);
         var t=trial;
         if(t==null || !(mc.level.getEntity(t.id()) instanceof BlossomWarden mob))return;
@@ -103,7 +106,8 @@ final class GuardianWarningProbe {
             if(t!=filming){filming=t;clientStart=player.tickCount;clientPeak=player.getY();draw=-1;armed=null;}
             clientPeak=Math.max(clientPeak,player.getY());
             if(t!=fired || mob.warningShake() || mob.warningWink()){
-                Vec3 aim=mob.position().add(0,t.arrow()&&t!=fired?1.70:2.14,0).subtract(player.getEyePosition());
+                double focus=t.arrow()&&t!=fired?1.70:t.girl()?1.27:2.14;
+                Vec3 aim=mob.position().add(0,focus,0).subtract(player.getEyePosition());
                 player.setYRot((float)Math.toDegrees(Math.atan2(-aim.x,aim.z)));
                 player.setXRot((float)-Math.toDegrees(Math.atan2(aim.y,aim.horizontalDistance())));
             }
@@ -256,9 +260,9 @@ final class GuardianWarningProbe {
             require(winks>=8&&shake==0&&flips>=18&&minHand<-.25&&maxHand>.25
                     &&maxHand-minHand>(t.girl()?.70:1.40)&&maxHandHeight>1.80,
                     "Missing Petal wink or held rotation "+details(player));
-            require(rise>3&&distance>=16&&distance<=24,"Wrong diagonal warning arc "+details(player)+" travel="+distance);
+            require(rise>3&&distance>=18&&distance<=22,"Wrong diagonal warning arc "+details(player)+" travel="+distance);
         }else{
-            require(shake>=32&&grips>=8&&winks==0&&flips==0&&rise>=8&&rise<=12.5&&distance<2.2,
+            require(shake>=32&&grips>=8&&winks==0&&flips==0&&rise>=9&&rise<=11&&distance<2.2,
                     "Wrong first warning or height "+details(player)+" distance="+distance);
         }
         require(Math.abs(clientPeak-peak)<1.5,"Client and server observed different apexes");
@@ -320,8 +324,8 @@ final class GuardianWarningProbe {
     }
     private static void oldVillageControls(ServerLevel original){
         var world=original.getServer().getLevel(ReefLife.REACH);require(world!=null,"Sakura Reach missing");
-        oldDusk=legacy(world,new BlockPos(13,215,13),"midnight_lace");
-        oldPetal=legacy(world,new BlockPos(51,215,13),"petal_quilt");
+        oldDusk=legacy(world,new BlockPos(13,arena.getY(),13),"midnight_lace");
+        oldPetal=legacy(world,new BlockPos(51,arena.getY(),13),"petal_quilt");
     }
     private static BlossomWarden legacy(ServerLevel level,BlockPos feet,String marker){
         var cp=new net.minecraft.world.level.ChunkPos(feet);
