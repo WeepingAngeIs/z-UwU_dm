@@ -57,6 +57,8 @@ public final class RevivalBlossomLights implements DynamicLightsInitializer {
     }
 
     static final class Point implements DynamicLightBehavior {
+        // Keep the same peak intensity and give a trailing companion enough reach to light its owner.
+        private static final double FALLOFF_MULTIPLIER = .75;
         private volatile Vec3 center;
         private Vec3 lastUpdate;
         Point(Vec3 center) { this.center=center; }
@@ -73,7 +75,8 @@ public final class RevivalBlossomLights implements DynamicLightsInitializer {
         }
         @Override public double lightAtPos(BlockPos pos,double falloffRatio) {
             Vec3 p=center;
-            return Math.max(0,11-Math.sqrt(p.distanceToSqr(pos.getX()+.5,pos.getY()+.5,pos.getZ()+.5))*falloffRatio);
+            double distance = Math.sqrt(p.distanceToSqr(pos.getX() + .5, pos.getY() + .5, pos.getZ() + .5));
+            return Math.max(0, 11 - distance * falloffRatio * FALLOFF_MULTIPLIER);
         }
     }
 }

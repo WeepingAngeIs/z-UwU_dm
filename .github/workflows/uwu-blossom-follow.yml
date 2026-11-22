@@ -47,9 +47,10 @@ jobs:
               changed = {n for n in members if baseline.read(n) != candidate.read(n)}
           expected = {"META-INF/neoforge.mods.toml",
                       "dev/uwu/dimension/RevivalBlossomClient.class",
+                      "dev/uwu/dimension/RevivalBlossomLights$Point.class",
                       "dev/uwu/dimension/RevivalBlossomMotion.class"}
           assert changed == expected, f"unexpected packaged changes: {sorted(changed ^ expected)}"
-          print("BLOSSOM PACKAGED SCOPE PASS: only companion motion and version metadata changed")
+          print("BLOSSOM PACKAGED SCOPE PASS: only companion motion, light falloff and version metadata changed")
           PY
           sha256sum "$UWU_JAR" > build/blossom.sha256
           echo "UWU_EXPECTED_JAR_SHA256=$(cut -d' ' -f1 build/blossom.sha256)" >> "$GITHUB_ENV"

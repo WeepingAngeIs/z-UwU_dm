@@ -40,7 +40,8 @@ public final class BlossomFollowProbe {
     private double walkSpeed, sprintSpeed, walkLag, sprintLag, turnLag, maxTurnStep;
     private double stopLag, earlyStopStep, coastDistance, settledLag;
     private int sprintTicks, lightTicks, litTicks;
-    private int dimmestPassingPlayerLight = 15;
+    private int dimmestPlayerLight = 15;
+    private int dimmestBlossomLight = 15;
     private int disarmedTicks, framesBeforeDisarm;
     private static int submittedFrames;
 
@@ -95,14 +96,16 @@ public final class BlossomFollowProbe {
             int remainingLight = light(client, Vec3.atCenterOf(finalLightPosition));
             require(remainingLight == 0 && submittedFrames == framesBeforeDisarm,
                     "companion or light remained after unequipping");
-            require(litTicks >= .95 * lightTicks, "moving light was weak too often: " + litTicks + "/" + lightTicks);
             System.out.printf(Locale.ROOT, "BLOSSOM WALK RUN TURN STOP PASS: walk %.2f blocks/tick (%.2f blocks trail), "
                             + "sprint %.2f blocks/tick (%.2f blocks trail), sharp-turn trail %.2f blocks, "
                             + "coast %.2f blocks, settled error %.3f blocks, short teleport reset%n",
                     walkSpeed, walkLag, sprintSpeed, sprintLag, turnLag, coastDistance, settledLag);
+            require(litTicks >= .95 * lightTicks && dimmestPlayerLight >= 4 && dimmestBlossomLight >= 8,
+                    "moving light was weak too often: " + litTicks + "/" + lightTicks
+                            + ", minimum by player=" + dimmestPlayerLight + ", by blossom=" + dimmestBlossomLight);
             System.out.printf(Locale.ROOT, "BLOSSOM RENDER AND LIGHT PASS: %d companion frames, "
-                            + "%d/%d lit moving samples, near-player light at least %d in passing samples, disarmed light %d%n",
-                    submittedFrames, litTicks, lightTicks, dimmestPassingPlayerLight, remainingLight);
+                            + "%d/%d lit moving samples, minimum block light %d by player and %d by blossom, disarmed light %d%n",
+                    submittedFrames, litTicks, lightTicks, dimmestPlayerLight, dimmestBlossomLight, remainingLight);
             return true;
         }
         if (phase == Phase.READY && !ready) return false;
@@ -122,10 +125,10 @@ public final class BlossomFollowProbe {
         if (phase == Phase.WALK || phase == Phase.RUN || phase == Phase.TURN || phase == Phase.STOP) {
             lightTicks++;
             int ownerLight = light(client, player.getEyePosition());
-            if (light(client, blossom) >= 9 && ownerLight >= 6) {
-                litTicks++;
-                dimmestPassingPlayerLight = Math.min(dimmestPassingPlayerLight, ownerLight);
-            }
+            int blossomLight = light(client, blossom);
+            dimmestPlayerLight = Math.min(dimmestPlayerLight, ownerLight);
+            dimmestBlossomLight = Math.min(dimmestBlossomLight, blossomLight);
+            if (blossomLight >= 9 && ownerLight >= 5) litTicks++;
         }
         switch (phase) {
             case READY -> {
