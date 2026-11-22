@@ -61,6 +61,7 @@ public final class LotusClientProbe {
         NeoForge.EVENT_BUS.addListener(LotusClientProbe::tick);
         if (GUARDIAN_ONLY) {
             NeoForge.EVENT_BUS.addListener(GuardianCamera::before);
+            NeoForge.EVENT_BUS.addListener(GuardianCamera::gallerySubject);
             NeoForge.EVENT_BUS.addListener(GuardianCamera::draw);
             NeoForge.EVENT_BUS.addListener(GuardianCamera::frame);
             NeoForge.EVENT_BUS.addListener(GuardianWarningProbe::serverTick);

@@ -51,6 +51,11 @@ public final class GuardianCamera {
                 (float)-Math.toDegrees(Math.atan2(direction.y,direction.horizontalDistance())));
     }
     static void before(RenderFrameEvent.Pre event){guardDraw=false;playerDraw=false;texture="";up=Float.NaN;}
+    static void gallerySubject(RenderLivingEvent.Pre<?,?> event){
+        var t=GuardianWarningProbe.trial;
+        if(t!=null&&GuardianGallery.pending(t)&&event.getEntity()==Minecraft.getInstance().player)
+            event.setCanceled(true);
+    }
     static void draw(RenderLivingEvent.Post<?,?> event){
         var actor=Minecraft.getInstance().player;
         if(actor==event.getEntity())playerDraw=true;
