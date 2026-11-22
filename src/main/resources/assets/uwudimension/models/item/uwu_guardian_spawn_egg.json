@@ -15,6 +15,14 @@
         "custom_model_data": 2
       },
       "model": "uwudimension:item/owl_guardian_girl_egg"
+    },
+    {
+      "predicate": { "custom_model_data": 3 },
+      "model": "uwudimension:item/dusk_guardian_male_egg"
+    },
+    {
+      "predicate": { "custom_model_data": 4 },
+      "model": "uwudimension:item/dusk_guardian_girl_egg"
     }
   ]
 }

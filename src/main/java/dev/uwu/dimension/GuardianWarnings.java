@@ -18,34 +18,42 @@ public final class GuardianWarnings {
     private static final int FORGET_AFTER = 30 * 20;
     private static final int SAME_IMPACT = 10;
     private static final String LANDING = "uwudimension:guardian_warning_landing";
-    private record Notice(long lastHit, long until, boolean pending) {}
+    static final int FIRST = 1, SECOND = 2;
+    private record Notice(long lastHit, long until, int completed, int pending) {}
     private final Map<UUID, Notice> notices = new HashMap<>();
 
-    /** False for repeat callbacks in the same hurt-resistance interval. */
-    boolean accept(UUID id, long now, boolean alreadyOnDuty) {
+    boolean accept(UUID id, long now, boolean alreadyOnDuty, boolean petal) {
         Notice old = notices.get(id);
-        if (old != null && now >= old.lastHit && now - old.lastHit < SAME_IMPACT) return false;
-        boolean first = !alreadyOnDuty && (old == null || (!old.pending && now >= old.until));
-        notices.put(id, new Notice(now, now + FORGET_AFTER, first));
+        // A hit during approach, shake, wink or hold cannot cancel or promote an active warning.
+        if (alreadyOnDuty || old != null && (old.pending != 0 || now >= old.lastHit && now - old.lastHit < SAME_IMPACT)) return false;
+        int completed = old == null || now >= old.until ? 0 : old.completed;
+        int next = completed == 0 ? FIRST : petal && completed == FIRST ? SECOND : 0;
+        notices.put(id, new Notice(now, now + FORGET_AFTER, completed, next));
         return true;
     }
 
-    boolean pending(UUID id) {
+    int kind(UUID id) {
         Notice notice = notices.get(id);
-        return notice != null && notice.pending;
+        return notice == null ? 0 : notice.pending;
     }
+
+    boolean pending(UUID id) { return kind(id) != 0; }
 
     void delivered(UUID id, long now) {
         Notice notice = notices.get(id);
-        if (notice != null) notices.put(id, new Notice(notice.lastHit, now + FORGET_AFTER, false));
+        if (notice != null && notice.pending != 0)
+            notices.put(id, new Notice(notice.lastHit, now + FORGET_AFTER, notice.pending, 0));
     }
 
     void abandon(UUID id) {
-        if (pending(id)) notices.remove(id);
+        Notice notice = notices.get(id);
+        if (notice == null || notice.pending == 0) return;
+        if (notice.completed == 0) notices.remove(id);
+        else notices.put(id, new Notice(notice.lastHit, notice.until, notice.completed, 0));
     }
 
     void prune(long now) {
-        notices.values().removeIf(n -> !n.pending && now >= n.until);
+        notices.values().removeIf(n -> n.pending == 0 && now >= n.until);
     }
 
     void save(CompoundTag tag, long now) {
@@ -56,7 +64,9 @@ public final class GuardianWarnings {
             entry.putUUID("Player", id);
             entry.putLong("Hit", notice.lastHit);
             entry.putLong("Until", notice.until);
-            entry.putBoolean("Pending", notice.pending);
+            entry.putBoolean("Pending", notice.pending != 0);
+            entry.putInt("Completed", notice.completed);
+            entry.putInt("Kind", notice.pending);
             entries.add(entry);
         });
         if (!entries.isEmpty()) tag.put("PlayerWarnings", entries);
@@ -70,13 +80,15 @@ public final class GuardianWarnings {
             if (!entry.hasUUID("Player")) continue;
             UUID id = entry.getUUID("Player");
             boolean pending = entry.getBoolean("Pending");
+            int completed = entry.contains("Completed") ? Math.clamp(entry.getInt("Completed"), 0, SECOND) : pending ? 0 : FIRST;
+            int kind = pending ? entry.contains("Kind") ? Math.clamp(entry.getInt("Kind"), FIRST, SECOND) : FIRST : 0;
             long until = entry.getLong("Until");
             if (pending ? queue.contains(id) : until > now)
-                notices.put(id, new Notice(entry.getLong("Hit"), until, pending));
+                notices.put(id, new Notice(entry.getLong("Hit"), until, completed, kind));
         }
     }
 
-    static void toss(ServerPlayer player, double originalFeetY) {
+    static void toss(ServerPlayer player, double originalFeetY, int kind, float bearing, boolean left) {
         CompoundTag landing = new CompoundTag();
         long now = player.level().getGameTime();
         landing.putString("Dimension", player.level().dimension().location().toString());
@@ -86,7 +98,13 @@ public final class GuardianWarnings {
         player.fallDistance = 0;
         player.setOnGround(false);
         // Vanilla movement covers the remainder of the ten-block arc from the raised hands.
-        player.setDeltaMovement(0, 1.30, 0);
+        if (kind == SECOND) {
+            // In still air this travels about twenty blocks horizontally before returning to level ground.
+            var horizontal = GuardianWarningMotion.forward(bearing).yRot(left ? .95F : -.95F).scale(2.05);
+            player.setDeltaMovement(horizontal.x, .94, horizontal.z);
+        } else {
+            player.setDeltaMovement(0, 1.30, 0);
+        }
         player.hurtMarked = true; // ServerEntity sends the velocity to the player and tracking clients.
     }
 

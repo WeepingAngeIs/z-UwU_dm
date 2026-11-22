@@ -136,6 +136,7 @@ final class GuardianFamily {
             String pair=ta.compareTo(tb)<0?ta+"|"+tb:tb+"|"+ta;
             child.setUUID(UUID.nameUUIDFromBytes(("uwudimension/owl/"+pair).getBytes(java.nio.charset.StandardCharsets.UTF_8)));
             child.setFemale(a.getRandom().nextBoolean());
+            child.setDuskGuardian((a.female()?a:b).duskGuardian());
             var f=child.family();
             f.offspring=true;
             f.mother=(a.female()?a:b).getUUID();

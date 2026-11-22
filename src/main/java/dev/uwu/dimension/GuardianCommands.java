@@ -28,14 +28,14 @@ public final class GuardianCommands {
                     var guard = source.getLevel().getEntitiesOfClass(BlossomWarden.class, near).stream()
                             .min(java.util.Comparator.comparingDouble(g -> g.distanceToSqr(pos)));
                     source.sendSuccess(() -> Component.literal(guard.map(BlossomWarden::combatStatus)
-                            .orElse("No loaded UwU Guardian within 64 blocks.")), false);
+                            .orElse("No loaded Guardian within 64 blocks.")), false);
                     return guard.isPresent() ? 1 : 0;
                 }))
                 .then(Commands.literal("creeperaggro")
                         .executes(ctx -> {
                             boolean on = GuardianTargeting.creeperAggroOn(ctx.getSource().getLevel());
                             ctx.getSource().sendSuccess(() -> Component.literal(
-                                    "Creeper aggro to the UwU Guardian is " + (on ? "on." : "off.")), false);
+                                    "Creeper aggro to Guardians is " + (on ? "on." : "off.")), false);
                             return on ? 1 : 0;
                         })
                         .then(Commands.argument("enabled", BoolArgumentType.bool())
@@ -43,7 +43,7 @@ public final class GuardianCommands {
                                     boolean on = BoolArgumentType.getBool(ctx, "enabled");
                                     GuardianTargeting.setCreeperAggro(ctx.getSource().getLevel(), on, ctx.getSource().getServer());
                                     ctx.getSource().sendSuccess(() -> Component.literal(
-                                            "Creeper aggro to the UwU Guardian is now " + (on ? "on." : "off.")), true);
+                                            "Creeper aggro to Guardians is now " + (on ? "on." : "off.")), true);
                                     return on ? 1 : 0;
                                 }))));
     }

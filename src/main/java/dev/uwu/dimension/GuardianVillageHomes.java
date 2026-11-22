@@ -62,6 +62,19 @@ final class GuardianVillageHomes extends SavedData {
         return dx * dx + dz * dz;
     }
 
+    /** Resolve a pre-faction village guard from its own loaded plaza or an actual resident of that court. */
+    @Nullable static Boolean duskAt(ServerLevel level, BlockPos court) {
+        BlockState floor = loadedState(level, court.below());
+        if (floor != null) {
+            if (floor.is(HeartwaterFeature.LACE.get())) return true;
+            if (floor.is(HeartwaterFeature.QUILT.get())) return false;
+        }
+        var residents = level.getEntitiesOfClass(Keeper.class, new AABB(court).inflate(PRECINCT_RADIUS),
+                keeper -> keeper.isAlive() && keeper.ownerId() == null && court.equals(keeper.villageCourt()));
+        if (residents.isEmpty()) return null;
+        return residents.getFirst().getType() == People.DUSK_KEEPER.get();
+    }
+
     private static boolean hasPlazaMarker(ServerLevel level, BlockPos court) {
         BlockState floor = loadedState(level, court.below());
         if (floor == null || !floor.is(HeartwaterFeature.QUILT.get()) && !floor.is(HeartwaterFeature.LACE.get())) return false;

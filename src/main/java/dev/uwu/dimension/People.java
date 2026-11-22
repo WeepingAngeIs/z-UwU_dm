@@ -44,14 +44,20 @@ public final class People {
     }
 
     public static net.minecraft.world.item.ItemStack guardianEgg(boolean girl) {
+        return guardianEgg(girl, false);
+    }
+
+    public static net.minecraft.world.item.ItemStack guardianEgg(boolean girl, boolean dusk) {
         var stack = new net.minecraft.world.item.ItemStack(WARDEN_EGG.get());
         var tag = new net.minecraft.nbt.CompoundTag();
         tag.putString("id", "uwudimension:blossom_warden");
         tag.putBoolean("FemaleGuardian", girl);
+        tag.putBoolean("DuskGuardian", dusk);
         stack.set(net.minecraft.core.component.DataComponents.ENTITY_DATA, net.minecraft.world.item.component.CustomData.of(tag));
-        stack.set(net.minecraft.core.component.DataComponents.CUSTOM_MODEL_DATA, new net.minecraft.world.item.component.CustomModelData(girl ? 2 : 1));
+        stack.set(net.minecraft.core.component.DataComponents.CUSTOM_MODEL_DATA, new net.minecraft.world.item.component.CustomModelData((dusk ? 2 : 0) + (girl ? 2 : 1)));
         stack.set(net.minecraft.core.component.DataComponents.ITEM_NAME, net.minecraft.network.chat.Component.translatable(
-                girl ? "item.uwudimension.owl_guardian_girl_egg" : "item.uwudimension.owl_guardian_male_egg"));
+                dusk ? girl ? "item.uwudimension.dusk_guardian_girl_egg" : "item.uwudimension.dusk_guardian_male_egg"
+                        : girl ? "item.uwudimension.owl_guardian_girl_egg" : "item.uwudimension.owl_guardian_male_egg"));
         return stack;
     }
 
@@ -78,6 +84,8 @@ public final class People {
             if (!e.getTabKey().equals(CreativeModeTabs.SPAWN_EGGS)) return;
             e.accept(guardianEgg(false));
             e.accept(guardianEgg(true));
+            e.accept(guardianEgg(false, true));
+            e.accept(guardianEgg(true, true));
             for (var resident : java.util.List.of(PETAL_EGG,DUSK_EGG,PETAL_ZOMBIE_EGG,DUSK_ZOMBIE_EGG)) e.accept(resident.get());
         });
     }

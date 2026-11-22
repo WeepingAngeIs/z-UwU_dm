@@ -188,7 +188,8 @@ public final class BlossomVillage {
             var warden=People.BLOSSOM_WARDEN.get().create(v.level.getLevel());
             if(warden!=null){
                 var at=p.plaza();warden.moveTo(at.getX()+.5,at.getY(),at.getZ()+.5,0,0);
-                warden.bindVillage(at);warden.setPersistenceRequired();v.level.addFreshEntity(warden);
+                warden.bindVillage(at);warden.setDuskGuardian(p.dusk());
+                warden.setPersistenceRequired();v.level.addFreshEntity(warden);
             }
         }
     }
