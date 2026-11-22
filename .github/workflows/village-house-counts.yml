@@ -75,7 +75,12 @@ jobs:
       - name: Confirm all house counts, upgrade evidence and draw measured layouts
         run: |
           (cd build/village-input && sha256sum -c checksums.txt)
-          /usr/bin/python3 village-size-check/report.py
+          curl --fail --silent --show-error --location --retry 3 --retry-all-errors \
+            https://files.pythonhosted.org/packages/e4/c9/06dd4a38974e24f932ff5f98ea3c546ce3f8c995d3f0985f8e5ba48bba19/pillow-11.3.0-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl \
+            --output "$RUNNER_TEMP/village-preview.whl"
+          printf '%s  %s\n' 676b2815362456b5b3216b4fd5bd89d362100dc6f4945154ff172e206a22c024 "$RUNNER_TEMP/village-preview.whl" | sha256sum -c
+          /usr/bin/python3 -m zipfile -e "$RUNNER_TEMP/village-preview.whl" "$RUNNER_TEMP/village-preview-libs"
+          PYTHONPATH="$RUNNER_TEMP/village-preview-libs" /usr/bin/python3 village-size-check/report.py
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: uwu-village-playtest-${{ github.sha }}

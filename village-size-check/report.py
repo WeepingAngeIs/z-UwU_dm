@@ -45,17 +45,18 @@ for i,(faction,count) in enumerate([("Petal",6),("Petal",12),("Dusk",6),("Dusk",
     draw.rounded_rectangle((x,y,x+510,y+353), 16, fill=paper,outline="#d5cbd0",width=2)
     draw.text((x+18,y+12), f"{faction}   ·   {count} houses",font=heading,fill=edge)
     draw.text((x+18,y+46), f"Seed {row['seed']}   ·   Plaza {row['plaza']}",font=small,fill="#615969")
-    scale=3.0
     lo=min(h["z"]-h["depth"] for h in row["houses"])
     hi=max(h["z"]+h["depth"] for h in row["houses"])
+    span=max(abs(h["x"])+h["width"] for h in row["houses"])
+    scale=min(6.0,221/max(span,len(row["bends"])//2),247/(hi-lo))
     def pt(ex,ez):
         return (round(x+255+scale*ex), round(y+206+scale*(ez-(lo+hi)/2)))
     bends=row["bends"]
-    draw.line([pt(dx-len(bends)//2,bend) for dx,bend in enumerate(bends)],fill="#ab9274",width=9)
+    draw.line([pt(dx-len(bends)//2,bend) for dx,bend in enumerate(bends)],fill="#ab9274",width=round(3*scale))
     for h in row["houses"]:
         hx,hz,side=h["x"],h["z"],h["side"]
         dz=hz-side*h["depth"]
-        draw.line((pt(hx,bends[hx+len(bends)//2]),pt(hx,dz)),fill="#b7a287",width=3)
+        draw.line((pt(hx,bends[hx+len(bends)//2]),pt(hx,dz)),fill="#b7a287",width=round(scale))
         draw.rectangle((*pt(hx-h["width"],hz-h["depth"]),*pt(hx+h["width"],hz+h["depth"])),fill=roof,outline=edge,width=2)
         a,b=pt(hx,dz)
         draw.ellipse((a-2,b-2,a+2,b+2),fill="#fff5d8",outline="#543f35")
