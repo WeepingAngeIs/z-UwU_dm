@@ -58,8 +58,9 @@ public final class BlossomWarden extends PathfinderMob {
     private static final int RESCUE_TICKS = 60;
     private static final double RESCUE_RANGE_SQUARED = 64 * 64;
     private static final byte IDLE = 0, CHASE = 1, GRIP = 2, THROW = 3, OLD_POST_TOSS_LOOK = 4;
-    private static final byte WARNING_SHAKE = 5, WARNING_WINK = 6, WARNING_FLIP = 7;
+    private static final byte WARNING_SHAKE = 5, WARNING_WINK = 6, WARNING_FLIP = 7, WARNING_FACE = 8;
     public static final int WARNING_SHAKE_TICKS = 46, WARNING_WINK_TICKS = 12, WARNING_FLIP_TICKS = 24;
+    private static final int WINK_SETTLE_TICKS = 10;
     private static final EntityDataAccessor<Byte> POSE = SynchedEntityData.defineId(BlossomWarden.class, EntityDataSerializers.BYTE);
     private static final EntityDataAccessor<Boolean> FEMALE =
             SynchedEntityData.defineId(BlossomWarden.class, EntityDataSerializers.BOOLEAN);
@@ -238,6 +239,10 @@ public final class BlossomWarden extends PathfinderMob {
     }
     public boolean chasing() { return entityData.get(POSE) == CHASE; }
     boolean idlePose() { return entityData.get(POSE) == IDLE; }
+    private boolean facingForWarning() {
+        byte pose = entityData.get(POSE);
+        return pose == WARNING_FACE || pose == WARNING_SHAKE || pose == WARNING_WINK;
+    }
     public boolean warningShake() { return entityData.get(POSE) == WARNING_SHAKE; }
     public boolean warningWink() { return entityData.get(POSE) == WARNING_WINK; }
     public boolean warningFlip() { return entityData.get(POSE) == WARNING_FLIP; }
@@ -254,6 +259,7 @@ public final class BlossomWarden extends PathfinderMob {
             case GRIP -> "holding";
             case THROW -> "releasing";
             case WARNING_SHAKE -> "shaking head";
+            case WARNING_FACE -> "facing player";
             case WARNING_WINK -> "winking";
             case WARNING_FLIP -> "holding through backflip";
             default -> "patrolling";
@@ -345,7 +351,7 @@ public final class BlossomWarden extends PathfinderMob {
             return;
         }
         if (rescue != null && rescue.target.equals(id)) return;
-        if (gripping() || throwing() || warningShake() || warningWink() || rescue != null) {
+        if (gripping() || throwing() || facingForWarning() || rescue != null) {
             if (!id.equals(offender())) rescueAlerts.putIfAbsent(id, level().getGameTime() + RESCUE_TICKS);
             return;
         }
@@ -390,7 +396,7 @@ public final class BlossomWarden extends PathfinderMob {
                 finish(level, false);
             }
         }
-        if (rescue == null && !gripping() && !throwing() && !warningShake() && !warningWink() && !rescueAlerts.isEmpty()) {
+        if (rescue == null && !gripping() && !throwing() && !facingForWarning() && !rescueAlerts.isEmpty()) {
             var pending = rescueAlerts.entrySet().iterator();
             while (pending.hasNext()) {
                 var alert = pending.next();
@@ -531,7 +537,7 @@ public final class BlossomWarden extends PathfinderMob {
                 getNavigation().stop();
                 if (warning != 0) {
                     faceWarning(culprit, 0);
-                    transition(warning == GuardianWarnings.FIRST ? WARNING_SHAKE : WARNING_WINK);
+                    transition(warning == GuardianWarnings.FIRST ? WARNING_SHAKE : WARNING_FACE);
                     return;
                 }
                 culprit.stopRiding();
@@ -587,13 +593,18 @@ public final class BlossomWarden extends PathfinderMob {
     private void tickPlayerWarning(ServerLevel level, ServerPlayer player, byte phase) {
         getNavigation().stop();
         setDeltaMovement(0, getDeltaMovement().y, 0);
-        if (phase == WARNING_SHAKE || phase == WARNING_WINK) {
+        if (facingForWarning()) {
             // Players can move freely while reading the tell. Reacquire on foot if they step away.
             if (distanceToSqr(player) > reachSquared(player) + 1 || !hasLineOfSight(player)) {
                 transition(CHASE);
                 return;
             }
             faceWarning(player, phase == WARNING_SHAKE ? GuardianWarningMotion.headShake(motionTicks) : 0);
+            if (phase == WARNING_FACE) {
+                // Let the native damage flash clear so the player sees the wink in its usual colors.
+                if (++motionTicks >= WINK_SETTLE_TICKS) transition(WARNING_WINK);
+                return;
+            }
             if (++motionTicks < (phase == WARNING_SHAKE ? WARNING_SHAKE_TICKS : WARNING_WINK_TICKS)) return;
             player.stopRiding();
             takeoffY = player.getY();
