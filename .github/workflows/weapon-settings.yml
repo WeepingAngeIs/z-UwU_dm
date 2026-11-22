@@ -1,0 +1,40 @@
+name: Live UwU weapon settings
+on:
+  push:
+    branches: ['codex/cupid-charm-seconds']
+permissions:
+  contents: read
+jobs:
+  verify:
+    if: github.repository == 'WeepingAngeIs/z-UwU_dm' && github.event.repository.private == false
+    runs-on: ubuntu-24.04
+    timeout-minutes: 32
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with: {persist-credentials: false}
+      - uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880
+        with: {distribution: temurin, java-version: '21'}
+      - name: Build the candidate and separate verifier
+        run: |
+          bash weapon-release/bootstrap.sh
+          bash gradlew --no-daemon --max-workers=2 -I weapon-settings-check/probe.gradle jar weaponSettingsProbeJar
+      - name: Exercise the settings on the packaged server and restart
+        run: bash weapon-settings-check/run.sh
+      - name: Keep the tested candidate and its settings contract
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: uwu-weapon-settings-${{ github.sha }}
+          path: |
+            build/libs/*-weapon-settings.1.jar
+            build/weapon-settings-check/evidence/
+            weapon-settings-check/CONFIGTOPIA.md
+          retention-days: 14
+          if-no-files-found: error
+      - name: Keep focused server logs
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: uwu-weapon-settings-logs-${{ github.sha }}
+          path: build/weapon-settings-check/*.log
+          retention-days: 7
+          if-no-files-found: ignore

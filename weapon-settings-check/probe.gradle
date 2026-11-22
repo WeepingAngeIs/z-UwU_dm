@@ -1,0 +1,19 @@
+gradle.projectsEvaluated {
+    def project = gradle.rootProject
+    def compile = project.tasks.register('compileWeaponSettingsProbe', JavaCompile) {
+        dependsOn project.tasks.named('classes')
+        source(project.fileTree('weapon-settings-check/java') { include '**/*.java' })
+        source(project.file('weapon-check/java/dev/uwu/weaponcheck/CandidateJarProbe.java'))
+        classpath = project.sourceSets.main.compileClasspath + project.sourceSets.main.output
+        destinationDirectory.set(project.layout.buildDirectory.dir('weapon-settings-check/classes'))
+        javaCompiler.set(project.tasks.named('compileJava', JavaCompile).flatMap { it.javaCompiler })
+        options.release.set(21)
+        options.encoding = 'UTF-8'
+    }
+    project.tasks.register('weaponSettingsProbeJar', Jar) {
+        archiveFileName.set('weapon-settings-probe.jar')
+        destinationDirectory.set(project.layout.buildDirectory.dir('weapon-settings-check'))
+        from(compile.flatMap { it.destinationDirectory })
+        from(project.file('weapon-settings-check/resources'))
+    }
+}
