@@ -31,6 +31,7 @@ public final class RevivalBlossomClient {
     private static final int TICKS_PER_FRAME = 2;
     // The widest nontransparent silhouette spans 92 of the 96 frame pixels.
     private static final float QUAD_SIZE = .40F * FRAME_PIXELS / 92F;
+    // Only nearby ready companions keep per-player motion state.
     private static final Map<Player, RevivalBlossomMotion> MOTION = new IdentityHashMap<>();
     private static Level motionLevel;
 

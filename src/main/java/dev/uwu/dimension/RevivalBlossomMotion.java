@@ -7,7 +7,7 @@ import net.minecraft.world.phys.Vec3;
 final class RevivalBlossomMotion {
     private static final double HORIZONTAL_SPRING = .058;
     private static final double HORIZONTAL_DAMPING = .66;
-    private static final double HORIZONTAL_LAG = 2.5;
+    private static final double HORIZONTAL_RADIUS = 3.5;
     private static final double VERTICAL_SPRING = .14;
     private static final double VERTICAL_DAMPING = .68;
     private static final double VERTICAL_LAG = .16;
@@ -51,17 +51,19 @@ final class RevivalBlossomMotion {
         }
 
         Vec3 toAnchor = anchor.subtract(position);
-        Vec3 step = new Vec3(
+        Vec3 proposed = position.add(
                 (velocity.x + toAnchor.x * HORIZONTAL_SPRING) * HORIZONTAL_DAMPING,
                 (velocity.y + toAnchor.y * VERTICAL_SPRING) * VERTICAL_DAMPING,
                 (velocity.z + toAnchor.z * HORIZONTAL_SPRING) * HORIZONTAL_DAMPING);
-        Vec3 lag = step.subtract(toAnchor);
-        double maxLag = HORIZONTAL_LAG * scale;
-        double distance = lag.horizontalDistance();
-        double horizontalScale = distance > maxLag ? maxLag / distance : 1;
+        // Limit distance from the owner so the light stays useful through abrupt changes in the goal.
+        Vec3 fromOwner = proposed.subtract(owner);
+        double radius = HORIZONTAL_RADIUS * scale;
+        double distance = fromOwner.horizontalDistance();
+        double horizontalScale = distance > radius ? radius / distance : 1;
         double verticalLimit = VERTICAL_LAG * scale;
-        position = anchor.add(lag.x * horizontalScale, Mth.clamp(lag.y, -verticalLimit, verticalLimit),
-                lag.z * horizontalScale);
+        position = new Vec3(owner.x + fromOwner.x * horizontalScale,
+                Mth.clamp(proposed.y, anchor.y - verticalLimit, anchor.y + verticalLimit),
+                owner.z + fromOwner.z * horizontalScale);
         velocity = position.subtract(previous);
         if (position.distanceToSqr(anchor) < 1e-6 && velocity.lengthSqr() < 1e-6) {
             position = anchor;

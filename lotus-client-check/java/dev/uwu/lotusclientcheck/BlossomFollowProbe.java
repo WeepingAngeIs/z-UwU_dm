@@ -116,7 +116,8 @@ public final class BlossomFollowProbe {
         double blossomStep = previousBlossom == null ? 0 : blossom.subtract(previousBlossom).horizontalDistance();
         previousOwner = owner;
         previousBlossom = blossom;
-        require(lag.horizontalDistance() <= 2.50001 * player.getScale(), "companion broke its trail limit");
+        require(blossom.subtract(owner).horizontalDistance() <= 3.50001 * player.getScale(),
+                "companion moved beyond its travel radius");
 
         if (phase == Phase.WALK || phase == Phase.RUN || phase == Phase.TURN || phase == Phase.STOP) {
             lightTicks++;

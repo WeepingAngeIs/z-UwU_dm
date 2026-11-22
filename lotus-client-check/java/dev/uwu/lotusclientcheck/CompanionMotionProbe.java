@@ -44,7 +44,7 @@ final class CompanionMotionProbe {
             Vec3 owner = rest.add((tick - 64) * 1.10, (tick - 64) * .55, 0);
             follow.invoke(motion, owner, owner, tick, 1F);
             Vec3 lag = ((Vec3) sample.invoke(motion, 1F)).subtract(owner);
-            require(lag.horizontalDistance() <= 2.500001 && Math.abs(lag.y) <= .160001, "follow lag exceeded limits");
+            require(lag.horizontalDistance() <= 3.500001 && Math.abs(lag.y) <= .160001, "follow lag exceeded limits");
         }
         Vec3 destination = new Vec3(400, 90, -220);
         follow.invoke(motion, destination, destination, 76, 1F);
@@ -72,6 +72,21 @@ final class CompanionMotionProbe {
         require(afterTurn.x < 1 && afterTurn.x > .75, "turn snapped instead of carrying momentum around the owner");
         for (int tick = 2; tick <= 64; tick++) follow.invoke(turning, westAnchor, Vec3.ZERO, tick, 1F);
         require(near((Vec3) sample.invoke(turning, 1F), westAnchor), "turn did not settle at the original offset");
+
+        Vec3 sprintOffset = new Vec3(-1.05, 2, -.55);
+        var sprinting = constructor.newInstance(sprintOffset, Vec3.ZERO, 0);
+        for (int tick = 1; tick <= 32; tick++) {
+            Vec3 owner = new Vec3(0, 0, .28 * tick);
+            follow.invoke(sprinting, owner.add(sprintOffset), owner, tick, 1F);
+        }
+        Vec3 preTurn = (Vec3) sample.invoke(sprinting, 1F);
+        Vec3 turnOwner = new Vec3(.24, 0, 9.10);
+        Vec3 turnGoal = turnOwner.add(-.55, 2, 1.05);
+        follow.invoke(sprinting, turnGoal, turnOwner, 33, 1F);
+        Vec3 turnSample = (Vec3) sample.invoke(sprinting, 1F);
+        require(turnSample.subtract(preTurn).horizontalDistance() < .45
+                        && turnSample.subtract(turnGoal).horizontalDistance() > 2.5,
+                "a sharp sprint turn must preserve momentum when its goal moves far from the current blossom");
         System.out.println("LOTUS COMPANION MOMENTUM PASS acceleration, coast, turn, settle, interpolation and relocation");
     }
 
