@@ -63,7 +63,7 @@ public final class BlossomWardenRenderer extends MobRenderer<BlossomWarden,Bloss
     @Override protected void setupRotations(BlossomWarden entity,PoseStack poses,float age,float bodyYaw,float partial,float scale) {
         super.setupRotations(entity,poses,age,bodyYaw,partial,scale);
         if (!entity.warningFlip()) return;
-        float elapsed=entity.warningPhaseTicks(partial);
+        float elapsed=entity.flipAnimationTicks(partial);
         float size=entity.getAgeScale(); // Generic entity scale is already on the incoming pose stack.
         double pivot=GuardianWarningMotion.PIVOT_Y*size;
         poses.translate(0,pivot+GuardianWarningMotion.flipLift(elapsed)*size,0);
@@ -140,7 +140,7 @@ public final class BlossomWardenRenderer extends MobRenderer<BlossomWarden,Bloss
             if (w.warningFlip()) {
                 float partial = Mth.clamp(age - w.tickCount, 0F, 1F);
                 float settle = w.warningFollowThrough() ? Mth.clamp(
-                        (w.warningPhaseTicks(partial) - BlossomWarden.FLIP_RELEASE_TICK)
+                        (w.flipAnimationTicks(partial) - BlossomWarden.FLIP_RELEASE_TICK)
                                 / (BlossomWarden.WARNING_FLIP_TICKS - BlossomWarden.FLIP_RELEASE_TICK), 0F, 1F) : 0F;
                 left.xRot=right.xRot=Mth.lerp(settle, -1.34F, 0F);
                 left.zRot=Mth.lerp(settle, .28F, .08F);right.zRot=-left.zRot;

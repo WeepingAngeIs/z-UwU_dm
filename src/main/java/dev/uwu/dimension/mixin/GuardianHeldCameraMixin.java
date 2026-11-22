@@ -1,9 +1,11 @@
 package dev.uwu.dimension.mixin;
 
+import dev.uwu.dimension.BlossomWarden;
 import dev.uwu.dimension.GuardianWarningMotion;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.ClipContext;
@@ -30,7 +32,14 @@ abstract class GuardianHeldCameraMixin {
 
         Vec3 start = getPosition();
         double eyeHeight = start.y - player.getPosition(partial).y;
-        Vec3 desired = GuardianWarningMotion.renderedCarry(guardian, partial).eye(eyeHeight);
+        var carry = GuardianWarningMotion.renderedCarry(guardian, partial);
+        // During the return arc the broad shoulder sweeps across the carried player's sightline.
+        // Ease the viewpoint out to the throwing side, keeping the horizon and controls independent.
+        float returnProgress = Mth.clamp(2 * guardian.flipAnimationTicks(partial) / BlossomWarden.WARNING_FLIP_TICKS - 1, 0F, 1F);
+        double lean = Math.sin(Math.PI * returnProgress);
+        Vec3 shoulderRoom = new Vec3(guardian.throwsWarningLeft() ? .50 : -.50, 0, .15)
+                .yRot(-carry.bearing() * Mth.DEG_TO_RAD);
+        Vec3 desired = carry.eye(eyeHeight).add(shoulderRoom.scale(lean * lean));
         Vec3 eye = uwu$clipEye(level, player, start, desired);
         // Only the origin follows the carried body. Vanilla keeps the player's look direction and horizon.
         setPosition(eye.x, eye.y, eye.z);

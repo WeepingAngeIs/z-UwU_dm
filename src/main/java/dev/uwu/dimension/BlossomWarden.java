@@ -71,6 +71,7 @@ public final class BlossomWarden extends PathfinderMob {
     private static final EntityDataAccessor<Integer> HELD_PLAYER = SynchedEntityData.defineId(BlossomWarden.class, EntityDataSerializers.INT);
     private boolean factionKnown;
     private float warningBearing;
+    private long clientFlipPhaseBegan = -1;
     private GuardianDepartureGoal departure;
     private final GuardianFamily family=new GuardianFamily();
     public boolean isBaby() {return entityData.get(JUVENILE);}
@@ -108,7 +109,10 @@ public final class BlossomWarden extends PathfinderMob {
 
     @Override public void onSyncedDataUpdated(EntityDataAccessor<?> key) {
         super.onSyncedDataUpdated(key);
-        if (level().isClientSide && (HELD_PLAYER.equals(key) || POSE.equals(key))) trackCarriedPlayer();
+        if (level().isClientSide && (HELD_PLAYER.equals(key) || POSE.equals(key))) {
+            if (POSE.equals(key)) clientFlipPhaseBegan = warningFlip() ? level().getGameTime() : -1;
+            trackCarriedPlayer();
+        }
         if(JUVENILE.equals(key)) {
             var max=getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.MAX_HEALTH);
             if(max!=null)((GuardianVitality)max).uwu$guardianHealth(isBaby());
@@ -249,6 +253,7 @@ public final class BlossomWarden extends PathfinderMob {
     }
     public boolean warningShake() { return entityData.get(POSE) == WARNING_SHAKE; }
     public boolean warningWink() { return entityData.get(POSE) == WARNING_WINK; }
+    public boolean throwsWarningLeft() { return (getUUID().getLeastSignificantBits() & 1) == 0; }
     public boolean warningFollowThrough() { return entityData.get(POSE) == WARNING_FOLLOW_THROUGH; }
     public boolean warningFlip() { return entityData.get(POSE) == WARNING_FLIP || warningFollowThrough(); }
     public boolean holdsDuringFlip(Player player) {
@@ -262,6 +267,17 @@ public final class BlossomWarden extends PathfinderMob {
     public float warningPhaseTicks(float partial) {
         return Math.max(0, level().getGameTime() - entityData.get(WARNING_STARTED) + partial);
     }
+    public float flipAnimationTicks(float partial) {
+        float elapsed = warningPhaseTicks(partial);
+        if (clientFlipPhaseBegan < 0) return elapsed;
+        float local = Math.max(0, level().getGameTime() - clientFlipPhaseBegan + partial);
+        if (warningFollowThrough()) return Math.min(WARNING_FLIP_TICKS, FLIP_RELEASE_TICK + local);
+        // Start a normally received grip when it arrives. A new viewer tracking a flip already
+        // in progress uses its server age. The held body never passes the actual release cue.
+        long delay = clientFlipPhaseBegan - entityData.get(WARNING_STARTED);
+        return Math.min(FLIP_RELEASE_TICK, delay >= 0 && delay <= 4 ? local : elapsed);
+    }
+
     public boolean gripping() { return entityData.get(POSE) == GRIP || entityData.get(POSE) == WARNING_FLIP; }
     public boolean throwing() { return entityData.get(POSE) == THROW; }
     @Nullable public UUID offender() { return offenders.peekFirst(); }
@@ -664,7 +680,7 @@ public final class BlossomWarden extends PathfinderMob {
             return;
         }
         warnings.delivered(player.getUUID(), level.getGameTime());
-        GuardianWarnings.toss(player, takeoffY, kind, warningBearing, (getUUID().getLeastSignificantBits() & 1) == 0);
+        GuardianWarnings.toss(player, takeoffY, kind, warningBearing, throwsWarningLeft());
         sound(level, SoundEvents.IRON_GOLEM_ATTACK, .72F);
         level.sendParticles(ParticleTypes.CHERRY_LEAVES, hands.x, hands.y+.3, hands.z, 5,.2,.12,.2,.015);
         if (flip) {

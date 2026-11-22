@@ -70,8 +70,8 @@ def camera_checks():
                 follow=[r for r in rows if r["action"]=="follow" and r["actorDraw"] and r["guardianDraw"] and "actorBodyUp" in r]
                 need(follow and all(not r["carried"] and r["actorBodyUp"]>.93 for r in follow),
                      f"Player remained visually attached after the Petal release in {k}")
-                need(any(r["palmToPlayerAnchor"]>.55 for r in follow),
-                     f"No visible separation before the Guardian finished its turn in {k}: {follow}")
+                need(any(r["palmToPlayerAnchor"]>.55 and r["drawnGuardianUp"]<.9995 for r in follow),
+                     f"No visible separation while the Guardian was still rotating in {k}: {follow}")
                 after=[r for r in rows if r["tick"]>max(s["tick"] for s in flip) and r["action"]=="free" and "actorBodyUp" in r]
                 need(bool(after) and min(r["actorBodyUp"] for r in after)>.93,
                      f"Attacker remained visually rotated after release in {k}")

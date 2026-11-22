@@ -78,7 +78,7 @@ public final class GuardianWarningMotion {
 
     public static CarryPose renderedCarry(BlossomWarden guardian, float partial) {
         float bearing = Mth.rotLerp(partial, guardian.yBodyRotO, guardian.yBodyRot);
-        float elapsed = guardian.warningPhaseTicks(partial);
+        float elapsed = guardian.flipAnimationTicks(partial);
         Vec3 waist = grip(guardian, bearing, elapsed, 1)
                 .add(renderPosition(guardian, partial).subtract(guardian.position()))
                 .add(0, PLAYER_GRIP_HEIGHT, 0);
