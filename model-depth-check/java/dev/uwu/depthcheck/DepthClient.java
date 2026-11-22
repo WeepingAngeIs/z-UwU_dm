@@ -154,7 +154,8 @@ public final class DepthClient {
             if (serverError!=null) throw new AssertionError("World preparation",serverError);
             if (System.nanoTime()>deadline) throw new AssertionError("Timed out at sweep "+sweepIndex+" sample "+sampleIndex+" frames "+frameCount);
             if (prepared && mc.level.dimension().equals(ReefLife.REACH)
-                    && mc.level.getBlockEntity(SHRINE.block()) instanceof CupidShrine.Marker && mc.player.tickCount>50)
+                    && mc.level.getBlockState(SHRINE.block()).is(CupidShrine.BLOCK.get())
+                    && mc.level.getBlockEntity(SHRINE.block())!=null && mc.player.tickCount>50)
                 active=true;
         } catch(Throwable e) { fail(e); }
     }
