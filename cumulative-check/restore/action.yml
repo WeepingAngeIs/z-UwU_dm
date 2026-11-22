@@ -1,0 +1,30 @@
+name: Restore the frozen cumulative build
+description: Restore the exact source-bound input bundle and verify every JAR
+inputs:
+  bundle-sha:
+    description: SHA-256 of the compressed build inputs
+    required: true
+  candidate-sha:
+    description: SHA-256 of the sole candidate from the build job
+    required: true
+runs:
+  using: composite
+  steps:
+    - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
+      with:
+        name: cumulative-ci-inputs-${{ github.sha }}
+        path: ${{ runner.temp }}/uwu-inputs
+        digest-mismatch: error
+    - shell: bash
+      env:
+        BUNDLE_SHA: ${{ inputs.bundle-sha }}
+        CANDIDATE_SHA: ${{ inputs.candidate-sha }}
+      run: |
+        bundle="$RUNNER_TEMP/uwu-inputs/cumulative-inputs.tar.gz"
+        printf '%s  %s\n' "$BUNDLE_SHA" "$bundle" | sha256sum --check
+        tar -xzf "$bundle"
+        sha256sum --check build/cumulative/input/checksums.txt
+        test "$(cat build/cumulative/input/source)" = "$GITHUB_SHA"
+        printf '%s  %s\n' "$CANDIDATE_SHA" "$UWU_JAR" | sha256sum --check
+        echo "UWU_EXPECTED_JAR_SHA256=$CANDIDATE_SHA" >> "$GITHUB_ENV"
+        echo "UWU_EXPECTED_PROBE_SHA256=$(sha256sum "$UWU_PROBE_JAR" | cut -d' ' -f1)" >> "$GITHUB_ENV"

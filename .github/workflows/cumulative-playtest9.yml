@@ -1,0 +1,189 @@
+name: Cumulative UwU Playtest 9
+on:
+  push:
+    branches: ['codex/integration/uwu-cumulative-playtest9']
+permissions:
+  contents: read
+  actions: read
+env:
+  UWU_JAR: build/cumulative/input/UwU-Dimension-1.21.1-1.5.0-beta.13-combined-rc.2-playtest.9-integrated.2.jar
+  UWU_BASELINE_JAR: build/cumulative/input/integrated-baseline.jar
+  UWU_COMPANION_JAR: build/cumulative/input/UnyieldingQuests-1.6.9.jar
+  UWU_PROBE_JAR: build/cumulative/input/dusk-frequency-probe.jar
+jobs:
+  build:
+    if: github.repository == 'WeepingAngeIs/z-UwU_dm' && github.event.repository.private == false
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    outputs:
+      candidate: ${{ steps.seal.outputs.candidate }}
+      bundle: ${{ steps.seal.outputs.bundle }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with: {fetch-depth: 0, persist-credentials: false}
+      - uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880
+        with: {distribution: temurin, java-version: '21'}
+      - name: Build the cumulative mod and the separate disposable Dusk probe
+        run: |
+          bash weapon-release/bootstrap.sh
+          bash gradlew --no-daemon --no-build-cache --max-workers=2 -I dusk-frequency-check/probe.gradle jar duskFrequencyProbeJar
+          mkdir -p build/cumulative/input
+          cp "build/libs/${UWU_JAR##*/}" "$UWU_JAR"
+          cp build/dusk-frequency-check/dusk-frequency-probe.jar "$UWU_PROBE_JAR"
+      - name: Compare the complete approved source and packaged byte allowlist
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 cumulative-check/verify.py
+      - name: Seal the exact JAR and CI inputs
+        id: seal
+        run: |
+          printf '%s\n' "$GITHUB_SHA" > build/cumulative/input/source
+          sha256sum "$UWU_JAR" "$UWU_BASELINE_JAR" "$UWU_COMPANION_JAR" "$UWU_PROBE_JAR" build/cumulative/input/{scope.json,source} > build/cumulative/input/checksums.txt
+          tar -czf "$RUNNER_TEMP/cumulative-inputs.tar.gz" build/cumulative/input
+          echo "candidate=$(sha256sum "$UWU_JAR" | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
+          echo "bundle=$(sha256sum "$RUNNER_TEMP/cumulative-inputs.tar.gz" | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: cumulative-ci-inputs-${{ github.sha }}
+          path: ${{ runner.temp }}/cumulative-inputs.tar.gz
+          compression-level: 0
+          retention-days: 2
+          if-no-files-found: error
+  runtime:
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 42
+    strategy:
+      fail-fast: false
+      max-parallel: 7
+      matrix:
+        check: [weapons, guardian, bow-and-book, blossom, dialogue-native, dialogue-compat, shrine-client, cave, shrine-placement, waterfalls]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with: {fetch-depth: 0, persist-credentials: false}
+      - uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880
+        with: {distribution: temurin, java-version: '21'}
+      - uses: ./cumulative-check/restore
+        with:
+          bundle-sha: ${{ needs.build.outputs.bundle }}
+          candidate-sha: ${{ needs.build.outputs.candidate }}
+      - name: Run the native Minecraft check on the sealed cumulative JAR
+        env:
+          CHECK: ${{ matrix.check }}
+        run: |
+          bash weapon-release/bootstrap.sh
+          if ! command -v xvfb-run >/dev/null || ! command -v xauth >/dev/null || ! dpkg-query -W libgl1-mesa-dri libopenal1 >/dev/null 2>&1; then
+            sudo apt-get update -qq
+            sudo apt-get install -y xvfb xauth libgl1-mesa-dri libopenal1
+          fi
+          bash cumulative-check/runtime.sh "$CHECK"
+      - name: Keep hosted logs and native images
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: cumulative-evidence-${{ matrix.check }}-${{ github.sha }}
+          path: |
+            build/*client*.log
+            build/*-evidence/
+            build/weapon-check/evidence/
+            build/weapon-check/*.log
+            build/shrine-check/*.log
+            build/waterfall-check/*.log
+          retention-days: 7
+          if-no-files-found: warn
+  dusk-survey:
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 58
+    strategy:
+      fail-fast: false
+      matrix: {seed: [152045, 20261121, 8675309]}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with: {persist-credentials: false}
+      - uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880
+        with: {distribution: temurin, java-version: '21'}
+      - uses: ./cumulative-check/restore
+        with:
+          bundle-sha: ${{ needs.build.outputs.bundle }}
+          candidate-sha: ${{ needs.build.outputs.candidate }}
+      - name: Measure Dusk sites on the declared seed
+        env: {SEED: '${{ matrix.seed }}'}
+        run: bash dusk-frequency-check/run-server.sh survey "$SEED"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: cumulative-survey-${{ matrix.seed }}-${{ github.sha }}
+          path: |
+            build/dusk-frequency-evidence/survey-candidate-${{ matrix.seed }}.json
+            build/dusk-frequency-check/survey-candidate-${{ matrix.seed }}.log
+          retention-days: 7
+          if-no-files-found: error
+  dusk-placement-and-settings:
+    needs: [build, dusk-survey]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 56
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with: {fetch-depth: 0, persist-credentials: false}
+      - uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880
+        with: {distribution: temurin, java-version: '21'}
+      - uses: ./cumulative-check/restore
+        with:
+          bundle-sha: ${{ needs.build.outputs.bundle }}
+          candidate-sha: ${{ needs.build.outputs.candidate }}
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
+        with:
+          pattern: cumulative-survey-*-${{ github.sha }}
+          path: build
+          merge-multiple: true
+          digest-mismatch: error
+      - name: Compare native density, place fresh villages and upgrade saved settlements
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          bash dusk-frequency-ci/recover-baseline-surveys.sh
+          bash dusk-frequency-check/run-server.sh placement
+      - name: Change and save the setting in the actual Unyielding screen
+        run: |
+          bash weapon-release/bootstrap.sh
+          if ! command -v xvfb-run >/dev/null || ! command -v xauth >/dev/null || ! dpkg-query -W libgl1-mesa-dri libopenal1 >/dev/null 2>&1; then
+            sudo apt-get update -qq
+            sudo apt-get install -y xvfb xauth libgl1-mesa-dri libopenal1
+          fi
+          bash dusk-frequency-check/run-client.sh
+      - if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: cumulative-evidence-dusk-${{ github.sha }}
+          path: |
+            build/dusk-frequency-evidence/
+            build/dusk-frequency-check/*.log
+            build/dusk-frequency-client*.log
+          retention-days: 7
+          if-no-files-found: warn
+  delivery:
+    needs: [build, runtime, dusk-placement-and-settings]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with: {persist-credentials: false}
+      - uses: ./cumulative-check/restore
+        with:
+          bundle-sha: ${{ needs.build.outputs.bundle }}
+          candidate-sha: ${{ needs.build.outputs.candidate }}
+      - name: Deliver the exact tested cumulative JAR
+        id: artifact
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          path: ${{ env.UWU_JAR }}
+          archive: false
+          retention-days: 14
+          if-no-files-found: error
+      - name: Verify the final artifact's checksum
+        env:
+          UPLOADED: ${{ steps.artifact.outputs.artifact-digest }}
+          URL: ${{ steps.artifact.outputs.artifact-url }}
+        run: |
+          test "${UPLOADED#sha256:}" = "$UWU_EXPECTED_JAR_SHA256"
+          echo "Source $GITHUB_SHA, SHA-256 $UWU_EXPECTED_JAR_SHA256, artifact $URL" >> "$GITHUB_STEP_SUMMARY"

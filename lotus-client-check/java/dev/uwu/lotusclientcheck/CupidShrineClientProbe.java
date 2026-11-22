@@ -48,14 +48,14 @@ public final class CupidShrineClientProbe {
     private static final Map<String, String> APPROVED_RESOURCES = Map.of(
             "models/" + SCULPTURE + ".json", "2e45aaf08ee2b69d5719c762c1cdf7dd317088147a1c432a38e7543a90370b6c",
             "models/" + SCULPTURE + ".mtl", "54a04854dfd47aa0c9e12cc216128cc44f5d7ab5ea6b21009600664a293146c5",
-            "models/" + SCULPTURE + ".obj", "56734c3ceade849f296f5b006b72c08a2d64360fd982c617f4264243e49b00d8",
+            "models/" + SCULPTURE + ".obj", "024410265e798152f1bcafa4febbdda1ada9ac46784d7667fb6755ab7782f968",
             "textures/" + SCULPTURE + "/pedestal.png", "35dd30650ebfde045e7bb61709b2d6179c94d380a578e40f7445bbcb103f4246",
             "textures/" + SCULPTURE + "/cupid.png", "27ea1198f91d4c99a9c2f7db2ec0ba437e2d5d5a7ea5a24ae80b43c15f7184ee",
             "textures/" + SCULPTURE + "/eyes.png", "e074baee8f91f4125477234484d1c69181f79f2ceb1ad080db456bf814bb7540",
             "textures/" + SCULPTURE + "/head_wings.png", "b51df32173808426fa70e6c6a63423b0236c454b261c2faee6d4cd5ce5e8646a",
             "textures/effect/revival_blossom.png", "c904813210fe5f5e8e4d612d219770eafddd080561dfb4873ea33f58c49989b3");
     private static final Map<String, Integer> MATERIALS =
-            Map.of("pedestal", 744, "cupid", 3082, "eyes", 8, "head_wings", 72);
+            Map.of("pedestal", 744, "cupid", 3046, "eyes", 8, "head_wings", 72);
     private static final int QUADS = MATERIALS.values().stream().mapToInt(Integer::intValue).sum();
     private static final Vec3 HAND = new Vec3(.060, 1.133, .372);
     private static final RenderType STONE = RenderType.entityCutoutNoCull(InventoryMenu.BLOCK_ATLAS);
