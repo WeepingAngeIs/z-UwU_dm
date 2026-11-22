@@ -44,9 +44,12 @@ def view_pose(data, name, stage, swing=0, t=0, shake=0):
     speed=swing if stage=="walk" else 0
     arm=-1.34 if stage=="flip" else -1.25 if touching else 0
     roll=.28 if stage=="flip" else .08
-    rx_leg=-.2 if stage=="flip" else speed
+    settle=np.clip((t*24-21)/3,0,1) if stage=="flip" else 0
+    arm*=1-settle
+    roll=roll*(1-settle)+.08*settle
+    rx_leg=-.2*(1-settle) if stage=="flip" else speed
     m=[rot(),rot(y=shake),rot(arm+speed*.45,z=roll),rot(arm-speed*.45,z=-roll),
-        rot(rx_leg),rot(-.2 if stage=="flip" else -speed)]
+        rot(rx_leg),rot(rx_leg if stage=="flip" else -speed)]
     body=rot()
     pivot_y=24-1.12*16; lift=0
     if stage=="flip":
@@ -64,17 +67,8 @@ def view_pose(data, name, stage, swing=0, t=0, shake=0):
     for b,bone in enumerate(BONES):
         for r in [r for r in names if r["bone"]==bone]:
             shape_ids.extend([len(labels)]*(r["count"]//4)); labels.append(r["name"])
-    # Exact native tapered pads on the head, with their single UV-masked surface.
-    half=16*np.array([[-.081,-.208,0],[.081,-.208,0],[.154,.208,0],[-.154,.208,0]])
-    uv=[[0,1],[1,1],[1,0],[0,0]];pads=[]
-    for i in range(10):
-        a=i*2*PI/10; m0=rot(y=a)@rot(x=math.radians(48))
-        p=half @ m0.T+[math.sin(a)*.46*16,-.65*16,math.cos(a)*.46*16]
-        n=np.tile(m0 @ [0,0,1.0],(4,1))
-        pads.append(np.column_stack([p,n,uv]))
-        shape_ids.append(len(labels));labels.append("crown_pad_"+str(i))
-    qs.append(transform(np.array(pads),1))
-    return np.concatenate(qs),np.append(mats,np.ones(10,dtype=int)),np.array(shape_ids),labels
+    return np.concatenate(qs),mats,np.array(shape_ids),labels
+
 
 def render(pose, faction, angle, elev, size, scale, center=(0,2,0), wink=False, debug=False):
     qs,mats,ids,labels=pose; width,height=size
@@ -86,7 +80,7 @@ def render(pose, faction, angle, elev, size, scale, center=(0,2,0), wink=False, 
     lighting=np.array([-.46,-.66,-.60])
     shade=.69+.32*np.maximum(0,qs[:,:,3:6] @ lighting)
     mats0=skin("entity/"+("dusk_guardian_male" if faction=="Dusk" else "petal_guardian_male"+("_wink" if wink else "")))
-    atlas=[mats0,skin("entity/dusk_guardian_lily_pad" if faction=="Dusk" else "block/drift_blossom_pad")]
+    atlas=[mats0]
     view=np.zeros((height,width,4),dtype=np.uint8)
     zbuf=np.full((height,width),-1e5); idbuf=np.full((height,width),-1,dtype=int)
     # Painter order avoids most depth writes; actual coverage still uses the per-pixel z-buffer.

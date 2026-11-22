@@ -133,7 +133,7 @@ def separated(q,ids,names,forearm_mask):
     forearms=np.concatenate((hands,tris(q[forearm_mask],ids[forearm_mask])[0]))
     arms=take(lambda s:s.endswith(("_arm","_hand","_thumb","_inner_bracer","_biceps","_leaf_pauldron")) or s.startswith("shoulder_blossom"))
     feet=take(lambda s:s.endswith(("_shin_leaf","_boot")))
-    head=take(lambda s:s.startswith(("crown","nose")) or s.endswith(("temple_leaf","crown_fold")) or s in ("face_and_double_chin","moss_cap"))
+    head=take(lambda s:s.startswith(("crown","nose")) or s.endswith(("temple_leaf","crown_fold")) or s in ("face_and_double_chin","moss_cap","fitted_leaf_hair"))
     torso=take(lambda s:s in ("living_bark_torso","leaf_belt") or s.endswith(("_pectoral","_hip_petal","_waist_oblique")) or "_rib_" in s)
     lhand=take(lambda s:s.startswith("left") and s.endswith(("_hand","_thumb")))
     rhand=take(lambda s:s.startswith("right") and s.endswith(("_hand","_thumb")))
@@ -147,7 +147,7 @@ def physical_poses():
     for i in range(9):yield ("walk "+str(i),"walk",{"swing":.98*math.sin(2*math.pi*i/9)})
     for degrees in [-34,34]:yield ("head shake "+str(degrees),"idle",{"shake":math.radians(degrees)})
     yield ("grip","grip",{})
-    for tick in [0,3,6,9,12,15,18,21,24]:yield ("held flip tick "+str(tick),"flip",{"t":tick/24})
+    for tick in [0,3,6,9,12,15,18,21,21.5,22,22.5,23,23.5,24]:yield ("held flip tick "+str(tick),"flip",{"t":tick/24})
 
 def palette_checks():
     female=[]
@@ -161,11 +161,55 @@ def palette_checks():
     assert len(xx)>10 and xx.min()>=160 and xx.max()<176 and yy.min()>=32 and yy.max()<64 and np.array_equal(wink[delta],full[delta])
     male=skin("entity/petal_guardian_male");male_wink=skin("entity/petal_guardian_male_wink")
     yy2,xx2=np.where(np.any(male!=male_wink,axis=2))
-    assert len(xx2)>10 and xx2.max()<32 and yy2.min()>=64
+    assert male.shape == male_wink.shape == (256,256,4)
+    assert len(xx2)>35 and 13 <= xx2.min() < xx2.max() < 63 and 162 <= yy2.min() < yy2.max() < 186
+    dusk=skin("entity/dusk_guardian_male")
+    female_head=next(b for b in json.loads((ASSETS/"geometry/guardian_bones.json").read_text())["bones"] if b["name"]=="head")
+    source_tiles={c["tile"] for c in female_head["cubes"] if c["name"].startswith(("fringe_leaf_","middle_canopy_","right_nape_leaf_"))
+                  or c["name"] in ("under_canopy","right_temple_slip","left_temple_slip")}
+    allowed=set()
+    for tile in source_tiles:
+        x,y=(tile%4)*128+32,(tile//4)*64+32
+        swatch=open0[y:y+32,x:x+32]
+        colors=np.floor(swatch[:,:,:3].astype(float)*.86+.5).astype(np.uint8)
+        allowed.update(map(tuple, colors[swatch[:,:,3]>0]))
+    used=set()
+    for x,y,w,h in ((2,68,108,54),(116,68,88,54),(208,68,32,54),(132,132,116,70)):
+        chart=male[y:y+h,x:x+w]
+        assert np.array_equal(chart,dusk[y:y+h,x:x+w]) and np.array_equal(chart,male_wink[y:y+h,x:x+w])
+        assert .08 < np.mean(chart[:,:,3]>0) < 1
+        used.update(map(tuple,chart[chart[:,:,3]>0,:3]))
+    assert len(used)>=8 and used<=allowed, "Hair must use the darkened source Guardian lock palette"
     for k in ("male","girl"):
         a=skin("item/owl_guardian_"+k+"_egg");b=skin("item/dusk_guardian_"+k+"_egg")
         assert a.shape==(16,16,4) and np.array_equal(a[:,:,3],b[:,:,3])
-    return {"femaleExpressionFramesWithIdenticalAlpha":female,"femaleChangedWinkTexels":len(xx),"maleChangedWinkTexels":len(xx2)}
+    return {"femaleExpressionFramesWithIdenticalAlpha":female,"femaleChangedWinkTexels":len(xx),"maleChangedWinkTexels":len(xx2),"femaleHairSourceTiles":sorted(source_tiles),"maleHairRGBFactor":.86}
+
+def head_fit(data):
+    mesh, parts = data
+    head = mesh[1]
+    def vertices(name):
+        part = next(r for r in parts if r["name"] == name)
+        start, count = part["first"]//4, part["count"]//4
+        return head[start:start+count, :, :3]
+    face, hair, hat = (vertices(n) for n in ("face_and_double_chin", "fitted_leaf_hair", "moss_cap"))
+    size = np.ptp(face.reshape(-1,3), axis=0)
+    assert .98 < size[0]/size[1] < 1.07
+    rim = hair[:,0,:]
+    cap = hat.reshape(-1,3)
+    seam = max(np.min(np.linalg.norm(cap-p,axis=1)) for p in rim)
+    assert len(rim)==8 and seam<.00002, "Hat and hair rim do not meet"
+    # In model pixels the upper square face is bounded by this chamfered rectangle.
+    # The hair side walls must all lie outside it, including the midpoints of the four bevels.
+    margin = []
+    for quad in hair:
+        for t in np.linspace(0,1,13):
+            x,_,z = quad[0]*(1-t)+quad[3]*t
+            ax,az = abs(x)/6.08, abs(z+.72)/5.05
+            margin.append(max(ax,az,(ax+az)/1.85)-1)
+    assert min(margin)>.035, "A hair panel cuts into the face"
+    return {"headWidthToHeight":float(size[0]/size[1]), "maximumRimGapModelPixels":float(seam),
+            "minimumHairClearanceFractionOfFaceRadius":float(min(margin))}
 
 def verify(out):
     data=source();old=coincident(*boxes())
@@ -173,13 +217,13 @@ def verify(out):
     assert any("brooch petal" in name for name in old), "The old overlapping flower petals were not detected"
     # Select the integrated arm surfaces below the elbow in their original local coordinates.
     raw=np.concatenate(data[0])
-    selectors=np.r_[np.all(raw[:,:,1]>=7.58,axis=1),np.zeros(10,dtype=bool)]
+    selectors=np.all(raw[:,:,1]>=7.58,axis=1)
     full=[]; failures=[]
     cached={}
     for frame,stage,options in physical_poses():
         q,mat,ids,names=view_pose(data,"Petal",stage,**options)
         # The held turn applies one common rigid transform to all bones, preserving all relative geometry.
-        key="held-rigid" if stage=="flip" else frame
+        key="held-rigid" if stage=="flip" and options["t"]<=21/24 else frame
         if key not in cached:
             p=q[:,:,:3]
             forearm_mask=selectors & np.array([names[i] in ("left_arm","right_arm") for i in ids])
@@ -189,7 +233,7 @@ def verify(out):
         full.append({"frame":frame,"overlappingCoplanarSurfaces":planes,"unrelatedLimbIntersections":clipping})
     assets=ASSETS/"geometry/petal_guardian_male.mesh"
     result={"meshSHA256":hashlib.sha256(assets.read_bytes()).hexdigest(),
-        "originalArmorFlowersAndCrownCoplanarAreaModelPixelsSquared":old,"poses":full,"textureChecks":palette_checks()}
+        "originalArmorFlowersAndCrownCoplanarAreaModelPixelsSquared":old,"poses":full,"textureChecks":palette_checks(),"headFit":head_fit(data)}
     out.mkdir(parents=True,exist_ok=True);(out/"Male Guardian surface audit.json").write_text(json.dumps(result,indent=2)+"\n")
     if failures:raise SystemExit("Surface audit failed: "+str(failures))
     print("Guardian mesh validated",result["meshSHA256"],"across",len(full),"poses; legacy front/back overlap verified.")

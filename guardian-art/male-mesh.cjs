@@ -8,7 +8,7 @@ const mats = ['moss','bark','sapwood','skin','petal','pollen','shadow','pearl','
 
 function form(name, bone, material, center, rows, options = {}) {
     parts.push({name,bone,material,center,rows,power:options.power || 2.45, sides:options.sides || 16,
-        roll:options.roll||0,pitch:options.pitch||0,yaw:options.yaw||0,face:!!options.face});
+        roll:options.roll||0,pitch:options.pitch||0,yaw:options.yaw||0,face:!!options.face, square:!!options.square});
 }
 function oval(name,bone,material,center,size,options={}) {
     const [x,y,z]=size;
@@ -26,18 +26,15 @@ function flower(name,bone,cx,cy,cz,size) {
     oval(name+'_pollen',bone,'pollen',[cx,cy,cz-.22*size],[.29*size,.29*size,.18*size],{sides:10});
 }
 
-// One continuous face extends from the brow ridge to the tip of the second chin.
-// The inward fold and forward second lobe are rings in the same surface, so the chins have no overlapping faces.
+// A nearly square front and back, clipped corners and a recessed lower ledge share one continuous surface.
 form('face_and_double_chin','head','skin',[0,0,-.72],[
-    [-11.6,3.6,3.1,.24],[-10.7,5.30,3.92,.19],[-9.10,5.91,4.40,.10],[-7.58,6.12,4.54],
-    [-5.8,6.01,4.68,-.12],[-4.37,5.91,4.73,-.32],[-3.20,5.62,4.91,-.64],[-2.27,4.99,4.57,-.98],
-    [-1.77,4.39,3.82,-.75],[-1.35,4.46,4.03,-.62],[-.76,4.06,4.14,-.78],[-.17,3.40,3.74,-.70],
-    [.23,2.34,2.67,-.50]], {power:3.5,sides:24,face:true});
-oval('nose_bridge','head','skin',[0,-5.64,-5.61],[.88,1.12,.88],{power:2.6,sides:14});
-oval('nose_tip','head','skin',[.06,-5.18,-5.89],[1.00,.49,.77],{sides:14});
+    [-11.6,5.55,4.62],[-11.19,6.08,5.05],[-3.35,6.08,5.05],[-2.79,5.94,4.91,-.02],
+    [-2.31,5.56,4.70,-.15],[-1.90,5.12,4.12],[-1.57,5.08,3.97],
+    [-1.20,5.19,4.33,-.22],[-.61,5.13,4.33,-.22],[-.14,4.74,4.03,-.13],
+    [.22,4.12,3.57]], {sides:32,face:true,square:true});
 // A separate rear canopy never lies on the facial front. Pads still use their original cut-out crown layer.
-form('moss_cap','head','moss',[0,0,.39],[[-13.00,2.6,2.55],[-12.53,5.33,4.49],[-11.62,6.54,5.23],
-    [-10.61,6.76,5.33],[-9.85,6.12,5.04],[-9.64,5.7,4.61]],{sides:22,power:3.0});
+form('moss_cap','head','moss',[0,0,-.72],[[-12.75,5.48,4.59],[-12.43,6.18,5.15],[-12.02,6.48,5.46],
+    [-11.10,6.48,5.46],[-10.82,6.35,5.34]],{sides:32,square:true});
 form('neck','basket','sapwood',[0,0,.28],[[-7.29,2.94,2.61],[-6.75,3.18,2.82],[-5.03,3.12,2.73],[-4.08,4.0,3.16]],{sides:16});
 // Broad clavicles, a narrow waist, an apron of overlapping petals and carved chest plates.
 form('living_bark_torso','basket','bark',[0,0,.45],[
@@ -46,8 +43,6 @@ form('living_bark_torso','basket','bark',[0,0,.45],[
     [11.8,5.82,3.46],[12.50,4.59,3.09]],{sides:22,power:2.9});
 for(const sign of [-1,1]) {
     const side=sign>0?'left':'right', arm=side, leg=side+'_root';
-    oval(side+'_temple_leaf','head','leaf',[sign*5.77,-7.72,-.69],[1.56,3.27,2.97],{roll:-sign*13,pitch:-4});
-    oval(side+'_crown_fold','head','deepLeaf',[sign*4.65,-10.55,-3.32],[2.45,.83,1.78],{roll:-sign*15,yaw:sign*10,sides:14});
     oval(side+'_pectoral','basket','sapwood',[sign*4.25,-1.79,-3.15],[4.37,2.75,2.03],
         {power:2.6,roll:-sign*10,sides:18});
     oval(side+'_collar_leaf','basket','leaf',[sign*4.74,-4.22,-2.95],[3.27,.75,1.51],{roll:-sign*12,sides:14});
@@ -77,7 +72,7 @@ oval('leaf_belt','basket','moss',[0,7.73,-.03],[5.58,1.18,3.64],{power:3.0,sides
 flower('heartwood_brooch','basket',-4.49,-2.94,-5.23,1.35);
 flower('belt_blossom','basket',0,7.85,-3.83,1.49);
 flower('shoulder_blossom','left',1.92,-1.48,-2.71,1.21);
-flower('crown_blossom','head',-3.35,-11.43,-4.44,1.42);
+flower('crown_blossom','head',-3.93,-11.93,-6.19,1.13);
 
 function rotate(v,r) {
     let [x,y,z]=v, [rx,ry,rz]=r.map(a=>a*Math.PI/180);
@@ -90,24 +85,39 @@ const cross=([a,b,c],[d,e,f])=>[b*f-c*e,c*d-a*f,a*e-b*d];
 const unit=v=>{const n=Math.hypot(...v);return v.map(x=>x/n);};
 const fraction=(v,p)=>Math.sign(v)*Math.pow(Math.abs(v),p);
 const sourceRoot=path.join(__dirname,'../src/main/resources/assets/uwudimension');
+const hairCharts={front:[2,68,108,54],side:[116,68,88,54],corner:[208,68,32,54],back:[132,132,116,70]};
+// Shared rim for the bottom of the hat and the top of the hair.
+const hatRim=[[-.85,-1],[.85,-1],[1,-.85],[1,.85],[.85,1],[-.85,1],[-1,.85],[-1,-.85]];
 function bake(write = true) {
     let batches=bones.map(()=>[]), ranges=[];
     for(const shape of parts){
         const {rows,sides:n,power,center,roll,pitch,yaw}=shape, last=rows.length-1;
         function point(row,i){
             const [y,rx,rz,cz=0,cx=0]=rows[row], a=2*Math.PI*i/n-Math.PI;
+            if (shape.name==='moss_cap') {
+                const s=((i%n+n)%n)*hatRim.length/n;
+                const edge=Math.floor(s), t=s-edge;
+                const [x,z]=hatRim[edge], [nextX,nextZ]=hatRim[(edge+1)%hatRim.length];
+                return [cx+rx*(x+(nextX-x)*t),y,cz+rz*(z+(nextZ-z)*t)];
+            }
+            if (shape.square) {
+                const x=Math.sin(a), z=Math.cos(a), ax=Math.abs(x), az=Math.abs(z);
+                const edge=Math.max(ax, az, (ax+az)/1.85);
+                return [cx+rx*x/edge, y, cz-rz*z/edge];
+            }
             return [cx+rx*fraction(Math.sin(a),2/power),y,cz-rz*fraction(Math.cos(a),2/power)];
         }
         const rotatePart=v=>rotate(v,[pitch,yaw,roll]);
         const batch=batches[bones.indexOf(shape.bone)];
         const first=batch.length;
         function vertex(j,i,face,cap){
-            let v=point(j,i), ang=2*Math.PI*i/n-Math.PI;
+            let v=point(j,i);
             let normal=cap?[0,cap,0]:unit(cross(sub(point(Math.min(last,j+1),i),point(Math.max(0,j-1),i)),sub(point(j,i+1),point(j,i-1))));
             let pos=rotatePart(v).map((value,k)=>(value+center[k])/16), norm=rotatePart(normal);
             let height=(j===0?0:j===last?1:(rows[j][0]-rows[0][0])/(rows[last][0]-rows[0][0]));
             let uv;
-            if(face)uv=[(1.0+(ang/Math.PI+.5)*61)/128,(65+height*57)/128];
+            if(face)uv=[(1+(v[0]/rows[j][1]+1)*30.5)/128,(65+height*57)/128];
+            else if(shape.name==='moss_cap' && !cap) uv=[(132+i/n*116)/256,(217+height*23)/256];
             else{
                 const tile=mats.indexOf(shape.material);
                 uv=[((tile%8)*16+1+i/n*14)/128,(Math.floor(tile/8)*16+1+height*14)/128];
@@ -128,6 +138,22 @@ function bake(write = true) {
         }
         ranges.push({name:shape.name,bone:shape.bone,first,count:batch.length-first});
     }
+    // Each side meets the next at a shared edge. Layered leaf locks are painted on these surfaces.
+    // The front, temples and nape follow the head instead of swinging independent cards through it.
+    const shell=batches[bones.indexOf('head')], first=shell.length;
+    const charts=['front','corner','side','corner','back','corner','side','corner'];
+    for(let i=0;i<hatRim.length;i++) {
+        const a=hatRim[i], b=hatRim[(i+1)%hatRim.length];
+        const at=(p,y)=>[p[0]*6.35/16,y/16,(p[1]*5.34-.72)/16];
+        const tl=at(a,-10.82), bl=at(a,-3.20), br=at(b,-3.20), tr=at(b,-10.82);
+        const normal=unit(cross(sub(bl,tl),sub(tr,tl)));
+        const [x,y,w,h]=hairCharts[charts[i]];
+        const mirror=i===6 || i===7 || i===5;
+        const u0=(x+(mirror?w-.5:.5))/256, u1=(x+(mirror ? .5 : w-.5))/256;
+        const v0=(y+.5)/256, v1=(y+h-.5)/256;
+        for(const [p,u,v] of [[tl,u0,v0],[bl,u0,v1],[br,u1,v1],[tr,u1,v0]])shell.push([...p,...normal,u,v]);
+    }
+    ranges.push({name:'fitted_leaf_hair',bone:'head',first,count:shell.length-first});
     const blocks=[Buffer.from('GDM1')];
     for(const batch of batches){
         const bytes=Buffer.alloc(4+batch.length*32);bytes.writeUInt32BE(batch.length,0);
@@ -137,4 +163,4 @@ function bake(write = true) {
     if (write) fs.writeFileSync(path.join(sourceRoot,'geometry/petal_guardian_male.mesh'),Buffer.concat(blocks));
     return ranges;
 }
-module.exports={sourceRoot,bones,parts,mats,bake,rotate};
+module.exports={sourceRoot,bones,parts,mats,bake,rotate,hairCharts};

@@ -1,6 +1,6 @@
 # Guardian model review
 
-The Petal and Dusk males share the flower Guardian's six original bone pivots. The jaw and second chin form one continuous ring mesh. A recessed fold separates the two lobes. The chest, sleeves, flowers and crown have their own curved surfaces. Each of the ten tapered lily pads occupies a separate angular sector on the head. Both female variants use the shipped female model, jaw, walk and chase clips. Her Dusk skin follows the same five expression frames.
+The Petal and Dusk males share the flower Guardian's six original bone pivots. The jaw and second chin form one continuous ring mesh. A recessed fold separates the two lobes. The chest, sleeves, flowers and crown have their own curved surfaces. The square head has a fitted cap and a continuous hair shell. The fringe, temple locks and nape use the female Guardian’s original hair tiles with their RGB channels darkened by 14 percent. Both female variants use the shipped female model, jaw, walk and chase clips. Her Dusk skin follows the same five expression frames.
 
 For a new or revised Guardian mesh, check for overlapping coplanar faces and visible limb, face or crown clipping in idle, walk, warning, grip and held flip. Include the outline from the front and side. Check the actual animation again in the packaged client from both the player and an observer.
 
@@ -24,4 +24,4 @@ At source baseline `072811cb288996978e7f664a3bda47a570fea079`, the old rigid mal
 
 The first new mesh has SHA-256 `99452e78af5663233c835bf066b4383f98c76211d2e6cffebf189959d3122cef`. Its 22 sampled poses cover idle, a walk cycle, both extremes of the head shake, grip and a complete held backflip. No two distinct authored parts had overlapping coplanar area above 0.0002 square model pixels. The hands and distal forearms cleared the torso, the full arms cleared the head and crown, and the feet stayed clear of each other, the hands and the head. The shoulder joints intentionally seat inside the torso. A backflip applies a common rigid rotation to every held-pose bone and the crown.
 
-The native female Petal wink changes 103 painted eyelid pixels on one side of her original face. The male wink changes 80 atlas pixels. All five Dusk female expression atlases and both Dusk eggs preserve their respective baseline alpha masks.
+The native female Petal wink changes 103 painted eyelid pixels on one side of her original face. The revised male wink changes 409 atlas pixels on one eye. All five Dusk female expression atlases and both Dusk eggs preserve their respective baseline alpha masks.

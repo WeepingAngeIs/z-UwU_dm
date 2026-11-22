@@ -61,7 +61,7 @@ with ZipFile(BytesIO(baseline)) as old, ZipFile(candidate) as new:
         if name in old.NameToInfo and name in new.NameToInfo and old.read(name) == new.read(name):
             continue
         assert name in allowed_resources or class_pat.fullmatch(name), f"Unexpected cumulative package change: {name}"
-        assert name in new.NameToInfo, f"Lost an existing package entry: {name}"
+        assert name in new.NameToInfo or name == "dev/uwu/dimension/BlossomWardenRenderer$LilyPadCrownLayer.class", f"Lost an existing package entry: {name}"
         changes.append(name)
     assert all(resource_prefix + p in new.NameToInfo for p in resources)
     assert all("dev/uwu/dimension/" + name + ".class" in changes for name in ("BlossomWarden", "GuardianWarnings", "MaleGuardianModel"))

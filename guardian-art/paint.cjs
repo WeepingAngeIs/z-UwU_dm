@@ -2,7 +2,8 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const {PNG} = require('pngjs');
-const {sourceRoot,bake,mats} = require('./male-mesh.cjs');
+const {sourceRoot,bake,mats,hairCharts} = require('./male-mesh.cjs');
+const {paintHair} = require('./hair.cjs');
 const root=path.join(sourceRoot,'textures');
 const read=f=>PNG.sync.read(fs.readFileSync(path.join(root,f+'.png')));
 function save(f,data){fs.writeFileSync(path.join(root,f+'.png'),PNG.sync.write(data));}
@@ -60,46 +61,47 @@ function paintMale(dusk,wink){
             if(j===0)put(img,tx+x+1,ty+y,tones[t][3]);
         }
     }
-    let face=new PNG({width:64,height:60});
-    const col=s=>rgba(s);
-    const shades=dusk?['fadfd9','ebcdcb','dcb6b8','c49da4','a87e92','8e637c','503e54','362c42','ede4e8','b2a4d1','755d9a','dca5ba']:
-        ['ffe4bc','f3d2a5','e6be90','d4a381','bd8a70','a77162','504338','302c31','fff4da','9bab79','577754','e2a797'];
-    const [high,skin,shade,cheek,fold,lip,brow,ink,white,iris,deep,blush]=shades.map(col);
+    const face=new PNG({width:64,height:60});
+    const [skin,side,tint,crease]=palette(dusk ? 'ebcdcb ddbabe e1b4c3 cca9af' : 'f3d2a5 e5bd93 edc3ab deb991');
     for(let y=0;y<60;y++)for(let x=0;x<64;x++)put(face,x,y,skin);
-    poly(face,[[0,0],[9,0],[12,13],[8,29],[10,41],[20,51],[18,57],[0,59]],shade);
-    poly(face,[[63,0],[55,0],[52,13],[56,29],[53,40],[46,50],[48,58],[63,59]],shade);
-    poly(face,[[12,24],[20,27],[19,30],[11,30]],high);
-    poly(face,[[49,23],[52,22],[53,27],[45,29],[42,27]],high);
-    poly(face,[[6,31],[13,30],[15,32],[11,34],[7,33]],blush);
-    poly(face,[[49,31],[54,29],[58,30],[57,33],[52,34]],blush);
-    // Distinct arched brows, asymmetrical smirk and a split lower chin read even with the cap on.
-    poly(face,[[8,17],[10,13],[16,11],[23,12],[25,15],[22,15],[17,14],[12,15]],brow);
-    poly(face,[[36,13],[39,10],[47,8],[51,9],[54,13],[50,12],[43,12],[38,15]],brow);
-    line(face,[[13,14],[17,13],[21,14]],cheek);line(face,[[40,12],[46,10],[49,10]],cheek);
-    function eye(points,left){
-        if(wink&&left){
-            line(face,[[9,23],[12,21],[16,20],[20,21],[22,22]],ink,2);
-            line(face,[[12,24],[16,23],[19,24]],high);return;
-        }
-        poly(face,points,ink);
-        const a=left?10:38, y=left?18:17;
-        poly(face,[[a,y+3],[a+4,y+1],[a+9,y+1],[a+12,y+3],[a+8,y+5],[a+3,y+5]],white);
-        poly(face,[[a+4,y+1],[a+8,y+1],[a+9,y+3],[a+7,y+5],[a+4,y+4]],deep);
-        put(face,a+6,y+2,ink);put(face,a+5,y+1,white);put(face,a+7,y+4,iris);
-    }
-    eye([[8,21],[12,18],[16,17],[21,18],[24,21],[20,23],[15,24],[11,23]],true);
-    eye([[36,19],[40,16],[45,16],[50,17],[53,20],[49,22],[44,23],[39,22]],false);
-    line(face,[[26,30],[28,31],[31,30]],cheek);line(face,[[34,30],[37,30]],cheek);
-    line(face,[[20,37],[24,38],[30,38],[36,37],[40,35],[42,35]],lip,2);
-    line(face,[[24,38],[30,39],[35,38]],high);
-    line(face,[[41,34],[43,33],[45,34]],lip);
-    line(face,[[19,45],[22,46],[27,47]],cheek);line(face,[[34,47],[40,45]],cheek);
-    line(face,[[18,49],[23,50],[30,51],[36,50],[44,48]],fold);
-    line(face,[[25,54],[29,55],[34,54]],high);
+    poly(face,[[0,0],[4,0],[4,39],[8,49],[6,59],[0,59]],side);
+    poly(face,[[63,0],[58,0],[59,39],[54,49],[57,59],[63,59]],side);
+    poly(face,[[3,31],[8,30],[9,32],[5,34]],tint);
+    poly(face,[[55,31],[60,30],[60,33],[56,34]],tint);
+    line(face,[[11,48],[19,50],[33,51],[46,50],[52,48]],crease);
     for(let y=0;y<60;y++)for(let x=0;x<64;x++){
-        const i=(y*64+x)*4;put(img,x,y+64,[...face.data.subarray(i,i+4)]);
+        const i=(y*64+x)*4;put(img,x,y+64,face.data.subarray(i,i+4));
     }
-    return img;
+
+    // Double the atlas resolution without changing the body swatches. The front of the head
+    // uses planar UVs so the supplied expression keeps its proportions around its eyes and smile.
+    const atlas=new PNG({width:256,height:256});
+    for(let y=0;y<atlas.height;y++)for(let x=0;x<atlas.width;x++) {
+        const i=((y>>1)*img.width+(x>>1))*4;
+        put(atlas,x,y,img.data.subarray(i,i+4));
+    }
+    const mask=PNG.sync.read(fs.readFileSync(path.join(__dirname,'male-smirk.png')));
+    const eyeHeight=mask.height/2;
+    const [ink,ivory]=palette(dusk ? '251d30 fbf3fc' : '282024 fff7e8');
+    for(let y=0;y<eyeHeight;y++)for(let x=0;x<mask.width;x++) {
+        const m=((y+(wink?eyeHeight:0))*mask.width+x)*4;
+        const alpha=mask.data[m+3]/255;
+        if(alpha===0)continue;
+        const shade=mask.data[m]/255;
+        const pixel=((154+y)*atlas.width+13+x)*4;
+        for(let c=0;c<3;c++) {
+            const marking=ink[c]+(ivory[c]-ink[c])*shade;
+            atlas.data[pixel+c]=Math.round(atlas.data[pixel+c]*(1-alpha)+marking*alpha);
+        }
+    }
+    paintHair(atlas,read('entity/female_uwu_guardian'),sourceRoot,hairCharts);
+    // The leaf pattern belongs to the hat band, so it cannot project through the hair or forehead.
+    for(let y=216;y<=241;y++)for(let x=131;x<=249;x++)put(atlas,x,y,tones[0][y<225?2:y<237?1:0]);
+    for(let x=134;x<244;x+=16) {
+        poly(atlas,[[x,232],[x+3,228],[x+9,227],[x+6,231]],tones[9][2]);
+        line(atlas,[[x+1,232],[x+7,228]],tones[0][1]);
+    }
+    return atlas;
 }
 const lum=(r,g,b)=>(.299*r+.587*g+.114*b)/255;
 function ramp(colors,t){
@@ -154,6 +156,7 @@ bake();
 save('entity/petal_guardian_male',paintMale(false,false));
 save('entity/petal_guardian_male_wink',paintMale(false,true));
 save('entity/dusk_guardian_male',paintMale(true,false));
+if(process.argv.includes('--male-only'))process.exit(0);
 save('entity/petal_guardian_female_wink',femaleWink());
 for(const suffix of ['','_half','_blink','_half_lips','_blink_lips'])
     save('entity/dusk_guardian_female'+suffix,femaleDusk(read('entity/female_uwu_guardian'+suffix)));

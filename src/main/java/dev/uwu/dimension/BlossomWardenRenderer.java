@@ -3,19 +3,14 @@ package dev.uwu.dimension;
 import net.minecraft.client.model.HierarchicalModel;
 import net.minecraft.client.model.geom.ModelLayerLocation;
 import net.minecraft.client.model.geom.ModelPart;
-import net.minecraft.client.model.geom.PartPose;
-import net.minecraft.client.model.geom.builders.*;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.client.renderer.entity.MobRenderer;
-import net.minecraft.client.renderer.entity.layers.RenderLayer;
 import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.RenderType;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.math.Axis;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
-import net.minecraft.world.phys.Vec3;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
@@ -28,9 +23,7 @@ public final class BlossomWardenRenderer extends MobRenderer<BlossomWarden,Bloss
     private static final ResourceLocation DUSK_MALE=skin("dusk_guardian_male");
     private static final ResourceLocation MALE_WINK=skin("petal_guardian_male_wink");
     private static final ResourceLocation FEMALE_WINK=skin("petal_guardian_female_wink");
-    private static final ResourceLocation DUSK_PAD=skin("dusk_guardian_lily_pad");
     private static ResourceLocation skin(String name){return Arsenal.id("textures/entity/"+name+".png");}
-    private static final ResourceLocation PAD=ResourceLocation.fromNamespaceAndPath("uwudimension","textures/block/drift_blossom_pad.png");
     private static final ModelLayerLocation FEMALE_LAYER = new ModelLayerLocation(Arsenal.id("female_guardian"), "body");
     private static ResourceLocation[] expressionFrames(String name) {
         return new ResourceLocation[]{skin(name),skin(name+"_half"),skin(name+"_blink"),skin(name+"_half_lips"),skin(name+"_blink_lips")};
@@ -44,7 +37,6 @@ public final class BlossomWardenRenderer extends MobRenderer<BlossomWarden,Bloss
         super(context,new Model(context.bakeLayer(LAYER)),.78F);
         maleModel = model;
         femaleModel = new Model(FemaleGuardianModel.sizeCubes(context.bakeLayer(FEMALE_LAYER)));
-        addLayer(new LilyPadCrownLayer(this));
     }
     @Override protected void scale(BlossomWarden guardian,PoseStack poses,float partialTick) {
         // The two hierarchical guardian meshes are adult-sized. Vanilla's generic entity
@@ -78,31 +70,6 @@ public final class BlossomWardenRenderer extends MobRenderer<BlossomWarden,Bloss
     @SubscribeEvent public static void model(EntityRenderersEvent.RegisterLayerDefinitions e) { e.registerLayerDefinition(LAYER,MaleGuardianModel::layer); e.registerLayerDefinition(FEMALE_LAYER,FemaleGuardianModel::layer); }
     @SubscribeEvent public static void renderer(EntityRenderersEvent.RegisterRenderers e) {
         e.registerEntityRenderer(People.BLOSSOM_WARDEN.get(),BlossomWardenRenderer::new);
-    }
-
-    private static final class LilyPadCrownLayer extends RenderLayer<BlossomWarden,Model> {
-        LilyPadCrownLayer(BlossomWardenRenderer renderer){super(renderer);}
-        @Override public void render(PoseStack poses,MultiBufferSource buffers,int light,BlossomWarden entity,
-                float limbSwing,float limbSwingAmount,float partialTick,float age,float netHeadYaw,float headPitch){
-            if (entity.female()) return; // Her lily pads and blooms are part of her model.
-            poses.pushPose();
-            getParentModel().root().getChild("head").translateAndRotate(poses);
-            VertexConsumer consumer=buffers.getBuffer(RenderType.entityCutoutNoCull(entity.duskGuardian()?DUSK_PAD:PAD));
-            for(int i=0;i<10;i++){
-                float angle=(float)(Math.PI*2*i/10.0);
-                poses.pushPose();
-                poses.translate(Math.sin(angle)*.46,-.65,Math.cos(angle)*.46);
-                poses.mulPose(Axis.YP.rotation(angle));
-                poses.mulPose(Axis.XP.rotationDegrees(48));
-                // Radial petals taper at their stems and occupy separate angular sectors.
-                RangedRelicRenderer.vertex(consumer,poses.last(),new Vec3(-.081,-.208,0),0,1,0xffffffff,light);
-                RangedRelicRenderer.vertex(consumer,poses.last(),new Vec3(.081,-.208,0),1,1,0xffffffff,light);
-                RangedRelicRenderer.vertex(consumer,poses.last(),new Vec3(.154,.208,0),1,0,0xffffffff,light);
-                RangedRelicRenderer.vertex(consumer,poses.last(),new Vec3(-.154,.208,0),0,0,0xffffffff,light);
-                poses.popPose();
-            }
-            poses.popPose();
-        }
     }
 
     static final class Model extends HierarchicalModel<BlossomWarden> {
