@@ -67,6 +67,7 @@ public final class BlossomWarden extends PathfinderMob {
     private static final EntityDataAccessor<Boolean> JUVENILE=SynchedEntityData.defineId(BlossomWarden.class,EntityDataSerializers.BOOLEAN);
     private static final EntityDataAccessor<Boolean> DUSK = SynchedEntityData.defineId(BlossomWarden.class, EntityDataSerializers.BOOLEAN);
     private static final EntityDataAccessor<Long> WARNING_STARTED = SynchedEntityData.defineId(BlossomWarden.class, EntityDataSerializers.LONG);
+    private static final EntityDataAccessor<Integer> HELD_PLAYER = SynchedEntityData.defineId(BlossomWarden.class, EntityDataSerializers.INT);
     private boolean factionKnown;
     private float warningBearing;
     private GuardianDepartureGoal departure;
@@ -106,6 +107,7 @@ public final class BlossomWarden extends PathfinderMob {
 
     @Override public void onSyncedDataUpdated(EntityDataAccessor<?> key) {
         super.onSyncedDataUpdated(key);
+        if (level().isClientSide && (HELD_PLAYER.equals(key) || POSE.equals(key))) trackCarriedPlayer();
         if(JUVENILE.equals(key)) {
             var max=getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.MAX_HEALTH);
             if(max!=null)((GuardianVitality)max).uwu$guardianHealth(isBaby());
@@ -165,6 +167,7 @@ public final class BlossomWarden extends PathfinderMob {
         builder.define(JUVENILE,false);
         builder.define(DUSK, false);
         builder.define(WARNING_STARTED, 0L);
+        builder.define(HELD_PLAYER, -1);
     }
 
     @Override protected PathNavigation createNavigation(Level level) {
@@ -246,6 +249,12 @@ public final class BlossomWarden extends PathfinderMob {
     public boolean warningShake() { return entityData.get(POSE) == WARNING_SHAKE; }
     public boolean warningWink() { return entityData.get(POSE) == WARNING_WINK; }
     public boolean warningFlip() { return entityData.get(POSE) == WARNING_FLIP; }
+    public boolean holdsDuringFlip(Player player) { return warningFlip() && entityData.get(HELD_PLAYER) == player.getId(); }
+
+    private void trackCarriedPlayer() {
+        if (warningFlip() && level().getEntity(entityData.get(HELD_PLAYER)) instanceof Player player)
+            GuardianWarningMotion.trackOnClient(player, this);
+    }
     public float warningPhaseTicks(float partial) {
         return Math.max(0, level().getGameTime() - entityData.get(WARNING_STARTED) + partial);
     }
@@ -421,6 +430,7 @@ public final class BlossomWarden extends PathfinderMob {
     private void transition(byte phase) {
         if (phase == IDLE || phase == CHASE) rescueGrab = false;
         entityData.set(POSE, phase);
+        if (phase != WARNING_FLIP) entityData.set(HELD_PLAYER, -1);
         if (phase == WARNING_SHAKE || phase == WARNING_WINK || phase == WARNING_FLIP)
             entityData.set(WARNING_STARTED, level().getGameTime());
         motionTicks = 0;
@@ -457,7 +467,10 @@ public final class BlossomWarden extends PathfinderMob {
                 ownCombatSpeed=false;
             }
         }
-        if (!(level() instanceof ServerLevel level)) return;
+        if (!(level() instanceof ServerLevel level)) {
+            trackCarriedPlayer();
+            return;
+        }
         if (tickCount % 100 == 0) warnings.prune(level.getGameTime());
         family.tick(this,level);
         resolveVillageHome(level);
@@ -616,6 +629,7 @@ public final class BlossomWarden extends PathfinderMob {
         }
         int kind = warnings.kind(player.getUUID());
         boolean flip = phase == WARNING_FLIP;
+        if (flip && entityData.get(HELD_PLAYER) != player.getId()) entityData.set(HELD_PLAYER, player.getId());
         setYRot(warningBearing);
         setYBodyRot(warningBearing);
         setYHeadRot(warningBearing);
@@ -632,6 +646,7 @@ public final class BlossomWarden extends PathfinderMob {
         player.fallDistance = 0;
         if (++motionTicks < (flip ? WARNING_FLIP_TICKS : kind == GuardianWarnings.SECOND ? 6 : 14)) return;
         if (!flip && kind == GuardianWarnings.SECOND) {
+            entityData.set(HELD_PLAYER, player.getId());
             transition(WARNING_FLIP);
             return;
         }

@@ -44,8 +44,16 @@ for suffix in ["", "_half", "_blink", "_half_lips", "_blink_lips"]:
     resources.add("textures/entity/dusk_guardian_female" + suffix + ".png")
 for sex in ["male", "girl"]:
     resources.update({f"textures/item/dusk_guardian_{sex}_egg.png", f"models/item/dusk_guardian_{sex}_egg.json"})
-allowed_resources = {resource_prefix + p for p in resources} | {"META-INF/MANIFEST.MF", "META-INF/neoforge.mods.toml"}
+allowed_resources = {resource_prefix + p for p in resources} | {
+    "META-INF/MANIFEST.MF", "META-INF/neoforge.mods.toml", "uwudimension.mixins.json",
+    "dev/uwu/dimension/mixin/GuardianHeldPlayerMixin.class",
+}
 with ZipFile(BytesIO(baseline)) as old, ZipFile(candidate) as new:
+    before_mixins = json.loads(old.read("uwudimension.mixins.json"))
+    after_mixins = json.loads(new.read("uwudimension.mixins.json"))
+    assert after_mixins["client"].count("GuardianHeldPlayerMixin") == 1
+    after_mixins["client"].remove("GuardianHeldPlayerMixin")
+    assert before_mixins == after_mixins, "An unrelated mixin changed"
     changes = []
     entries = sorted({i.filename for z in (old,new) for i in z.infolist() if not i.is_dir()})
     for name in entries:
