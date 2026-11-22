@@ -32,12 +32,14 @@ import net.neoforged.neoforge.common.NeoForge;
 /** Opens a disposable world and samples real owner-camera geometry and block light. */
 @Mod("uwu_lotus_client_check")
 public final class LotusClientProbe {
-    private enum Stage { LOAD, POSITION, DIRK_COUNTDOWN, REPLAY, JADE, CUPID, LANTERN, CUPID_SHRINE, DONE }
+    private enum Stage { LOAD, POSITION, DIRK_COUNTDOWN, REPLAY, JADE, CUPID, LANTERN, CUPID_SHRINE, CHARM_OVERLAY, DONE }
     private static Stage stage = Stage.LOAD;
     private static final boolean DIRK_ONLY = Boolean.getBoolean("uwu.check.dirkCountdown");
     private static final boolean SHRINE_ONLY = Boolean.getBoolean("uwu.check.shrine");
     private static final boolean CUPID_LANTERN_ONLY = Boolean.getBoolean("uwu.check.cupidLantern");
     private static final boolean CAVE_ONLY = Boolean.getBoolean("uwu.check.cave");
+    private static final boolean CHARM_OVERLAY_ONLY = Boolean.getBoolean("uwu.check.charmOverlay");
+    private static CupidCharmOverlayProbe charmOverlay;
     private static boolean opening;
     private static DirkCountdownProbe dirk;
     private static JadeFluidProbe jade;
@@ -150,6 +152,12 @@ public final class LotusClientProbe {
             switch (stage) {
                 case LOAD -> {
                     if (player.tickCount < 85) return;
+                    if (CHARM_OVERLAY_ONLY) {
+                        charmOverlay = new CupidCharmOverlayProbe(client, action -> serverAction(client, action));
+                        stageTick = player.tickCount;
+                        stage = Stage.CHARM_OVERLAY;
+                        return;
+                    }
                     if (CUPID_LANTERN_ONLY) {
                         LanternCoverProbe.verify(client);
                         CupidHeldScaleProbe.verify(client);
@@ -253,6 +261,9 @@ public final class LotusClientProbe {
                     System.out.println("LOTUS DYNAMIC LIGHT PASS server block light in shader-free client at " + lightSample
                             + ", block light " + baseLight + " -> " + peakLight + " -> " + current);
                     stage = Boolean.getBoolean("uwu.check.decor") ? Stage.CUPID : Stage.JADE;
+                }
+                case CHARM_OVERLAY -> {
+                    if (charmOverlay.frame(client)) stage = Stage.DONE;
                 }
                 case DIRK_COUNTDOWN, JADE, CUPID, LANTERN, CUPID_SHRINE, DONE -> {}
             }

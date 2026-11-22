@@ -48,6 +48,10 @@ gradle.beforeProject { project ->
             if (dirkCountdown) jvmArgument('-Duwu.check.dirkCountdown=true')
             if (shrineCheck) jvmArgument('-Duwu.check.shrine=true')
             if (caveCheck) jvmArgument('-Duwu.check.cave=true')
+            if (System.getenv('UWU_CHARM_OVERLAY_CHECK') == 'true') {
+                jvmArgument('-Duwu.check.charmOverlay=true')
+                jvmArgument('-Duwu.check.evidence=' + project.file('build/charm-overlay-evidence').absolutePath)
+            }
             if (cupidLantern) {
                 jvmArgument('-Duwu.check.cupidLantern=true')
                 jvmArgument('-Duwu.check.evidence=' + project.file('build/cupid-lantern-evidence').absolutePath)

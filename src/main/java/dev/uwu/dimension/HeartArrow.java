@@ -79,7 +79,7 @@ public final class HeartArrow extends Arrow {
                 && pet.isOwnedBy(owner) && CupidWishes.enabled(owner)) {
             if(HeartMagic.charm(server,owner,pet,true)) GlitchCompletions.track(this,pet,"charm");
         } else if (hit.getEntity() instanceof LivingEntity creature && !HeartMagic.friendly(player, creature)) {
-            boolean charmed = !ripple && HeartMagic.charm(server, player, creature, true);
+            boolean charmed = !ripple && HeartMagic.charmFromBow(server, player, creature);
             if(charmed)GlitchCompletions.track(this,creature,"charm");
             if (!charmed && (!(creature instanceof Player other) || player.canHarmPlayer(other)))
                 creature.hurt(damageSources().arrow(this, player), (ripple ? Arsenal.Relic.RIPPLE_BOW.damage : Arsenal.Relic.CUPID_BOW.damage) * getPersistentData().getFloat("strength"));

@@ -37,6 +37,10 @@ if grep -Ei 'OutOfMemoryError|CHECK FAILED|single server tick has taken' "$log";
 if [[ -n ${UWU_JAR:-} ]]; then
     grep -F 'UWU PACKAGED CANDIDATE PASS' "$log"
 fi
+if [[ ${UWU_CHARM_OVERLAY_CHECK:-false} == true ]]; then
+    grep -F 'CUPID CHARM OVERLAY PASS' "$log"
+    exit 0
+fi
 if [[ ${UWU_CUPID_LANTERN_CHECK:-false} == true ]]; then
     grep -F 'LANTERN COVER CLIENT PASS' "$log"
     grep -F 'CUPID HELD SCALE PASS' "$log"

@@ -29,7 +29,17 @@ final class CupidMinions {
     static final String COMMAND_TARGET = "uwudimension.cupid_target";
     static final String COMMAND_END = "uwudimension.cupid_target_end";
     private static final String CLIENT_CONTROL = "uwudimension.cupid_control";
-    private static final int CHARM_TICKS = 800;
+    static final int CHARM_TICKS = 800;
+    static final String VIEW_UNTIL = "uwudimension.cupid_view_until";
+    private static final String BOW_VIEW = "uwudimension.cupid_bow_view";
+
+    record CharmView(int ticks) implements CustomPacketPayload {
+        static final Type<CharmView> TYPE = new Type<>(UwUDimension.id("cupid_charm_view"));
+        static final StreamCodec<RegistryFriendlyByteBuf, CharmView> CODEC = StreamCodec.of(
+                (buffer, message) -> buffer.writeVarInt(message.ticks()),
+                buffer -> new CharmView(buffer.readVarInt()));
+        @Override public Type<CharmView> type() { return TYPE; }
+    }
 
     record Designate() implements CustomPacketPayload {
         static final Type<Designate> TYPE = new Type<>(UwUDimension.id("cupid_designate"));
@@ -64,6 +74,15 @@ final class CupidMinions {
     }
 
     private static void registerPayloads(RegisterPayloadHandlersEvent event) {
+        event.registrar("1").optional().playToClient(CharmView.TYPE, CharmView.CODEC,
+                (message, context) -> context.enqueueWork(() -> {
+                    Player player = context.player();
+                    if (message.ticks() > 0) {
+                        player.getPersistentData().putLong(VIEW_UNTIL, player.level().getGameTime() + message.ticks());
+                    } else {
+                        player.getPersistentData().remove(VIEW_UNTIL);
+                    }
+                }));
         event.registrar("1")
             .playToServer(Designate.TYPE, Designate.CODEC, (message, context) -> context.enqueueWork(() -> {
                 if (context.player() instanceof ServerPlayer owner) designate(owner);
@@ -87,6 +106,11 @@ final class CupidMinions {
         return charm(level, keeper, target, pastelCupid, CHARM_TICKS);
     }
     static boolean charm(ServerLevel level, Player keeper, ServerPlayer target, boolean pastelCupid, int duration) {
+        return charm(level, keeper, target, pastelCupid, duration, false);
+    }
+
+    static boolean charm(ServerLevel level, Player keeper, ServerPlayer target, boolean pastelCupid, int duration,
+            boolean bowView) {
         if (target == keeper || target.isCreative() || target.isSpectator() || !keeper.canHarmPlayer(target)) return false;
         var data = target.getPersistentData();
         if (data.hasUUID(HeartMagic.OWNER)
@@ -98,6 +122,10 @@ final class CupidMinions {
         data.putBoolean("uwu.pastel_cupid", pastelCupid);
         data.remove(HeartMagic.PETALFOLD);
         data.putLong(HeartMagic.END, level.getGameTime() + duration);
+        boolean hadBowView = data.getBoolean(BOW_VIEW);
+        if (bowView) data.putBoolean(BOW_VIEW, true);
+        else data.remove(BOW_VIEW);
+        if (bowView || hadBowView) sendView(target, bowView ? duration : 0);
         data.remove(COMMAND_TARGET);
         data.remove(COMMAND_END);
         target.displayClientMessage(net.minecraft.network.chat.Component.literal("You have been charmed into a temporary minion."), true);
@@ -237,6 +265,12 @@ final class CupidMinions {
         PacketDistributor.sendToPlayer(minion, new Control(true, target.getX(), target.getY(), target.getZ(), stopDistance));
     }
 
+    private static void sendView(ServerPlayer player, int ticks) {
+        if (player.connection.hasChannel(CharmView.TYPE)) {
+            PacketDistributor.sendToPlayer(player, new CharmView(ticks));
+        }
+    }
+
     private static void release(ServerPlayer player) {
         GlitchCompletions.resolved(player.serverLevel(),player,"charm");
         player.removeTag(HeartMagic.OWNER);
@@ -248,6 +282,8 @@ final class CupidMinions {
         data.remove("uwu.pastel_cupid");
         data.remove(COMMAND_TARGET);
         data.remove(COMMAND_END);
+        if (data.getBoolean(BOW_VIEW)) sendView(player, 0);
+        data.remove(BOW_VIEW);
         PacketDistributor.sendToPlayer(player, new Control(false, 0, 0, 0, 0));
         if (!petalfold && player.level() instanceof ServerLevel level)
             level.sendParticles(ParticleTypes.CHERRY_LEAVES, player.getX(), player.getY() + .8, player.getZ(), 10,
@@ -272,8 +308,12 @@ final class CupidMinions {
         if (player.getTags().contains(HeartMagic.OWNER) && data.hasUUID(HeartMagic.OWNER)
             && player.serverLevel().getGameTime() < data.getLong(HeartMagic.END)) {
             Player owner = player.serverLevel().getServer().getPlayerList().getPlayer(data.getUUID(HeartMagic.OWNER));
-            if (owner instanceof ServerPlayer keeper && keeper.serverLevel() == player.serverLevel()) sendControl(player, keeper, 3.0);
-            else release(player);
+            if (owner instanceof ServerPlayer keeper && keeper.serverLevel() == player.serverLevel()) {
+                sendControl(player, keeper, 3.0);
+                if (data.getBoolean(BOW_VIEW)) {
+                    sendView(player, (int) (data.getLong(HeartMagic.END) - player.serverLevel().getGameTime()));
+                }
+            } else release(player);
         }
     }
 }

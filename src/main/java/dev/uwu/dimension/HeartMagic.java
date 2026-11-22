@@ -55,6 +55,13 @@ final class HeartMagic {
         return false;
     }
 
+    static boolean charmFromBow(ServerLevel level, Player keeper, LivingEntity target) {
+        if (target instanceof net.minecraft.server.level.ServerPlayer player) {
+            return CupidMinions.charm(level, keeper, player, true, CupidMinions.CHARM_TICKS, true);
+        }
+        return charm(level, keeper, target, true);
+    }
+
     // Petalfold places its own particles around the blocker, away from the camera.
     static boolean charmFromShield(ServerLevel level, Player keeper, LivingEntity target, int duration) {
         if (target instanceof Mob mob) return charmMob(level, keeper, mob, false, duration, true);
