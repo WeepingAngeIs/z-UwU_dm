@@ -47,6 +47,10 @@
     "defaultRequire": 1
   },
   "client": [
+    "TimePocketParticleHistory",
+    "TimePocketParticleMixin",
+    "TimePocketSoundMixin",
+    "TimePocketChannelMixin",
     "ReachLiquidVanillaMixin",
     "LushRenderChunkRegionMixin",
     "LushSodiumLevelSliceMixin",

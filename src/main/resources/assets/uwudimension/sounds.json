@@ -1,4 +1,12 @@
 {
+  "pocket_tick": {
+    "subtitle": "subtitles.uwudimension.pocket_clock",
+    "sounds": ["uwudimension:pocket_tick"]
+  },
+  "pocket_tock": {
+    "subtitle": "subtitles.uwudimension.pocket_clock",
+    "sounds": ["uwudimension:pocket_tock"]
+  },
   "dusk_chest_open": {
     "subtitle": "subtitles.uwudimension.dusk_chest_open",
     "sounds": [

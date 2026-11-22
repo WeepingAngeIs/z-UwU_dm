@@ -1,0 +1,71 @@
+name: Regional time-freeze prototype
+on:
+  push:
+    branches: ['prototype/uwu-regional-time-freeze']
+permissions:
+  contents: read
+concurrency:
+  group: regional-time-pocket-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    if: github.repository == 'WeepingAngeIs/z-UwU_dm' && github.event.repository.private == false
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    outputs:
+      digest: ${{ steps.seal.outputs.digest }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with: {fetch-depth: 0, persist-credentials: false}
+      - uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880
+        with: {distribution: temurin, java-version: '21'}
+      - name: Build the isolated prototype on its recorded Guardian base
+        run: |
+          git merge-base --is-ancestor c7288c1510e85b2d1ec2e8dfd8dc8abfbfbf3baa HEAD
+          bash weapon-release/bootstrap.sh
+          bash gradlew --no-daemon --max-workers=2 jar
+      - id: seal
+        name: Seal the product and check the fixture is absent
+        run: |
+          mkdir -p build/pocket-input
+          cp build/libs/*-time-prototype.1.jar build/pocket-input/
+          python3 time-pocket-check/check_package.py build/pocket-input/*.jar
+          cd build/pocket-input
+          sha256sum *.jar > SHA256SUMS.txt
+          echo "digest=$(cut -d' ' -f1 SHA256SUMS.txt)" >> "$GITHUB_OUTPUT"
+          echo "$GITHUB_SHA" > source.txt
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: time-pocket-input-${{ github.sha }}
+          path: build/pocket-input/
+          retention-days: 7
+  gameplay:
+    needs: build
+    strategy:
+      fail-fast: false
+      matrix: {side: [client, server]}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 28
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with: {persist-credentials: false}
+      - uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880
+        with: {distribution: temurin, java-version: '21'}
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
+        with:
+          name: time-pocket-input-${{ github.sha }}
+          path: build/pocket-input
+          digest-mismatch: error
+      - name: Exercise the packaged mod in a disposable Minecraft world
+        env:
+          UWU_EXPECTED_JAR_SHA256: ${{ needs.build.outputs.digest }}
+          POCKET_SIDE: ${{ matrix.side }}
+        run: bash time-pocket-check/run.sh
+      - if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: time-pocket-${{ matrix.side }}-evidence-${{ github.sha }}
+          path: build/pocket-evidence/
+          retention-days: 7
+          if-no-files-found: warn
