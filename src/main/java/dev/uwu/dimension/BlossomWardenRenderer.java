@@ -126,7 +126,7 @@ public final class BlossomWardenRenderer extends MobRenderer<BlossomWarden,Bloss
                 GuardianGreetingMotion.limbs(w.greeting(), w.greetingTicks(partial), head, left, right, footL, footR);
             } else if (female) {
                 boolean grounded = w.onGround() && !w.isPassenger() && !w.isInWaterOrBubble();
-                var clip = OwlGuardianGaits.select(grounded, w.gripping() || w.throwing() || w.warningShake() || w.warningWink() || w.warningFlip(), w.chasing(), speed);
+                var clip = OwlGuardianGaits.select(grounded, w.gripping() || w.throwing() || w.warningShake() || w.warningWink() || w.warningFlip(), w.chasing() || w.approachingVisitor(), speed);
                 if (clip != null) {
                     OwlGuardianGaits.apply(gaitParts, head, clip, age, speed);
                 }

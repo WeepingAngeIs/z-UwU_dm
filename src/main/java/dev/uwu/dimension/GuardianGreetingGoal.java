@@ -28,6 +28,8 @@ final class GuardianGreetingGoal extends Goal {
     private ServerPlayer visitor;
     private long started, nextScan, nextPath;
     private boolean gaveAccent, departing;
+    private UUID unreachable;
+    private long retryAfter;
     private float bearing;
 
     GuardianGreetingGoal(BlossomWarden guard) {
@@ -63,7 +65,8 @@ final class GuardianGreetingGoal extends Goal {
     }
 
     private boolean available(ServerPlayer player) {
-        if (!eligible(player) || alreadyGreeted(player)) return false;
+        if (!eligible(player) || alreadyGreeted(player)
+                || player.getUUID().equals(unreachable) && guard.level().getGameTime() < retryAfter) return false;
         Claim claim = APPROACHES.get(player);
         return claim == null || claim.expires <= guard.level().getGameTime()
                 || !(player.serverLevel().getEntity(claim.guardian) instanceof BlossomWarden other) || !other.isAlive();
@@ -94,6 +97,7 @@ final class GuardianGreetingGoal extends Goal {
     @Override public void start() {
         started = guard.level().getGameTime();
         nextPath = started;
+        guard.approachVisitor(true);
         gaveAccent = departing = false;
         APPROACHES.put(visitor, new Claim(guard.getUUID(), started + APPROACH_LIMIT + 1));
     }
@@ -122,6 +126,7 @@ final class GuardianGreetingGoal extends Goal {
             }
             if (alreadyGreeted(visitor)) { departing = true; return; }
             guard.getNavigation().stop();
+            guard.approachVisitor(false);
             guard.beginGreeting(remember(visitor));
         }
         bearing = (float)(Mth.atan2(visitor.getZ() - guard.getZ(), visitor.getX() - guard.getX()) * Mth.RAD_TO_DEG) - 90F;
@@ -151,10 +156,15 @@ final class GuardianGreetingGoal extends Goal {
 
     @Override public void stop() {
         if (visitor != null) {
+            if (guard.approachingVisitor() && guard.level().getGameTime() - started >= APPROACH_LIMIT) {
+                unreachable = visitor.getUUID();
+                retryAfter = guard.level().getGameTime() + 100;
+            }
             var claim = APPROACHES.get(visitor);
             if (claim != null && claim.guardian.equals(guard.getUUID())) APPROACHES.remove(visitor);
         }
         visitor = null;
+        guard.approachVisitor(false);
         guard.endGreeting();
         guard.getNavigation().stop();
         nextScan = guard.level().getGameTime() + 15;

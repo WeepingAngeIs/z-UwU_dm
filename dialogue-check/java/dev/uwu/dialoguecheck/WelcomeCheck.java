@@ -38,8 +38,8 @@ import net.neoforged.neoforge.event.tick.ServerTickEvent;
 public final class WelcomeCheck {
     private enum Stage { OFF, CONTROL, APPROACH, SHOW, EXIT, RETURN, COMPETE, RECONNECT, INTERRUPT, WARN, DONE }
     private static Stage stage = Stage.OFF;
-    private static final BlockPos COURT = new BlockPos(0, 221, 0);
-    private static final Vec3 ARRIVAL = new Vec3(.5, 221, -7.5);
+    private static final BlockPos COURT = new BlockPos(128, 296, 128);
+    private static final Vec3 ARRIVAL = Vec3.atBottomCenterOf(COURT).add(0, 0, -8);
     private static final Path OUT = Path.of(System.getProperty("uwu.check.evidence"), "welcome");
     private static final boolean REFERENCE = "with-reference".equals(System.getProperty("uwu.check.dialogueMode"));
     static volatile Throwable problem;
@@ -54,7 +54,7 @@ public final class WelcomeCheck {
     private static double startGap, greetingGap, bestExit;
     private static long atFirst;
     private static int starts, maxSimultaneous;
-    private static boolean wasG1, wasG2;
+    private static boolean wasG1, wasG2, sawApproach;
     private static final EnumSet<GuardianGreeting> males = EnumSet.noneOf(GuardianGreeting.class);
     private static final EnumSet<GuardianGreeting> females = EnumSet.noneOf(GuardianGreeting.class);
     private static final List<Map<String,Object>> trials = new ArrayList<>();
@@ -78,8 +78,19 @@ public final class WelcomeCheck {
         owner = player;
         level = owner.server.getLevel(ReefLife.REACH);
         level.getGameRules().getRule(GameRules.RULE_DAYLIGHT).set(false, owner.server);
-        for (int x=-14;x<=14;x++) for (int z=-20;z<=20;z++)
-            level.setBlockAndUpdate(new BlockPos(x,220,z),Blocks.SMOOTH_QUARTZ.defaultBlockState());
+        // The previous dialogue scenes create real village Guardians. Give the single-speaker
+        // captures their own court before explicitly bringing two residents together below.
+        for (int x=-15;x<=15;x++) for (int z=-20;z<=20;z++) {
+            var floor = Math.abs(x) == 5 ? Blocks.CHERRY_PLANKS
+                    : Math.abs(x) < 5 ? Blocks.SMOOTH_QUARTZ : Blocks.MOSS_BLOCK;
+            level.setBlockAndUpdate(COURT.offset(x,-1,z), floor.defaultBlockState());
+            if (Math.abs(x) > 6 && Math.floorMod(x*11+z*5, 17) == 0)
+                level.setBlockAndUpdate(COURT.offset(x,0,z), Blocks.PINK_PETALS.defaultBlockState());
+        }
+        for (int x : new int[]{-6,6}) for (int z : new int[]{-10,4,15}) {
+            level.setBlockAndUpdate(COURT.offset(x,0,z), Blocks.CHERRY_FENCE.defaultBlockState());
+            level.setBlockAndUpdate(COURT.offset(x,1,z), Blocks.LANTERN.defaultBlockState());
+        }
         owner.setGameMode(GameType.SURVIVAL);
         position();
         guard = create(false, false, 4.5, false);
@@ -98,7 +109,7 @@ public final class WelcomeCheck {
         data.putBoolean("DuskGuardian", dusk);
         data.putBoolean("KeeperSummonedGuardian", true); // permits a second resident at one court in the concurrency test
         npc.readAdditionalSaveData(data);
-        npc.moveTo(x,221,4.5,180,0);
+        npc.moveTo(COURT.getX()+x,COURT.getY(),COURT.getZ()+4.5,180,0);
         if (resident) npc.bindVillage(COURT);
         require(level.addFreshEntity(npc), "guardian spawn");
         return npc;
@@ -117,7 +128,7 @@ public final class WelcomeCheck {
         dawn(100 + trial);
         guard = create(trial >= 6 && trial <= 12, trial >= 12, .5, true);
         entityId = guard.getId(); startGap = owner.distanceTo(guard);
-        heartBefore = hearts; dingBefore = dings; filming = true;
+        heartBefore = hearts; dingBefore = dings; filming = true; sawApproach = false;
         change(Stage.APPROACH);
     }
 
@@ -125,6 +136,7 @@ public final class WelcomeCheck {
         if (stage == Stage.OFF || stage == Stage.DONE || problem != null) return;
         try {
             long age = level.getGameTime() - lastChange;
+            if (age == 150 && stage == Stage.APPROACH) reportApproach();
             require(age < 310, "server timeout " + stage + " trial=" + trial + " gap=" + owner.distanceTo(guard)
                     + " guard=" + guard.position() + " visitor=" + owner.position() + " greeting=" + guard.greeting());
             switch (stage) {
@@ -133,7 +145,9 @@ public final class WelcomeCheck {
                     if (age >= 45) beginTrial();
                 }
                 case APPROACH -> {
+                    sawApproach |= guard.approachingVisitor() && !guard.getNavigation().isDone();
                     if (guard.greeting() == GuardianGreeting.NONE) return;
+                    require(sawApproach && !guard.approachingVisitor(), "missing running approach or it continued through welcome");
                     performed = guard.greeting();
                     require(performed != previous, "repeated yesterday's gesture");
                     greetingGap = owner.distanceTo(guard);
@@ -160,7 +174,7 @@ public final class WelcomeCheck {
                             "gesture",performed.toString(),"arrival",startGap,"at_greeting",greetingGap,"walked_away",bestExit));
                     filming = false;
                     if (trial == 0) {
-                        owner.teleportTo(level, .5, 221, 60.5, Set.of(), 0, 0);
+                        owner.teleportTo(level, ARRIVAL.x, ARRIVAL.y, ARRIVAL.z+68, Set.of(), 0, 0);
                         change(Stage.RETURN);
                     } else if (++trial < 14) beginTrial();
                     else {
@@ -217,6 +231,15 @@ public final class WelcomeCheck {
                 default -> { }
             }
         } catch (Throwable ex) { problem = ex; }
+    }
+
+    private static void reportApproach() {
+        var nearby = level.getEntitiesOfClass(BlossomWarden.class, owner.getBoundingBox().inflate(30));
+        System.out.println("WELCOME APPROACH trial=" + trial + " visit=" + visit(owner) + " calendar="
+                + owner.server.overworld().getDayTime() + " player=" + owner.isAlive() + "/" + owner.isSpectator()
+                + " guardians=" + nearby.stream().map(g -> g.getId() + "/" + g.greeting() + "/"
+                    + g.position() + "/path=" + g.getNavigation().getPath() + "/ai=" + g.isNoAi()
+                    + "/juvenile=" + g.isBaby() + "/warning=" + g.chasing()).toList());
     }
 
     private static void startCompetition() throws Exception {

@@ -69,6 +69,7 @@ public final class BlossomWarden extends PathfinderMob {
     private static final EntityDataAccessor<Boolean> DUSK = SynchedEntityData.defineId(BlossomWarden.class, EntityDataSerializers.BOOLEAN);
     private static final EntityDataAccessor<Long> WARNING_STARTED = SynchedEntityData.defineId(BlossomWarden.class, EntityDataSerializers.LONG);
     private static final EntityDataAccessor<Integer> HELD_PLAYER = SynchedEntityData.defineId(BlossomWarden.class, EntityDataSerializers.INT);
+    private static final EntityDataAccessor<Boolean> VISITOR_APPROACH = SynchedEntityData.defineId(BlossomWarden.class, EntityDataSerializers.BOOLEAN);
     private static final EntityDataAccessor<Byte> GREETING = SynchedEntityData.defineId(BlossomWarden.class, EntityDataSerializers.BYTE);
     private static final EntityDataAccessor<Long> GREETING_STARTED = SynchedEntityData.defineId(BlossomWarden.class, EntityDataSerializers.LONG);
     private boolean factionKnown;
@@ -175,6 +176,7 @@ public final class BlossomWarden extends PathfinderMob {
         builder.define(DUSK, false);
         builder.define(WARNING_STARTED, 0L);
         builder.define(HELD_PLAYER, -1);
+        builder.define(VISITOR_APPROACH, false);
         builder.define(GREETING, (byte) 0);
         builder.define(GREETING_STARTED, 0L);
     }
@@ -250,6 +252,8 @@ public final class BlossomWarden extends PathfinderMob {
             if (nearest != null) bindVillage(nearest);
         }
     }
+    public boolean approachingVisitor() { return entityData.get(VISITOR_APPROACH); }
+    void approachVisitor(boolean value) { entityData.set(VISITOR_APPROACH, value); }
     public GuardianGreeting greeting() { return GuardianGreeting.byId(entityData.get(GREETING)); }
     public float greetingTicks(float partial) { return level().getGameTime() - entityData.get(GREETING_STARTED) + partial; }
     void beginGreeting(GuardianGreeting greeting) {
@@ -465,7 +469,7 @@ public final class BlossomWarden extends PathfinderMob {
     }
 
     private void transition(byte phase) {
-        if (phase != IDLE) endGreeting();
+        if (phase != IDLE) { approachVisitor(false); endGreeting(); }
         if (phase == IDLE || phase == CHASE) rescueGrab = false;
         entityData.set(POSE, phase);
         if (phase != WARNING_FLIP) entityData.set(HELD_PLAYER, -1);
