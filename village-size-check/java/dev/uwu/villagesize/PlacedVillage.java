@@ -20,7 +20,7 @@ import net.minecraft.world.phys.AABB;
 import static dev.uwu.villagesize.VillageSizeProbe.require;
 
 final class PlacedVillage {
-    static JsonObject inspect(ServerLevel level, BlossomVillage.Plan plan) {
+    static JsonObject inspect(ServerLevel level, BlossomVillage.Plan plan, boolean fresh) {
         var site=plan.site();
         var firstDoor=level.getBlockState(plan.doorway(plan.houses().getFirst())).getBlock();
         String expectedDoor=plan.dusk()?"uwudimension:velvetwood_door":"uwudimension:silkwood_door";
@@ -54,19 +54,26 @@ final class PlacedVillage {
             int dx=house.x()-plan.x(),index=dx+plan.road().length/2;
             int start=plan.z()+plan.bends()[index]+2*house.side(),end=house.z()-house.side()*house.depth();
             int distance=Math.abs(end-start);
+            int previous=plan.road()[index];
             for(int i=0;i<distance;i++){
-                int y=plan.road()[index]+(int)Math.round((house.floor()-plan.road()[index])*i/(double)distance);
-                var at=site.pos(house.x(),y,start+i*house.side());
-                var ground=level.getBlockState(at);
-                require(BuiltInRegistries.BLOCK.getKey(ground.getBlock()).getNamespace().equals("uwudimension")
-                        && !ground.getCollisionShape(level,at).isEmpty(),"Path lost its paving at "+at+" "+ground);
-                for(int up=1;up<=2;up++){
-                    var above=at.above(up);
-                    require(level.getBlockState(above).getCollisionShape(level,above).isEmpty(),
-                            "Blocked doorway approach "+above+" "+level.getBlockState(above));
+                var column=site.pos(house.x(),previous,start+i*house.side());
+                // Find the actual paved tread independently of the generator's interpolation. Adjacent
+                // treads must connect and leave room for a player. Legacy porches can expose native soil.
+                boolean foundTread=false;
+                for(int dy:new int[]{0,1,-1}){
+                    var ground=column.above(dy);
+                    var state=level.getBlockState(ground);
+                    boolean authored=BuiltInRegistries.BLOCK.getKey(state.getBlock()).getNamespace().equals("uwudimension");
+                    if ((!authored && (fresh || distance-i>2)) || state.getCollisionShape(level,ground).isEmpty())continue;
+                    if (!level.getBlockState(ground.above()).getCollisionShape(level,ground.above()).isEmpty()
+                            || !level.getBlockState(ground.above(2)).getCollisionShape(level,ground.above(2)).isEmpty())continue;
+                    previous=ground.getY();foundTread=true;break;
                 }
+                require(foundTread,"Missing walkable tread at "+column+" house "+house+" remaining="+(distance-i)
+                        +" column="+level.getBlockState(column.below())+","+level.getBlockState(column)+","+level.getBlockState(column.above()));
                 paths++;
             }
+            require(Math.abs(previous-house.floor())<=1,"Disconnected last tread at "+door);
             var h=new JsonObject();h.addProperty("x",dx);h.addProperty("z",house.z()-plan.z());
             h.addProperty("width",house.width());h.addProperty("depth",house.depth());h.addProperty("side",house.side());
             h.addProperty("floor",house.floor());h.addProperty("style",house.style());

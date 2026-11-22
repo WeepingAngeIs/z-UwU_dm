@@ -136,7 +136,7 @@ public final class VillageSizeProbe {
         Pick pick=picks.get(physical);
         if(phase==1){load(pick.plan);phase=2;return false;}
         if(!ready(pick.plan))return false;
-        JsonObject result=PlacedVillage.inspect(level,pick.plan);
+        JsonObject result=PlacedVillage.inspect(level,pick.plan,true);
         result.addProperty("coreHouseCount",pick.row.old);
         result.addProperty("coreSignature",pick.row.signature);
         result.addProperty("signature",signature(pick.plan));layouts.add(result);
@@ -186,7 +186,7 @@ public final class VillageSizeProbe {
         if(!ready(p))return false;
         require(level.getBlockState(BlockPos.of(oldState.get("marker").getAsLong())).is(Blocks.DIAMOND_BLOCK),"Old player edit lost");
         require(level.getBlockState(p.doorway(p.houses().getFirst())).toString().equals(oldState.get("door").getAsString()),"Existing doorway changed");
-        var full=PlacedVillage.inspect(level,p);require(full.get("actualHouses").getAsInt()==oldState.get("oldHouseCount").getAsInt(),"Old footprint gained homes");
+        var full=PlacedVillage.inspect(level,p,false);require(full.get("actualHouses").getAsInt()==oldState.get("oldHouseCount").getAsInt(),"Old footprint gained homes");
         save("upgrade-"+seed,full);return true;
     }
     private Row row(JsonObject evidence){return sites.stream().filter(r->r.x==evidence.get("gx").getAsInt()&&r.z==evidence.get("gz").getAsInt()).findFirst().orElseThrow();}

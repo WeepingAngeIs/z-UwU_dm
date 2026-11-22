@@ -162,6 +162,12 @@ public final class BlossomVillage {
         }
         return Optional.empty();
     }
+    // The outer porch and its landing clear two columns to the floor of the house. Meet that floor
+    // before the last two columns so a downhill porch cannot erase the upper tread of its approach.
+    static int approachHeight(int from,int to,int step,int length,boolean villageLots){
+        int ramp=Math.max(1,length-(villageLots?2:0));
+        return from+(int)Math.round((to-from)*Math.clamp(step,0,ramp)/(double)ramp);
+    }
     static void place(HeartwaterFeature.Valley v,Plan p){
         if(!v.overlaps(p.x()-VillageHouseLots.EXTENT_X,p.z()-VillageHouseLots.EXTENT_Z,
                 p.x()+VillageHouseLots.EXTENT_X,p.z()+VillageHouseLots.EXTENT_Z))return;
@@ -176,11 +182,11 @@ public final class BlossomVillage {
             int y0=p.road()[h.x()-p.x()+HALF],n=Math.abs(zb-za);
             int pathRadius=p.sideLane(h)?0:1;
             for(int i=0;i<=n;i++)for(int dx=-pathRadius;dx<=pathRadius;dx++){
-                int y=y0+(int)Math.round((h.floor()-y0)*i/(double)Math.max(1,n));
+                int y=approachHeight(y0,h.floor(),i,n,p.original()!=null);
                 int x = h.x()+dx, z = za+i*h.side();
                 road(v,x,y,z,p.dusk());
-                int previous = y0+(int)Math.round((h.floor()-y0)*Math.max(0,i-1)/(double)Math.max(1,n));
-                int next = y0+(int)Math.round((h.floor()-y0)*Math.min(n,i+1)/(double)Math.max(1,n));
+                int previous=approachHeight(y0,h.floor(),i-1,n,p.original()!=null);
+                int next=approachHeight(y0,h.floor(),i+1,n,p.original()!=null);
                 Direction inward = h.side()>0 ? Direction.SOUTH : Direction.NORTH;
                 if (previous<y) step(v,x,y,z,inward,p.dusk());
                 else if (next<y) step(v,x,y,z,inward.getOpposite(),p.dusk());

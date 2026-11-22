@@ -16,7 +16,6 @@ final class VillageHouseLots {
         var site = base.site();
         int hash = HeartwaterFeature.Valley.mix(site.gx(), site.gz(), level.getSeed() ^ SIZE_SALT);
         int target = 6 + Math.floorMod(hash, 7);
-        if (base.houses().size() == target) return base;
         var houses = new ArrayList<>(base.houses().subList(0, Math.min(target, base.houses().size())));
         if (houses.size() < target) {
             var lots = new ArrayList<Lot>();
@@ -38,7 +37,6 @@ final class VillageHouseLots {
                 if (houses.size() == target) break;
             }
         }
-        if (houses.equals(base.houses())) return base;
         return new BlossomVillage.Plan(site, base.x(), base.z(), base.y(), base.road(), base.bends(),
                 List.copyOf(houses), base.dusk(), base);
     }
@@ -106,13 +104,13 @@ final class VillageHouseLots {
 
     private static boolean laneFits(ServerLevel level,BlossomVillage.Plan p,int x,int start,int door,int from,int to) {
         int length = Math.abs(door-start);
-        if (Math.abs(to-from)>length) return false;
+        if (Math.abs(to-from)>Math.max(1,length-2)) return false;
         var s = p.site();
         for (int i=0;i<=length;i++) {
             int z = start + Integer.signum(door-start)*i;
             int wx=s.wx(x,z), wz=s.wz(x,z);
             int ground=GroveSites.height(level,wx,wz);
-            int grade=from+(int)Math.round((to-from)*i/(double)length);
+            int grade=BlossomVillage.approachHeight(from,to,i,length,true);
             if (ground<=level.getSeaLevel() || Math.abs(ground-grade)>2 || !GroveSites.cherry(level,wx,ground+1,wz)
                     || !p.dusk() && GroveSites.duskLand(level,wx,ground+1,wz)) return false;
         }
