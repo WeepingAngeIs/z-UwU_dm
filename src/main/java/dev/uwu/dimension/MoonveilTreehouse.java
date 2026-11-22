@@ -55,7 +55,7 @@ public final class MoonveilTreehouse {
         if(!ReefLife.isSettlementRealm(level))return Optional.empty();
         var cache=cache(level);
         if(cache.size()>4096)cache.clear();
-        return cache.computeIfAbsent(new Key(village.site().gx(),village.site().gz(),village.dusk()),unused->survey(level,village));
+        return cache.computeIfAbsent(new Key(village.site().gx(),village.site().gz(),village.dusk()),unused->survey(level,village.landmarkLayout()));
     }
     public static Plot first(ServerLevel level,boolean dusk){
         if(!ReefLife.isSettlementRealm(level))throw new IllegalArgumentException("Moonveil houses grow in Sakura Reach");

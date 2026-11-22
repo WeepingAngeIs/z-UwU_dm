@@ -1,0 +1,84 @@
+name: Verify Sakura Reach village house counts
+on:
+  push:
+    branches: ['codex/village-house-counts']
+permissions:
+  contents: read
+  actions: read
+jobs:
+  package:
+    if: github.repository == 'WeepingAngeIs/z-UwU_dm' && github.event.repository.private == false
+    runs-on: ubuntu-24.04
+    timeout-minutes: 33
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with: {persist-credentials: false}
+      - uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880
+        with: {distribution: temurin, java-version: '21'}
+      - name: Build candidate and separate native verifier
+        run: |
+          bash weapon-release/bootstrap.sh
+          bash gradlew --no-daemon --max-workers=2 -I village-size-check/probe.gradle jar villageSizeProbeJar
+      - name: Compare with the exact preceding playtest
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api repos/WeepingAngeIs/z-UwU_dm/actions/artifacts/14737631439/zip > "$RUNNER_TEMP/previous.zip"
+          python3 village-size-check/package.py "$RUNNER_TEMP/previous.zip"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: village-inputs-${{ github.sha }}
+          path: build/village-input/
+          retention-days: 5
+          if-no-files-found: error
+  generate:
+    needs: package
+    runs-on: ubuntu-24.04
+    timeout-minutes: 84
+    strategy:
+      fail-fast: false
+      matrix:
+        seed: [152045, 20261121, 8675309]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with: {persist-credentials: false}
+      - uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880
+        with: {distribution: temurin, java-version: '21'}
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
+        with:
+          name: village-inputs-${{ github.sha }}
+          path: build/village-input
+      - name: Generate Sakura Reach and inspect completed homes and streets
+        run: bash village-size-check/run.sh ${{ matrix.seed }}
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        if: always()
+        with:
+          name: village-evidence-${{ matrix.seed }}-${{ github.sha }}
+          path: build/village-evidence/
+          retention-days: 8
+          if-no-files-found: ignore
+  verified:
+    needs: generate
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with: {persist-credentials: false}
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
+        with:
+          name: village-inputs-${{ github.sha }}
+          path: build/village-input
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
+        with:
+          pattern: village-evidence-*-${{ github.sha }}
+          path: build/village-evidence
+          merge-multiple: true
+      - name: Confirm all house counts, upgrade evidence and draw measured layouts
+        run: |
+          (cd build/village-input && sha256sum -c checksums.txt)
+          /usr/bin/python3 village-size-check/report.py
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: uwu-village-playtest-${{ github.sha }}
+          path: build/village-final/
+          retention-days: 14
+          if-no-files-found: error
