@@ -52,18 +52,18 @@ public final class CupidCharmOverlay {
     }
 
     private static void glow(GuiGraphics graphics, int width, int height, float opacity) {
-        graphics.fill(0, 0, width, height, color(0xf3add4, opacity * .36F));
-        int reach = Math.min(width, height) * 48 / 100;
+        int reach = glowReach(width, height);
         int rings = Math.min(80, reach);
         for (int ring = 0; ring < rings; ring++) {
             int outer = ring * reach / rings;
             int inner = (ring + 1) * reach / rings;
             float t = (ring + .5F) / rings;
             float light = 1F - ease(t);
-            int green = Math.round(Mth.lerp(light, 159, 223));
-            int blue = Math.round(Mth.lerp(light, 204, 243));
+            float highlight = 1F - ease(Math.min(1F, t * 9F));
+            int green = Math.round(Mth.lerp(highlight, 173, 232));
+            int blue = Math.round(Mth.lerp(highlight, 215, 248));
             int pink = (255 << 16) | (green << 8) | blue;
-            int tint = color(pink, opacity * light * .98F);
+            int tint = color(pink, opacity * (.62F * light + .27F * highlight));
             // Non-overlapping strips give each corner the same opacity as its adjacent edges.
             graphics.fill(outer, outer, width - outer, inner, tint);
             graphics.fill(outer, height - inner, width - outer, height - outer, tint);
@@ -72,24 +72,40 @@ public final class CupidCharmOverlay {
         }
     }
 
+    private static int glowReach(int width, int height) {
+        return Math.min(width, height) * 34 / 100;
+    }
+
     private static void hearts(GuiGraphics graphics, int width, int height, float time, float opacity) {
         float scale = Math.max(.5F, Math.min(width, height) / 240F);
-        for (int i = 0; i < 32; i++) {
-            boolean near = i >= 20;
-            int lane = near ? i - 20 : i;
-            int lanes = near ? 12 : 20;
+        float fadeStart = glowReach(width, height) * .43F;
+        float fadeWidth = Math.max(1F, glowReach(width, height) * .46F);
+        for (int i = 0; i < 44; i++) {
+            boolean near = i >= 28;
+            int lane = near ? i - 28 : i;
+            int lanes = near ? 16 : 28;
             float period = (near ? 132F : 210F) + (i % 5) * 10F;
             float life = ((time + i * 47) % period) / period;
             float fade = ease(Math.min(1F, Math.min(life, 1F - life) * 6F));
             int size = Math.max(9, Math.round(((near ? 17 : 9) + (i % 4) * 4) * scale));
             float column = (lane + .5F) / lanes;
-            float drift = scale * (near ? 10F : 5F) * Mth.sin(life * Mth.TWO_PI + i);
-            float x = width * column + drift - size / 2F;
-            float y = Mth.lerp(life, height + size * .5F, -size);
+            // Reserve several lanes along both sides so hearts also travel vertically beside the clear center.
+            if (lane % 4 == 0) column = .035F + (lane % 12) * .006F;
+            if (lane % 4 == 1) column = .965F - (lane % 12) * .006F;
+            float sway = scale * (near ? 10F : 5F) * Mth.sin(life * Mth.TWO_PI + i);
+            float jiggle = Mth.sin(time * .19F + i * 1.3F);
+            float shrink = Mth.lerp(life, 1.15F, .48F) * (1F + .055F * jiggle);
+            float span = size * shrink;
+            float x = width * column + sway - span / 2F;
+            float y = Mth.lerp(life, height + size * .5F, -size) + jiggle * scale * 2F;
+            float depth = Math.min(Math.min(x + span, width - x), Math.min(y + span, height - y));
+            float edgeFade = 1F - ease(Mth.clamp((depth - fadeStart) / fadeWidth, 0F, 1F));
+            if (edgeFade <= 0F || fade <= 0F) continue;
             var pose = graphics.pose();
             pose.pushPose();
             pose.translate(x, y, 0);
-            heart(graphics, 0, 0, size, opacity * fade * (near ? 1F : .64F), near);
+            pose.scale(shrink, shrink, 1F);
+            heart(graphics, 0, 0, size, opacity * fade * edgeFade * (near ? 1F : .64F), near);
             pose.popPose();
         }
     }
