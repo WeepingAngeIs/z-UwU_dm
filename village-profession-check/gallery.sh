@@ -14,4 +14,4 @@ timeout --kill-after=20s 12m xvfb-run -a -s '-screen 0 1280x720x24' bash gradlew
 grep -F 'ESCORT PICK NATIVE GALLERY PASS' build/escort-gallery.log
 test "$(find build/profession-evidence/gallery -name '*.png' | wc -l)" = 12
 grep -F 'NATIVE HARVEST GALLERY PASS' build/escort-gallery.log
-test "$(find build/profession-evidence/harvest -name '*.png' | wc -l)" = 7
+test "$(find build/profession-evidence/harvest -name '*.png' | wc -l)" = 9

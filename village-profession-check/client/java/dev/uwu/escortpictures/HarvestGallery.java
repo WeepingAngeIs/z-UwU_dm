@@ -31,7 +31,7 @@ final class HarvestGallery {
     private static final String[] TREES={"heartbloom","starpetal","moonberry","giant_sakura"};
     private static final String[] NEW_DISHES={"petal_harvest_galette","moonlit_potato_chowder","dewleaf_picnic_wrap"};
     private static final String[] OLDER_DISHES={"rose_berry_pie_slice","shulker_soup","heartberry_burger"};
-    private static final String[] NAMES={"field-day","field-dusk","saplings-front","saplings-side","saplings-rear","saplings-middle","pantry"};
+    private static final String[] NAMES={"field-day","field-dusk","saplings-front","saplings-side","saplings-rear","saplings-middle","field-near","field-near-dusk","pantry"};
     private static final BlockPos PLOT=new BlockPos(-9453,121,14501);
     private final Path out=Path.of(System.getProperty("uwu.check.evidence")).resolveSibling("harvest");
     private boolean active,done;
@@ -89,14 +89,16 @@ final class HarvestGallery {
     private void position(ServerPlayer player,int index){
         var level=player.getServer().getLevel(ReefLife.REACH);
         if(index==0){plant(level);player.setGameMode(GameType.SPECTATOR);}
-        long time=index==1?13000L:3500L;
+        long time=index==1 || index==7?13000L:3500L;
         for(var world:level.getServer().getAllLevels())world.setDayTime(time);
         var target=Vec3.atBottomCenterOf(PLOT).add(index<2?1:0,.62,index<2?-.5:7);
+        if(index==6||index==7)target=Vec3.atBottomCenterOf(PLOT).add(-3,.53,-2.5);
         Vec3 offset=switch(index){
             case 0,1 -> new Vec3(3.9,5.7,11.3);
             case 2 -> new Vec3(.15,1.65,4.8);
             case 3 -> new Vec3(3.4,1.6,3.8);
             case 4 -> new Vec3(-.4,1.55,-5.1);
+            case 6,7 -> new Vec3(.3,2.05,5.6);
             default -> new Vec3(1.9,2.1,8);
         };
         Vec3 eye=target.add(offset);Vec3 direction=target.subtract(eye);
@@ -147,7 +149,7 @@ final class HarvestGallery {
                 g.drawString(font,row==0?"Village harvest":"Existing pantry",12,y,0xffd1bcb6,false);
                 for(int i=0;i<items.length;i++){
                     ItemStack stack=new ItemStack(BuiltInRegistries.ITEM.getOptional(id(items[i])).orElseThrow());
-                    int x=width/2+(i-1)*112;
+                    int x=width/2+(i-1)*(width/3);
                     g.pose().pushPose();g.pose().translate(x-20,y+10,0);g.pose().scale(2.5F,2.5F,1);g.renderItem(stack,0,0);g.pose().popPose();
                     g.renderItem(stack,x+23,y+27);g.drawCenteredString(font,stack.getHoverName(),x,y+54,0xffffe7d2);
                 }
