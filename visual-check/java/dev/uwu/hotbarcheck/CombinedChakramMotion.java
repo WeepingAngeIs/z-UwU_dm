@@ -5,6 +5,7 @@ import com.mojang.blaze3d.platform.NativeImage;
 import dev.uwu.dimension.RelicFlight;
 import dev.uwu.dimension.SharedAbilityHotbar;
 import dev.uwu.hotbarcheck.mixin.MouseCallbacks;
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -27,6 +28,7 @@ import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.HumanoidArm;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.component.CustomData;
+import net.minecraft.world.level.GameRules;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.phys.Vec3;
 import org.lwjgl.glfw.GLFW;
@@ -35,6 +37,11 @@ import org.lwjgl.glfw.GLFW;
 final class CombinedChakramMotion {
     private static final String MARKER = "uwu_visual_motion_trial";
     private static final String BASE = "c1c0802be13d0cd5a01149ffa357018f7a863c5c";
+    private static final int WALK_WARMUP_TICKS = 12;
+    private static final int WALK_MIN_TICKS = 72;
+    private static final int WALK_MAX_TICKS = 120;
+    private static final double REQUIRED_BOB_PHASE_SPAN = 6.0; // Three complete sine periods, two dips each.
+    private static final double MAX_RETAINED_PHASE_GAP = .25;
     private enum Action { ATTACK, USE }
     private enum Stage { EQUIP, REST, WALK, WALK_STOP, SELECT, ACTIVE, RETURN, DONE }
     private record Trial(String id, InteractionHand hand, Action action) {
@@ -42,6 +49,8 @@ final class CombinedChakramMotion {
                 + "-" + action.name().toLowerCase(); }
     }
     private record Combat(boolean active, float progress, int upswing, int combo, String clip, float vanilla) {}
+    private record Bob(float walk, float oldWalk, float amount, float oldAmount, float partial,
+                       double phase, double sway, double dip) {}
     private static final List<Trial> TRIALS = new ArrayList<>();
     private static final List<Map<String, Object>> RESULTS = new ArrayList<>();
     private static final List<Map<String, Object>> FRAMES = new ArrayList<>();
@@ -51,9 +60,14 @@ final class CombinedChakramMotion {
     private static final List<Map<String, Object>> SAMPLES = new ArrayList<>();
     private static Path out;
     private static Method currentHand, swingProgress, upswingTicks, comboCount, attributes;
+    private static Field walkDistanceField, oldWalkDistanceField, bobField, oldBobField;
     private static Stage stage;
     private static int index, begunAt, settledAt = -1, selectedAt, inputAt, returnAt = -1, lastFrameTick = -1;
     private static int firstFrame, activeFrames, verified, walkStartedAt, walkStoppedAt;
+    private static int walkFrames, steadyWalkFrames, sequenceFrames, bestSequenceFrames, backstopZ = Integer.MIN_VALUE;
+    private static double sequenceFirstPhase, sequenceLastPhase, sequenceSpan, bestSequenceSpan, maximumPhaseGap;
+    private static boolean sequenceDipA, sequenceDipB, sequenceSwayLeft, sequenceSwayRight;
+    private static boolean fullNativeWalkCaptured;
     private static Vec3 walkOrigin;
     private static double walkedDistance;
     private static boolean walkStoppedCaptured;
@@ -79,6 +93,11 @@ final class CombinedChakramMotion {
         upswingTicks = api.getMethod("getUpswingTicks");
         comboCount = api.getMethod("getComboCount");
         attributes = Class.forName("net.bettercombat.logic.WeaponRegistry").getMethod("getAttributes", ItemStack.class);
+        // Read the unmodified vanilla inputs; never write walking/bob fields or synthetic transforms.
+        walkDistanceField = field(client.player.getClass(), "walkDist");
+        oldWalkDistanceField = field(client.player.getClass(), "walkDistO");
+        bobField = field(client.player.getClass(), "bob");
+        oldBobField = field(client.player.getClass(), "oBob");
         for (String material : List.of("iron", "gold", "diamond", "netherite", "runic")) {
             for (String shape : List.of("katana", "rapier", "sai", "twinblade")) {
                 String id = "counter_" + material + "_" + shape;
@@ -91,10 +110,13 @@ final class CombinedChakramMotion {
         }
         require(TRIALS.size() == 50, "Expected 20 attacks and 30 supported physical-use cases");
         server(client, actor -> {
-            // An ordinary block backstop gives physical throws their normal impact/return path.
-            // It is outside native block-use reach and is created after all baseline-matched stills.
-            for (int x = -2; x <= 3; x++) for (int y = 220; y <= 225; y++)
-                actor.serverLevel().setBlockAndUpdate(new BlockPos(x, y, 9), Blocks.LIGHT_GRAY_CONCRETE.defaultBlockState());
+            var level = actor.serverLevel();
+            level.getGameRules().getRule(GameRules.RULE_WEATHER_CYCLE).set(false, actor.server);
+            level.setWeatherParameters(1_000_000, 0, false, false);
+            // A level, ordinary-block corridor gives W enough room for multiple complete bob cycles.
+            // It is only a hosted fixture; movement and rendering remain native.
+            for (int x = -4; x <= 4; x++) for (int z = -2; z <= 40; z++)
+                level.setBlockAndUpdate(new BlockPos(x, 220, z), Blocks.SMOOTH_QUARTZ.defaultBlockState());
         });
         begin(client);
         write(false);
@@ -128,6 +150,9 @@ final class CombinedChakramMotion {
         inputAt = -1;
         walkOrigin = null;
         walkedDistance = 0;
+        walkFrames = steadyWalkFrames = sequenceFrames = bestSequenceFrames = 0;
+        sequenceFirstPhase = sequenceLastPhase = sequenceSpan = bestSequenceSpan = maximumPhaseGap = 0;
+        sequenceDipA = sequenceDipB = sequenceSwayLeft = sequenceSwayRight = fullNativeWalkCaptured = false;
         walkStoppedCaptured = false;
         lastFrameTick = -1;
         activeFrames = 0;
@@ -143,6 +168,12 @@ final class CombinedChakramMotion {
             actor.stopUsingItem();
             actor.removeAllEffects();
             actor.setSprinting(false);
+            actor.getFoodData().setFoodLevel(20);
+            if (backstopZ != Integer.MIN_VALUE) {
+                for (int x = -2; x <= 3; x++) for (int y = 221; y <= 225; y++)
+                    actor.serverLevel().setBlockAndUpdate(new BlockPos(x, y, backstopZ), Blocks.AIR.defaultBlockState());
+                backstopZ = Integer.MIN_VALUE;
+            }
             // Cleanup belongs to the next fixture, never to the preceding trial's acceptance.
             for (var flight : actor.serverLevel().getEntitiesOfClass(RelicFlight.class,
                     actor.getBoundingBox().inflate(160), f -> f.getOwner() != null
@@ -167,7 +198,7 @@ final class CombinedChakramMotion {
         Trial trial = TRIALS.get(index);
         var combat = combat(client);
         int tick = client.player.tickCount;
-        if (tick - begunAt > 260) {
+        if (tick - begunAt > 400) {
             end(client, "Timed out while observing native " + stage + "; no recovery was simulated");
             return stage == Stage.DONE;
         }
@@ -192,7 +223,8 @@ final class CombinedChakramMotion {
         } else if (stage == Stage.WALK) {
             walkedDistance = Math.max(walkedDistance, client.player.position().distanceTo(walkOrigin));
             SAMPLES.add(sample(client, combat, flights(client)));
-            if (tick - walkStartedAt >= 10) {
+            if ((tick - walkStartedAt >= WALK_MIN_TICKS && fullNativeWalkCaptured)
+                    || tick - walkStartedAt >= WALK_MAX_TICKS) {
                 key(client, GLFW.GLFW_KEY_W, GLFW.GLFW_RELEASE);
                 walkStoppedAt = tick;
                 stage = Stage.WALK_STOP;
@@ -238,9 +270,10 @@ final class CombinedChakramMotion {
                         + " ids=" + FLIGHT_IDS.size() + " flightFrames=" + activeFrames;
             if (trial.action == Action.USE && client.player.getItemInHand(trial.hand).getCount() != 1)
                 issue = "Physical return did not restore exactly one held stack";
-            if (trial.action == Action.USE && (walkedDistance < .25 || !walkStoppedCaptured
-                    || CAPTURED.stream().noneMatch(p -> p.equals("walk-early") || p.equals("walk-moving"))))
-                issue = "Native W-key movement lacked actual displacement and a retained moving/stop frame";
+            if (trial.action == Action.USE && (walkedDistance < 8 || !walkStoppedCaptured || !fullNativeWalkCaptured))
+                issue = "Full native walking-cycle coverage incomplete; distance=" + walkedDistance
+                        + " frames=" + walkFrames + " bestContinuousPhaseSpan=" + bestSequenceSpan
+                        + " required=" + REQUIRED_BOB_PHASE_SPAN + " stop=" + walkStoppedCaptured;
             end(client, issue);
         }
         return stage == Stage.DONE;
@@ -257,8 +290,11 @@ final class CombinedChakramMotion {
             capture(client, "pre", combat, flights);
             preCaptured = true;
         } else if (stage == Stage.WALK && client.player.position().distanceTo(walkOrigin) > .02) {
-            String phase = tick - walkStartedAt <= 5 ? "walk-early" : "walk-moving";
-            if (!CAPTURED.contains(phase)) capture(client, phase, combat, flights);
+            require(client.options.bobView().get() && !combat.active && combat.vanilla < .001F
+                            && flights.isEmpty() && matches(client.player.getItemInHand(trial.hand)),
+                    "Walking capture must show the actual held item without an attack or flight");
+            capture(client, String.format("walk-%03d", tick - walkStartedAt), combat, flights);
+            observeWalkFrame(client);
         } else if (stage == Stage.WALK_STOP && tick - walkStoppedAt >= 10
                 && client.player.getDeltaMovement().horizontalDistanceSqr() < .0001 && !walkStoppedCaptured) {
             capture(client, "walk-stop", combat, flights);
@@ -285,6 +321,62 @@ final class CombinedChakramMotion {
         } else if (stage == Stage.RETURN && !returnCaptured && matches(client.player.getItemInHand(trial.hand))) {
             capture(client, trial.action == Action.ATTACK ? "attack-return" : "return-settled", combat, flights);
             returnCaptured = true;
+        }
+    }
+
+    private static void observeWalkFrame(Minecraft client) {
+        walkFrames++;
+        if (client.player.tickCount - walkStartedAt < WALK_WARMUP_TICKS) return;
+        Bob nativeBob = bob(client);
+        require(!client.player.isSprinting() && client.player.onGround(),
+                "Walking cycle must be ordinary grounded walking, without sprint or jump");
+        require(nativeBob.amount > .05F, "Native walking bob amplitude never became active");
+        steadyWalkFrames++;
+        double gap = sequenceFrames == 0 ? 0 : Math.abs(nativeBob.phase - sequenceLastPhase);
+        maximumPhaseGap = Math.max(maximumPhaseGap, gap);
+        if (sequenceFrames == 0 || gap > MAX_RETAINED_PHASE_GAP) {
+            sequenceFirstPhase = nativeBob.phase;
+            sequenceFrames = 0;
+            sequenceDipA = sequenceDipB = sequenceSwayLeft = sequenceSwayRight = false;
+        }
+        sequenceLastPhase = nativeBob.phase;
+        sequenceFrames++;
+        sequenceSpan = Math.abs(sequenceLastPhase - sequenceFirstPhase);
+        sequenceDipA |= nativeBob.dip > .97;
+        sequenceDipB |= nativeBob.dip < -.97;
+        sequenceSwayLeft |= nativeBob.sway < -.97;
+        sequenceSwayRight |= nativeBob.sway > .97;
+        if (sequenceSpan > bestSequenceSpan) {
+            bestSequenceSpan = sequenceSpan;
+            bestSequenceFrames = sequenceFrames;
+        }
+        fullNativeWalkCaptured |= sequenceSpan >= REQUIRED_BOB_PHASE_SPAN
+                && sequenceDipA && sequenceDipB && sequenceSwayLeft && sequenceSwayRight;
+    }
+
+    private static Field field(Class<?> type, String name) throws Exception {
+        for (Class<?> current = type; current != null; current = current.getSuperclass()) {
+            try {
+                Field result = current.getDeclaredField(name);
+                result.setAccessible(true);
+                return result;
+            } catch (NoSuchFieldException absent) { /* The native field may belong to a superclass. */ }
+        }
+        throw new NoSuchFieldException(type.getName() + "." + name);
+    }
+
+    private static Bob bob(Minecraft client) {
+        try {
+            float walk = walkDistanceField.getFloat(client.player);
+            float oldWalk = oldWalkDistanceField.getFloat(client.player);
+            float amount = bobField.getFloat(client.player);
+            float oldAmount = oldBobField.getFloat(client.player);
+            float partial = client.gameRenderer.getMainCamera().getPartialTickTime();
+            double phase = -(walk + (walk - oldWalk) * partial);
+            return new Bob(walk, oldWalk, amount, oldAmount, partial, phase,
+                    Math.sin(phase * Math.PI), Math.cos(phase * Math.PI));
+        } catch (IllegalAccessException failure) {
+            throw new AssertionError("Could not read the native walking/bob observation fields", failure);
         }
     }
 
@@ -336,6 +428,13 @@ final class CombinedChakramMotion {
         result.put("playerVelocity", client.player.getDeltaMovement().toString());
         result.put("walkDisplacement", walkOrigin == null ? 0 : client.player.position().distanceTo(walkOrigin));
         result.put("nativeViewBobbing", client.options.bobView().get());
+        Bob nativeBob = bob(client);
+        result.put("nativeBob", Map.of("walkDist", nativeBob.walk, "walkDistO", nativeBob.oldWalk,
+                "bob", nativeBob.amount, "oBob", nativeBob.oldAmount, "partialTick", nativeBob.partial,
+                "phase", nativeBob.phase, "swaySine", nativeBob.sway, "dipCosine", nativeBob.dip));
+        result.put("walkElapsedTicks", walkOrigin == null ? -1 : client.player.tickCount - walkStartedAt);
+        result.put("sprinting", client.player.isSprinting());
+        result.put("onGround", client.player.onGround());
         result.put("betterCombatActive", combat.active);
         result.put("betterCombatProgress", combat.progress);
         result.put("betterCombatUpswingTicks", combat.upswing);
@@ -407,6 +506,12 @@ final class CombinedChakramMotion {
         result.put("maximumFlightDistance", maximumFlight);
         result.put("nativeWalkDistance", walkedDistance);
         result.put("nativeWalkStopCaptured", walkStoppedCaptured);
+        result.put("nativeWalkFrames", walkFrames);
+        result.put("nativeSteadyWalkFrames", steadyWalkFrames);
+        result.put("bestContinuousBobPhaseSpan", bestSequenceSpan);
+        result.put("bestContinuousBobFrames", bestSequenceFrames);
+        result.put("maximumObservedBobPhaseGap", maximumPhaseGap);
+        result.put("fullNativeWalkingCyclesCaptured", fullNativeWalkCaptured);
         result.put("returnedCount", client.player.getItemInHand(trial.hand).getCount());
         result.put("captures", List.copyOf(FRAMES.subList(firstFrame, FRAMES.size())));
         result.put("nativeTickSamples", List.copyOf(SAMPLES));
@@ -445,7 +550,15 @@ final class CombinedChakramMotion {
         document.put("complete", complete);
         document.put("summary", summary());
         document.put("baselineCommit", BASE);
-        document.put("clippingSourceCommit", "3681aacf39fb7675802c25814282aba71f15297f");
+        document.put("clippingSourceCommit", "9a6e699158992117e6b9ac4ae78fa83361518784");
+        document.put("testedCombinedParent", "ea2d6d1ab2b2a35eec6026a3e2048ab84a57e15b");
+        document.put("walkingCaptureContract", Map.of("warmupTicks", WALK_WARMUP_TICKS,
+                "minimumWalkTicks", WALK_MIN_TICKS, "maximumWalkTicks", WALK_MAX_TICKS,
+                "requiredContinuousPhaseSpan", REQUIRED_BOB_PHASE_SPAN,
+                "maximumPhaseGap", MAX_RETAINED_PHASE_GAP, "minimumAbsoluteExtremum", .97,
+                "sampling", "First rendered native frame per game tick; every retained frame keeps the complete HUD and viewport",
+                "phaseDefinition", "-(walkDist + (walkDist-walkDistO)*cameraPartialTick); a full bob period spans 2",
+                "verdict", "Coverage only; manual native-pixel review decides viewport and offhand-slot intersections"));
         document.put("runtimeCandidateSha256", System.getProperty("uwu.check.candidateSha256"));
         document.put("cases", RESULTS);
         document.put("frames", FRAMES);
@@ -469,6 +582,15 @@ final class CombinedChakramMotion {
     }
 
     private static void select(Minecraft client) {
+        if (TRIALS.get(index).action == Action.USE) {
+            // Add a normal physical return backstop only after all walking and stop frames.
+            // It cannot obstruct or artificially constrain the recorded walking cycle.
+            server(client, actor -> {
+                backstopZ = (int)Math.floor(actor.getZ()) + 9;
+                for (int x = -2; x <= 3; x++) for (int y = 221; y <= 225; y++)
+                    actor.serverLevel().setBlockAndUpdate(new BlockPos(x, y, backstopZ), Blocks.LIGHT_GRAY_CONCRETE.defaultBlockState());
+            });
+        }
         key(client, GLFW.GLFW_KEY_1, GLFW.GLFW_PRESS);
         key(client, GLFW.GLFW_KEY_1, GLFW.GLFW_RELEASE);
         selectedAt = client.player.tickCount;

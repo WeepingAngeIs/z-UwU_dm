@@ -3,6 +3,6 @@
   "minVersion": "0.8",
   "package": "dev.uwu.hotbarcheck.mixin",
   "compatibilityLevel": "JAVA_21",
-  "client": ["MouseCallbacks", "HotbarIconObserver", "AbilityNetworkObserver", "VanillaHotbarObserver", "NativeAttackObserver", "MiningObserver", "PlayerAttackObserver"],
+  "client": ["MouseCallbacks", "HotbarIconObserver", "AbilityNetworkObserver", "VanillaHotbarObserver", "NativeAttackObserver", "MiningObserver", "PlayerAttackObserver", "CombinedReviewCamera"],
   "injectors": {"defaultRequire": 1}
 }

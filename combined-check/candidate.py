@@ -12,6 +12,10 @@ import zipfile
 
 ROOT = Path("build/combined-candidate")
 BASE = "c1c0802be13d0cd5a01149ffa357018f7a863c5c"
+PRODUCT_SOURCE = "9a6e699158992117e6b9ac4ae78fa83361518784"
+TESTED_PARENT = "ea2d6d1ab2b2a35eec6026a3e2048ab84a57e15b"
+PRODUCT_TREE = "a0497d420e73af142f07b02932868f26887270c2"
+BUILD_BLOB = "d3ea0b64abb766769509607af1a230ce9a5f646f"
 
 def check(condition, message):
     if not condition:
@@ -31,6 +35,12 @@ def output(key, value):
 check(os.environ.get("GITHUB_ACTIONS") == "true", "Actions only")
 mode = sys.argv[1]
 manifest = json.loads(Path("combined-check/source-manifest.json").read_text())
+check(manifest["product_source_commit"] == PRODUCT_SOURCE and manifest["tested_combined_parent"] == TESTED_PARENT,
+      "exact walking source pins changed")
+check(manifest["product_tree"] == PRODUCT_TREE and manifest["build_gradle_blob"] == BUILD_BLOB,
+      "exact walking product pins changed")
+check(git("rev-parse", "HEAD:src/main") == PRODUCT_TREE, "checkout differs from exact walking product source")
+check(git("rev-parse", "HEAD:build.gradle") == BUILD_BLOB, "checkout differs from exact walking build configuration")
 if mode == "mode":
     reuse_file = Path("combined-check/reuse-candidate.json")
     if reuse_file.exists():
@@ -56,6 +66,8 @@ if mode == "build":
     report = {
         "source_commit": source_commit,
         "base_commit": BASE,
+        "product_source_commit": PRODUCT_SOURCE,
+        "tested_combined_parent": TESTED_PARENT,
         "product_tree": git("rev-parse", "HEAD:src/main"),
         "build_gradle_blob": git("rev-parse", "HEAD:build.gradle"),
         "handoffs": manifest["handoffs"],
@@ -84,6 +96,10 @@ else:
 
 check(candidate.is_file() and candidate.parent == ROOT, "missing or unsafe candidate name")
 check(report["base_commit"] == BASE, "candidate base differs")
+check(report["product_source_commit"] == PRODUCT_SOURCE and report["tested_combined_parent"] == TESTED_PARENT,
+      "candidate walking source differs")
+check(report["product_tree"] == PRODUCT_TREE and report["build_gradle_blob"] == BUILD_BLOB,
+      "candidate immutable product pins differ")
 check(report["handoffs"] == manifest["handoffs"], "candidate handoffs differ")
 check(git("rev-parse", "HEAD:src/main") == report["product_tree"], "QA product source differs")
 check(git("rev-parse", "HEAD:build.gradle") == report["build_gradle_blob"], "QA product build configuration differs")

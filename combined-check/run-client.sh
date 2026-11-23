@@ -52,7 +52,7 @@ collect() {
 }
 trap collect EXIT
 export LIBGL_ALWAYS_SOFTWARE=1 ALSOFT_DRIVERS=null
-timeout --kill-after=20s 25m xvfb-run -a -s '-screen 0 1280x720x24' \
+timeout --kill-after=20s 35m xvfb-run -a -s '-screen 0 1280x720x24' \
     bash gradlew --no-daemon --max-workers=2 -I combined-check/client.gradle runCombinedClient \
     2>&1 | tee "$uwu_out/client.log"
 grep -F 'UWU WEAPONS PACKAGED CANDIDATE PASS' "$uwu_out/client.log"

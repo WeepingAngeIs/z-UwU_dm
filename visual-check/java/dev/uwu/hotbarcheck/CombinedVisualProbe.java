@@ -87,12 +87,17 @@ public final class CombinedVisualProbe {
             new View("third-side", CameraType.THIRD_PERSON_FRONT, InteractionHand.MAIN_HAND, 90, 70),
             new View("third-rear", CameraType.THIRD_PERSON_BACK, InteractionHand.MAIN_HAND, 0, 70),
             new View("third-front-nudge", CameraType.THIRD_PERSON_FRONT, InteractionHand.MAIN_HAND, 3, 70),
-            new View("third-front-close", CameraType.THIRD_PERSON_FRONT, InteractionHand.MAIN_HAND, 0, 35),
-            new View("third-side-close", CameraType.THIRD_PERSON_FRONT, InteractionHand.MAIN_HAND, 90, 35),
-            new View("third-rear-close", CameraType.THIRD_PERSON_BACK, InteractionHand.MAIN_HAND, 0, 35),
-            new View("third-front-close-nudge", CameraType.THIRD_PERSON_FRONT, InteractionHand.MAIN_HAND, 3, 35),
+            new View("third-front-close", CameraType.THIRD_PERSON_FRONT, InteractionHand.MAIN_HAND, 0, 70),
+            new View("third-side-close", CameraType.THIRD_PERSON_FRONT, InteractionHand.MAIN_HAND, 90, 70),
+            new View("third-rear-close", CameraType.THIRD_PERSON_BACK, InteractionHand.MAIN_HAND, 0, 70),
+            new View("third-front-close-nudge", CameraType.THIRD_PERSON_FRONT, InteractionHand.MAIN_HAND, 3, 70),
             new View("first-offhand", CameraType.FIRST_PERSON, InteractionHand.OFF_HAND, 0, 70),
-            new View("third-front-offhand", CameraType.THIRD_PERSON_FRONT, InteractionHand.OFF_HAND, 0, 70));
+            new View("third-front-offhand", CameraType.THIRD_PERSON_FRONT, InteractionHand.OFF_HAND, 0, 70),
+            // Append these to retain the existing first-person/bow-pose view indices.
+            new View("third-side-nudge", CameraType.THIRD_PERSON_FRONT, InteractionHand.MAIN_HAND, 93, 70),
+            new View("third-rear-nudge", CameraType.THIRD_PERSON_BACK, InteractionHand.MAIN_HAND, 3, 70),
+            new View("third-side-close-nudge", CameraType.THIRD_PERSON_FRONT, InteractionHand.MAIN_HAND, 93, 70),
+            new View("third-rear-close-nudge", CameraType.THIRD_PERSON_BACK, InteractionHand.MAIN_HAND, 3, 70));
     private static final List<Look> LOOKS = looks();
     private static final List<Trial> TRIALS = trials();
     private static final List<Map<String, Object>> FRAMES = new ArrayList<>();
@@ -143,7 +148,7 @@ public final class CombinedVisualProbe {
         if (!active || done) return;
         var client = Minecraft.getInstance();
         try {
-            require(System.nanoTime() - startedNanos < 1_200_000_000_000L, "Visual client exceeded 20 minutes");
+            require(System.nanoTime() - startedNanos < 1_800_000_000_000L, "Visual client exceeded 30 minutes");
             if (serverFailure != null) throw new AssertionError("Visual fixture server action failed", serverFailure);
             if (!opening && client.screen instanceof TitleScreen title) {
                 opening = true;
@@ -174,9 +179,10 @@ public final class CombinedVisualProbe {
                 server(client, actor -> {
                     var level = actor.serverLevel();
                     level.getGameRules().getRule(GameRules.RULE_DAYLIGHT).set(false, actor.server);
+                    level.getGameRules().getRule(GameRules.RULE_WEATHER_CYCLE).set(false, actor.server);
                     level.getGameRules().getRule(GameRules.RULE_DOMOBSPAWNING).set(false, actor.server);
                     level.setDayTime(6000);
-                    level.setWeatherParameters(6000, 0, false, false);
+                    level.setWeatherParameters(Integer.MAX_VALUE, 0, false, false);
                     for (int x = -14; x <= 14; x++) for (int z = -14; z <= 14; z++)
                         level.setBlockAndUpdate(new BlockPos(x, 220, z),
                                 (Math.abs(x) == 14 || Math.abs(z) == 14 ? Blocks.LIGHT_GRAY_CONCRETE : Blocks.SMOOTH_QUARTZ).defaultBlockState());
@@ -284,14 +290,21 @@ public final class CombinedVisualProbe {
     }
 
     private static void camera(ViewportEvent.ComputeCameraAngles event) {
-        if (!active || done || index >= TRIALS.size()) return;
+        if (!active || done || motionStarted || index >= TRIALS.size()) return;
         Trial trial = TRIALS.get(index);
         // NeoForge 1.21.1 Camera.setup posts this event before its setPosition and
         // detached-camera move. This changes the actual orbit position as well as
         // its yaw; the post-render callback also verifies alignment to the subject.
-        if (trial.view.camera == CameraType.THIRD_PERSON_FRONT
+        if (trial.view.camera != CameraType.FIRST_PERSON
                 && event.getCamera().getEntity() == Minecraft.getInstance().player)
             event.setYaw(event.getYaw() + trial.view.orbit);
+    }
+
+    /** QA-only camera framing; zero leaves native first-person, motion and gameplay untouched. */
+    public static double closeReviewCameraDistance() {
+        if (!active || !prepared || done || motionStarted || index >= TRIALS.size()) return 0;
+        View view = TRIALS.get(index).view;
+        return view.camera != CameraType.FIRST_PERSON && view.label.contains("-close") ? 2.75 : 0;
     }
 
     private static void frame(RenderFrameEvent.Post event) {
@@ -325,13 +338,15 @@ public final class CombinedVisualProbe {
                 Vec3 toSubject = client.player.getEyePosition(camera.getPartialTickTime()).subtract(camera.getPosition());
                 subjectDistance = toSubject.length();
                 subjectAlignment = toSubject.normalize().dot(Vec3.directionFromRotation(camera.getXRot(), camera.getYRot()));
-                require(subjectDistance > 2 && subjectDistance < 4.1 && subjectAlignment > .999,
+                double expectedDistance = trial.view.label.contains("-close") ? 2.75 : 4;
+                require(Math.abs(subjectDistance - expectedDistance) < .02 && subjectAlignment > .999,
                         "Detached camera is not looking at its subject " + trial.label()
-                                + " distance=" + subjectDistance + " alignment=" + subjectAlignment);
+                                + " distance=" + subjectDistance + " expected=" + expectedDistance + " alignment=" + subjectAlignment);
             }
-            if (trial.view.camera == CameraType.THIRD_PERSON_FRONT) {
+            if (trial.view.camera != CameraType.FIRST_PERSON) {
+                float facingOffset = trial.view.camera == CameraType.THIRD_PERSON_FRONT ? 180 : 0;
                 double actual = Math.IEEEremainder(camera.getYRot()
-                        - client.player.getViewYRot(camera.getPartialTickTime()) - 180, 360);
+                        - client.player.getViewYRot(camera.getPartialTickTime()) - facingOffset, 360);
                 require(Math.abs(actual - trial.view.orbit) < .02, "Native camera failed requested orbit " + trial.label() + " actual=" + actual);
             }
             Files.createDirectories(OUT.resolve("screenshots"));
@@ -358,6 +373,7 @@ public final class CombinedVisualProbe {
             record.put("cameraPitch", camera.getXRot());
             record.put("cameraToSubjectDistance", subjectDistance);
             record.put("cameraToSubjectAlignment", subjectAlignment);
+            record.put("closeCameraObserver", closeReviewCameraDistance() > 0);
             record.put("guiScale", client.getWindow().getGuiScale());
             record.put("drawRetries", retries);
             FRAMES.add(record);
@@ -396,7 +412,9 @@ public final class CombinedVisualProbe {
         require(FRAMES.size() + EXCEPTIONS.size() == TRIALS.size() && MODELS.size() == 22,
                 "Incomplete visual coverage frames=" + FRAMES.size() + " exceptions=" + EXCEPTIONS.size()
                         + "/" + TRIALS.size() + " looks=" + MODELS.size());
-        for (Look look : LOOKS) for (String requiredView : List.of("first-main", "third-front", "third-side", "third-rear"))
+        for (Look look : LOOKS) for (String requiredView : List.of("first-main", "third-front", "third-side", "third-rear",
+                "third-front-nudge", "third-side-nudge", "third-rear-nudge", "third-front-close", "third-side-close",
+                "third-rear-close", "third-front-close-nudge", "third-side-close-nudge", "third-rear-close-nudge"))
             require(FRAMES.stream().anyMatch(frame -> look.label().equals(frame.get("look"))
                             && requiredView.equals(frame.get("view")) && "REST".equals(frame.get("pose"))),
                     "Required main-hand view was not captured: " + look.label() + " " + requiredView);
@@ -424,7 +442,9 @@ public final class CombinedVisualProbe {
         document.put("motionEvidence", "motion/motion-results.json");
         document.put("motionSummary", CombinedChakramMotion.summary());
         document.put("captureMethod", "Screenshot.takeScreenshot on the unmodified Minecraft main render target, after the native world, held-item and HUD render");
-        document.put("closeViewMethod", "Native third-person camera with FOV 35 versus normal FOV 70; camera distance is unchanged");
+        document.put("closeViewMethod", "QA-only Camera.setup tail observer moves the static third-person camera along its native eye-to-camera line to 2.75 blocks; normal views retain the native 4 blocks. Both distances use FOV 70. First-person, motion, models and gameplay are untouched");
+        document.put("cameraNudges", "Front, side and rear each retain an actual +3 degree camera orbit at both physical distances, 4 and 2.75 blocks");
+        document.put("weatherFixture", "Daylight and weather cycles disabled; clear midday retained for all stills and native motion");
         document.put("remainingManualChecks", List.of("all twenty chakram silhouettes and grip against the approved art",
                 "both Cupid Bow hotbar curves point upper left at rest and in every draw pose",
                 "visible clipping/intersections and flicker between the small native camera nudges",
