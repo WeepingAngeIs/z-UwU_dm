@@ -199,13 +199,13 @@ final class BakerToaster extends HorizontalDirectionalBlock implements EntityBlo
                 }
                 verified = true;
                 Vec3 center = Vec3.atCenterOf(worldPosition);
-                boolean nearby = !level.getEntitiesOfClass(ServerPlayer.class, new AABB(worldPosition).inflate(4),
+                var visitors = level.getEntitiesOfClass(ServerPlayer.class, new AABB(worldPosition).inflate(4),
                         p -> p.isAlive() && !p.isFakePlayer() && !p.hasDisconnected()
                                 && (p.gameMode.getGameModeForPlayer() == GameType.SURVIVAL
                                     || p.gameMode.getGameModeForPlayer() == GameType.ADVENTURE)
-                                && p.distanceToSqr(center) <= 16 && SakuraAccess.mayInteract(p, worldPosition)).isEmpty();
+                                && p.distanceToSqr(center) <= 16 && SakuraAccess.mayInteract(p, worldPosition));
                 if (token == null || !current(level)) return;
-                if (!nearby) {
+                if (visitors.isEmpty()) {
                     schedule(level, INTERVAL);
                     return;
                 }
@@ -213,7 +213,7 @@ final class BakerToaster extends HorizontalDirectionalBlock implements EntityBlo
                     disarm();
                     return;
                 }
-                pop(level, claims, token);
+                pop(level, claims, token, visitors);
             } catch (IOException failure) {
                 LOG.warn("Could not verify baker toaster receipt at {}", worldPosition, failure);
                 verified = false;
@@ -221,7 +221,7 @@ final class BakerToaster extends HorizontalDirectionalBlock implements EntityBlo
             }
         }
 
-        private void pop(ServerLevel level, ToastClaims claims, UUID claimed) throws IOException {
+        private void pop(ServerLevel level, ToastClaims claims, UUID claimed, java.util.List<ServerPlayer> visitors) throws IOException {
             activating = true;
             try {
                 Vec3 slot = Vec3.atLowerCornerOf(worldPosition).add(.5, .65, .5);
@@ -237,6 +237,7 @@ final class BakerToaster extends HorizontalDirectionalBlock implements EntityBlo
                 }
                 if (accepted) {
                     disarm();
+                    for (ServerPlayer visitor : visitors) SakuraAchievements.award(visitor, "pantry/toaster");
                     level.playSound(null, slot.x, slot.y, slot.z, DING.get(), SoundSource.BLOCKS, .55F, 1F);
                 } else if (!bread.isRemoved() && !bread.isAddedToLevel() && level.getEntity(bread.getUUID()) == null
                         && current(level) && claimed.equals(token) && claims.retryRejectedSpawn(worldPosition, claimed)) {
