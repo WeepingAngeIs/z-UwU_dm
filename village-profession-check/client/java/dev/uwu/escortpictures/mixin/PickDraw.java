@@ -1,4 +1,6 @@
-package dev.uwu.escortpictures;
+package dev.uwu.escortpictures.mixin;
+
+import dev.uwu.escortpictures.EscortGallery;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import dev.uwu.dimension.BlossomWarden;

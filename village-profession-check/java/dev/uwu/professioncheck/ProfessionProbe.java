@@ -76,6 +76,7 @@ public final class ProfessionProbe {
                 case 7 -> returned();
                 case 8 -> ordinaryGuard();
                 case 9 -> walkIntoView();
+                case 10 -> spawned();
             }
         }catch(Throwable e){done=true;System.err.println("UWU PROFESSION AND ESCORT FAILED stage="+stage+" tick="+ticks);e.printStackTrace();event.getServer().halt(false);}
     }
@@ -126,10 +127,19 @@ public final class ProfessionProbe {
         observe(home);player.getRandom().setSeed(lose);observe(out);check(current()==null,"Failed roll created an escort");
         for(int i=0;i<24;i++){player.getRandom().setSeed(win);observe(out);check(current()==null,"Rerolled outside");}
         observe(home);player.getRandom().setSeed(win);observe(out);trip=current();check(trip!=null,"Winning departure failed");
-        escort=(BlossomWarden)level.getEntity((UUID)field(trip,"guardian"));check(escort!=null && escort.female(),"Escort was not female");
-        check(escort.duskGuardian()==village.dusk() && home.equals(field(trip,"court")),"Origin village or faction changed");
         observe(home);player.getRandom().setSeed(win);observe(out);check(trip==current(),"Duplicate on another departure");
-        start=level.getGameTime();until=(long)field(trip,"until");
+        go(10);
+    }
+    private void spawned()throws Exception {
+        until=(long)field(trip,"until");
+        escort=(BlossomWarden)level.getEntity((UUID)field(trip,"guardian"));
+        if(until==0 || escort==null){
+            check(ticks-stageAt<240,"Reserved escort not tracked: until="+until+" chunk="+field(trip,"last")
+                    +" owner="+player.position()+" home="+home+" sameTrip="+(current()==trip));return;
+        }
+        check(escort.female(),"Male selected for escort");
+        check(escort.duskGuardian()==village.dusk() && home.equals(field(trip,"court")),"Origin village or faction changed");
+        start=until-(long)field(trip,"duration");
         check(until-start>=6000 && until-start<=24000 && (until-start)%1200==0,"Follow duration "+(until-start));
         var nbt=escort.saveWithoutId(new CompoundTag());check(nbt.getBoolean("FemaleGuardian")&&nbt.getUUID("VillageEscortOwner").equals(player.getUUID()),"Lost identity on save");
         var restored=call(type("VillageEscorts"),"load",((net.minecraft.world.level.saveddata.SavedData)book).save(new CompoundTag(),level.registryAccess()),level.registryAccess());

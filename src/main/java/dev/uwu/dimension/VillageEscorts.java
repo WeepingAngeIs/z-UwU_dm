@@ -122,6 +122,7 @@ public final class VillageEscorts extends SavedData {
         guard.escortOwner=player.getUUID();guard.bindVillage(home);guard.setPersistenceRequired();
         guard.setUUID(trip.guardian);
         if(!level.addFreshEntity(guard))return;
+        level.getChunkSource().addRegionTicket(TRAVEL,guard.chunkPosition(),2,trip.guardian);
         trip.until=level.getGameTime()+trip.duration;moved(level,trip,guard.chunkPosition());setDirty();
     }
     void moved(ServerLevel level,Trip trip,ChunkPos where) {

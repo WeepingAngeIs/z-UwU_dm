@@ -22,8 +22,8 @@ import net.neoforged.neoforge.common.NeoForge;
 
 @Mod("uwu_escort_pictures")
 public final class EscortGallery {
-    static volatile int entityId=-1;
-    static boolean rendered;
+    public static volatile int entityId=-1;
+    public static boolean rendered;
     private static final BlockPos STAGE=new BlockPos(8,221,8);
     private static final int COUNT=12;
     private static final Path OUT=Path.of(System.getProperty("uwu.check.evidence"));
