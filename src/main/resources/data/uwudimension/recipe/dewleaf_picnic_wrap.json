@@ -1,0 +1,19 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    {
+      "item": "uwudimension:uwu_lettuce"
+    },
+    {
+      "item": "uwudimension:uwu_wheat"
+    },
+    {
+      "item": "uwudimension:sweetbean_pods"
+    }
+  ],
+  "result": {
+    "id": "uwudimension:dewleaf_picnic_wrap",
+    "count": 1
+  }
+}

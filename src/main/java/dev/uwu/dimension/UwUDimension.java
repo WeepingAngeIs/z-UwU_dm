@@ -16,6 +16,7 @@ import net.neoforged.neoforge.registries.DeferredRegister;
 public final class UwUDimension {
     static final DeferredRegister.Items ITEMS = DeferredRegister.createItems("uwudimension");
     public static final java.util.function.Supplier<Item> GLITCH = ITEMS.register("glitch_bow", GlitchBow::new);
+    static final java.util.function.Supplier<Item> ESCORT_PICK = ITEMS.registerSimpleItem("escort_leaf_pick",new Item.Properties().stacksTo(1));
     static final java.util.function.Supplier<Item> LOCKET = ITEMS.register("heartwater_locket", () -> new HeartwaterLocket());
     static final DeferredRegister<SoundEvent> SOUNDS = DeferredRegister.create(Registries.SOUND_EVENT, "uwudimension");
     private static final DeferredRegister<CreativeModeTab> CREATIVE_TABS =

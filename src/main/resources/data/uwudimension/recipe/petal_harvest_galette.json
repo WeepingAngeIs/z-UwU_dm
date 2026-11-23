@@ -1,0 +1,19 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    {
+      "item": "uwudimension:uwu_wheat"
+    },
+    {
+      "item": "uwudimension:uwu_potato"
+    },
+    {
+      "item": "uwudimension:glowginger"
+    }
+  ],
+  "result": {
+    "id": "uwudimension:petal_harvest_galette",
+    "count": 1
+  }
+}

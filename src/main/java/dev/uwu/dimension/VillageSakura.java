@@ -35,6 +35,10 @@ final class VillageSakura {
         return cache.computeIfAbsent(key, ignored -> survey(level, village.landmarkLayout()));
     }
 
+    static Optional<ProfessionQuarter.Tile> center(ServerLevel level, BlossomVillage.Plan village) {
+        return plan(level,village).map(p -> new ProfessionQuarter.Tile(p.x,p.z));
+    }
+
     static boolean reservedForTree(ServerLevel level, BlossomVillage.Plan village, int x1,int z1,int x2,int z2) {
         var tree=plan(level,village);
         if(tree.isEmpty())return false;

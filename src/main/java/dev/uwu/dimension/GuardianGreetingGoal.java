@@ -87,6 +87,7 @@ final class GuardianGreetingGoal extends Goal {
     }
 
     @Override public boolean canUse() {
+        if (guard.escortOwner!=null) return false;
         if (!ready() || !(guard.level() instanceof ServerLevel level) || level.getGameTime() < nextScan) return false;
         nextScan = level.getGameTime() + 10;
         visitor = level.players().stream().filter(this::available)

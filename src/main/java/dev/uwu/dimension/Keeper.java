@@ -70,6 +70,11 @@ public final class Keeper extends Villager {
     public void markAdaptedResident(){adaptedResident=true;}
     private static final int FACTION_OFFERS = 4;
 
+    @Override public boolean hasFarmSeeds() {
+        return super.hasFarmSeeds() || ReefLife.isProduceRealm(level()) &&
+                getInventory().hasAnyMatching(s -> s.getItem() instanceof NativeFieldSeed);
+    }
+
     @Override public float getAgeScale() { return isBaby() ? .5625F : 1F; }
 
     public Keeper(EntityType<? extends Villager> type, Level level) {

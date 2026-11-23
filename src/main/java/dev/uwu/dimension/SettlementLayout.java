@@ -48,6 +48,7 @@ public final class SettlementLayout extends SavedData {
     private final Map<Long,BitSet> beforeCupidShrines=new HashMap<>();
     private final Map<Long,BitSet> beforeDuskFactions=new HashMap<>();
     private final Map<Long,BitSet> beforeDuskFrequency=new HashMap<>();
+    private final Map<Long,BitSet> beforeProfessionSites=new HashMap<>();
     private final Map<Long,BitSet> beforeVillageLots=new HashMap<>();
     private final Map<Long,Integer> duskSiteChances=new java.util.concurrent.ConcurrentHashMap<>();
     private final Map<Long,Boolean> duskFactions=new java.util.concurrent.ConcurrentHashMap<>();
@@ -90,6 +91,7 @@ public final class SettlementLayout extends SavedData {
         // around a footprint that was already generated under the previous policy.
         loadRoomSnapshot(regions,"uwudimension_before_dusk_frequency_v1.dat",data.beforeDuskFrequency);
         loadRoomSnapshot(regions,"uwudimension_before_variable_village_lots_v1.dat",data.beforeVillageLots);
+        loadRoomSnapshot(regions,"uwudimension_before_profession_sites_v1.dat",data.beforeProfessionSites);
         data.previous.forEach((key,bits)->{
             var region=new ChunkPos(key);
             for(int i=bits.nextSetBit(0);i>=0;i=bits.nextSetBit(i+1)){
@@ -163,6 +165,14 @@ public final class SettlementLayout extends SavedData {
         }catch(IOException error){throw new IllegalStateException("Could not read or create the house layout boundary at "+path,error);}
     }
     // Freeze a whole village if any chunk in its footprint already existed during upgrade.
+    static boolean newProfessionSites(ServerLevel level, BlossomVillage.Plan village) {
+        int outward = village.dusk() ? 1 : -1;
+        int far = village.x() + outward * ProfessionQuarter.REACH;
+        return untouchedRoom(active(level).beforeProfessionSites, village.site(),
+                Math.min(village.x()-40, far), village.z()-ProfessionQuarter.WING,
+                Math.max(village.x()+40, far), village.z()+ProfessionQuarter.WING);
+    }
+
     static boolean newVillageLots(ServerLevel level,BlossomVillage.Plan plan){
         return untouchedRoom(active(level).beforeVillageLots,plan.site(),
                 plan.x()-VillageHouseLots.EXTENT_X,plan.z()-VillageHouseLots.EXTENT_Z,

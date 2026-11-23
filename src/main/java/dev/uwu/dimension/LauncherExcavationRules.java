@@ -41,6 +41,10 @@ final class LauncherExcavationRules {
                 && Float.isFinite(hardness) && hardness >= 0.0F && claims == ClaimState.UNCLAIMED;
     }
 
+    static boolean unclaimed(ServerLevel level,BlockPos position) {
+        return claims(level,position)==ClaimState.UNCLAIMED;
+    }
+
     private static ClaimState claims(ServerLevel level, BlockPos position) {
         var mods = ModList.get();
         if (OTHER_CLAIM_PROVIDERS.stream().anyMatch(mods::isLoaded)) return ClaimState.UNVERIFIED;

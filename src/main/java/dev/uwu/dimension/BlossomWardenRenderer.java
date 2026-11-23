@@ -37,6 +37,23 @@ public final class BlossomWardenRenderer extends MobRenderer<BlossomWarden,Bloss
 
     public BlossomWardenRenderer(EntityRendererProvider.Context context) {
         super(context,new Model(context.bakeLayer(LAYER)),.78F);
+        addLayer(new net.minecraft.client.renderer.entity.layers.RenderLayer<BlossomWarden,Model>(this) {
+            @Override public void render(PoseStack poses,MultiBufferSource buffers,int light,BlossomWarden guard,
+                    float walk,float speed,float partial,float age,float yaw,float pitch) {
+                if(!guard.female() || !guard.carryingEscortPick())return;
+                poses.pushPose();
+                var arm=getParentModel().right;
+                arm.translateAndRotate(poses);
+                var palm=arm.getChild("hand");
+                poses.translate(palm.x/16F,palm.y/16F,palm.z/16F);
+                poses.mulPose(Axis.XP.rotationDegrees(-90));
+                poses.mulPose(Axis.YP.rotationDegrees(180));
+                poses.scale(.65F,.65F,.65F);
+                context.getItemInHandRenderer().renderItem(guard,new net.minecraft.world.item.ItemStack(UwUDimension.ESCORT_PICK.get()),
+                        net.minecraft.world.item.ItemDisplayContext.THIRD_PERSON_RIGHT_HAND,false,poses,buffers,light);
+                poses.popPose();
+            }
+        });
         maleModel = model;
         femaleModel = new Model(FemaleGuardianModel.sizeCubes(context.bakeLayer(FEMALE_LAYER)));
     }
@@ -129,6 +146,10 @@ public final class BlossomWardenRenderer extends MobRenderer<BlossomWarden,Bloss
                 var clip = OwlGuardianGaits.select(grounded, w.gripping() || w.throwing() || w.warningShake() || w.warningWink() || w.warningFlip(), w.chasing() || w.approachingVisitor(), speed);
                 if (clip != null) {
                     OwlGuardianGaits.apply(gaitParts, head, clip, age, speed);
+                }
+                if (w.carryingEscortPick()) {
+                    right.xRot=-1.1F-.55F*Mth.cos(age*Mth.TWO_PI/8F);
+                    right.zRot=-.12F;
                 }
             }
         }

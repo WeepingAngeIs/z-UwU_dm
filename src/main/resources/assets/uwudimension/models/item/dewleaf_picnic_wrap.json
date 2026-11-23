@@ -1,0 +1,6 @@
+{
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "uwudimension:item/dewleaf_picnic_wrap"
+  }
+}

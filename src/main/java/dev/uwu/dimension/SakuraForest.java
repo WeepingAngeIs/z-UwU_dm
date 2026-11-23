@@ -126,6 +126,8 @@ public final class SakuraForest {
             // Reserve the complete settlement envelope and its approach, not individual trunk cells.
             if(Math.abs(lx-p.x())<=72&&Math.abs(lz-p.z())<=65)return true;
             if(lx>=Math.min(0,p.x())-22&&lx<=Math.max(0,p.x())+22&&lz>=Math.min(site.lip()-9,p.z())-22&&lz<=Math.max(site.lip()-9,p.z())+22)return true;
+            if (Math.abs(lx-p.x())<=ProfessionQuarter.REACH+19 && Math.abs(lz-p.z())<=ProfessionQuarter.WING+19
+                    && ProfessionQuarter.nearWork(ProfessionQuarter.plan(level,p),lx,lz,18)) return true;
             var house=MoonveilTreehouse.plan(level,p);
             if(house.isPresent()&&Math.abs(lx-house.get().x())<=42&&Math.abs(lz-house.get().z())<=42)return true;
         }

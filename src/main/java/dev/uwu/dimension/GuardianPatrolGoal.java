@@ -92,7 +92,7 @@ final class GuardianPatrolGoal extends Goal {
 
     @Override
     public boolean canUse() {
-        if (observedLevel == null || observedHome == null || guard.hasOffenders()
+        if (guard.escortOwner!=null || observedLevel == null || observedHome == null || guard.hasOffenders()
                 || guard.level() != observedLevel || night && !returning
                 || observedLevel.getGameTime() < retryAt) return false;
         if (!returning && outsideDistanceSquared(guard.position(), observedHome) > OUTSIDE_LIMIT * OUTSIDE_LIMIT)

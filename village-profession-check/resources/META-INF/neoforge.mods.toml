@@ -1,0 +1,8 @@
+modLoader="javafml"
+loaderVersion="[4,)"
+license="All Rights Reserved"
+[[mods]]
+modId="uwu_profession_check"
+version="1.0"
+displayName="Disposable UwU village profession and escort verification"
+description="Exercises natural chunk generation on the hosted verifier."

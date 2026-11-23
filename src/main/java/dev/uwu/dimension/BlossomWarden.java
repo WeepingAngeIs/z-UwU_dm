@@ -72,6 +72,9 @@ public final class BlossomWarden extends PathfinderMob {
     private static final EntityDataAccessor<Boolean> VISITOR_APPROACH = SynchedEntityData.defineId(BlossomWarden.class, EntityDataSerializers.BOOLEAN);
     private static final EntityDataAccessor<Byte> GREETING = SynchedEntityData.defineId(BlossomWarden.class, EntityDataSerializers.BYTE);
     private static final EntityDataAccessor<Long> GREETING_STARTED = SynchedEntityData.defineId(BlossomWarden.class, EntityDataSerializers.LONG);
+    private static final EntityDataAccessor<Boolean> ESCORT_PICK=SynchedEntityData.defineId(BlossomWarden.class,EntityDataSerializers.BOOLEAN);
+    boolean carryingEscortPick(){return entityData.get(ESCORT_PICK);}
+    void showEscortPick(boolean value){entityData.set(ESCORT_PICK,value);}
     private boolean factionKnown;
     private float warningBearing;
     private long clientFlipPhaseBegan = -1;
@@ -127,6 +130,7 @@ public final class BlossomWarden extends PathfinderMob {
         }
     }
 
+    @Nullable UUID escortOwner;
     private boolean summoned;
     private boolean seeksVillage;
     @Override public net.minecraft.world.entity.SpawnGroupData finalizeSpawn(
@@ -179,6 +183,7 @@ public final class BlossomWarden extends PathfinderMob {
         builder.define(VISITOR_APPROACH, false);
         builder.define(GREETING, (byte) 0);
         builder.define(GREETING_STARTED, 0L);
+        builder.define(ESCORT_PICK, false);
     }
 
     @Override protected PathNavigation createNavigation(Level level) {
@@ -199,6 +204,7 @@ public final class BlossomWarden extends PathfinderMob {
         goalSelector.addGoal(2, new GuardianDoorGoal(this));
         departure = new GuardianDepartureGoal(this);
         goalSelector.addGoal(2, departure);
+        goalSelector.addGoal(2, new EscortGoal(this));
         goalSelector.addGoal(2, new GuardianGreetingGoal(this));
         villagePatrol = new GuardianPatrolGoal(this);
         goalSelector.addGoal(3, villagePatrol);
@@ -342,7 +348,7 @@ public final class BlossomWarden extends PathfinderMob {
         BlossomWarden known = directory.active(level, center);
         if (known != null) return known;
         for (BlossomWarden guard : level.getEntitiesOfClass(BlossomWarden.class, new AABB(center).inflate(42),
-                g -> g.isAlive() && !g.summoned && !g.family.offspring && center.equals(g.court)
+                g -> g.isAlive() && !g.summoned && g.escortOwner==null && !g.family.offspring && center.equals(g.court)
                         && (g.villageDimension == null || center.equals(g.villageHome())))) {
             if (guard.villageDimension == null) guard.bindVillage(center);
             directory.remember(center, guard);
@@ -525,7 +531,7 @@ public final class BlossomWarden extends PathfinderMob {
             GuardianVillageHomes.remember(level, home);
             recordedVillage = true;
         }
-        if (home != null && !summoned && !family.offspring && (tickCount == 1 || tickCount % 120 == 0)) {
+        if (home != null && escortOwner==null && !summoned && !family.offspring && (tickCount == 1 || tickCount % 120 == 0)) {
             Registry registry = directory(level);
             BlossomWarden other = registry.active(level, court);
             if (other != null && other != this) { discard(); return; }
@@ -540,7 +546,7 @@ public final class BlossomWarden extends PathfinderMob {
             return;
         }
         if (offenders.isEmpty() && tickCount%10==0) acquireThreat(level);
-        villagePatrol.observe();
+        if(escortOwner==null) villagePatrol.observe();
         if (offenders.isEmpty()) return;
         Entity tracked = level.getEntity(offenders.getFirst());
         if (!(tracked instanceof LivingEntity culprit) || !culprit.isAlive()) {
@@ -833,6 +839,7 @@ public final class BlossomWarden extends PathfinderMob {
         tag.putBoolean("FemaleGuardian", female());
         if (factionKnown) tag.putBoolean("DuskGuardian", duskGuardian());
         tag.putFloat("WarningBearing", warningBearing);
+        if (escortOwner!=null) tag.putUUID("VillageEscortOwner",escortOwner);
         tag.putBoolean("KeeperSummonedGuardian", summoned);
         tag.putBoolean("SeekGuardianVillage", seeksVillage);
         if (court != null) tag.putLong("VillageCourt",court.asLong());
@@ -854,6 +861,8 @@ public final class BlossomWarden extends PathfinderMob {
         setFemale(tag.getBoolean("FemaleGuardian"));
         if (tag.contains("DuskGuardian")) setDuskGuardian(tag.getBoolean("DuskGuardian"));
         else { entityData.set(DUSK, false); factionKnown = false; }
+        escortOwner=tag.hasUUID("VillageEscortOwner")?tag.getUUID("VillageEscortOwner"):null;
+        if(escortOwner!=null)setFemale(true);
         summoned = tag.getBoolean("KeeperSummonedGuardian");
         seeksVillage = tag.contains("SeekGuardianVillage") ? tag.getBoolean("SeekGuardianVillage") : summoned;
         double oldMaximum=320;
@@ -908,7 +917,7 @@ public final class BlossomWarden extends PathfinderMob {
         @Nullable BlossomWarden active(ServerLevel level,BlockPos home) {
             UUID id=guards.get(home);
             return id != null && level.getEntity(id) instanceof BlossomWarden w && w.isAlive()
-                    && !w.summoned && !w.family.offspring && home.equals(w.villageHome()) ? w : null;
+                    && !w.summoned && w.escortOwner==null && !w.family.offspring && home.equals(w.villageHome()) ? w : null;
         }
         void remember(BlockPos home,BlossomWarden guardian) {
             if (!guardian.getUUID().equals(guards.put(home,guardian.getUUID()))) setDirty();

@@ -175,12 +175,13 @@ public final class HeartwaterFeature extends Feature<NoneFeatureConfiguration> {
             // Place doors, foundations and the spring bank before vanilla grows its cherry trees.
             // Later tree placements therefore see final ground, and never get amputated by grading.
 
-            if(overlaps(-211,-205,211,35)) {
+            if(overlaps(-229,-205,229,40)) {
                 // Pure authored reservations include a possible Dusk village even
                 // when its current roll is denied. They remain valid after live edits.
                 for(boolean dusk:new boolean[]{false,true})(planning()?BlossomVillage.potentialPlan(level.getLevel(),site,dusk)
                         :BlossomVillage.plan(level.getLevel(),site,dusk)).ifPresent(p->{
                     part(p.dusk()?"dusk_village":"petal_village",()->BlossomVillage.place(this,p));
+                    ProfessionQuarter.place(this,p);
                     MoonveilTreehouse.plan(level.getLevel(),p).ifPresent(tree->part("moonveil_treehouse",()->MoonveilTreehouse.place(this,tree)));
                     part("village_sakura",()->VillageSakura.place(this,p));
                     if(!p.dusk())part("cupid_shrine",()->PetalShrinePlacement.place(this,p));

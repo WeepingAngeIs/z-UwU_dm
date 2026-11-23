@@ -1,0 +1,20 @@
+gradle.projectsEvaluated {
+    def project = gradle.rootProject
+    def compile = project.tasks.register('compileProfessionProbe', JavaCompile) {
+        dependsOn project.tasks.named('classes')
+        source(project.fileTree('village-profession-check/java') { include '**/*.java' })
+        source(project.file('weapon-check/java/dev/uwu/weaponcheck/CandidateJarProbe.java'))
+        classpath = project.sourceSets.main.compileClasspath + project.sourceSets.main.output
+        destinationDirectory.set(project.layout.buildDirectory.dir('village-profession-check/classes'))
+        javaCompiler.set(project.tasks.named('compileJava', JavaCompile).flatMap { it.javaCompiler })
+        options.release.set(21)
+        options.encoding = 'UTF-8'
+    }
+    project.tasks.register('professionProbeJar', Jar) {
+        archiveFileName.set('profession-probe.jar')
+        destinationDirectory.set(project.layout.buildDirectory.dir('village-profession-check'))
+        from(compile.flatMap { it.destinationDirectory })
+        from(project.file('village-profession-check/resources'))
+        from(project.file('village-size-check/resources/village-sites.csv'))
+    }
+}

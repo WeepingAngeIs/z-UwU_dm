@@ -251,13 +251,13 @@ public final class BlossomVillage {
         }
         v.block(x,y,z,finish);
     }
-    private static void clear(HeartwaterFeature.Valley v,int x,int y,int z){
+    static void clear(HeartwaterFeature.Valley v,int x,int y,int z){
         if(v.planning()){v.survey.box(x,y,z,x,v.level.getMaxBuildHeight()-1,z);return;}
         if(!v.inside(x,z))return;
         int top=v.chunk.getHeight(Heightmap.Types.WORLD_SURFACE_WG,v.wx(x,z)&15,v.wz(x,z)&15);
         v.box(x,y,z,x,Math.max(y+3,top+1),z,v.air);
     }
-    private static void road(HeartwaterFeature.Valley v,int x,int y,int z,boolean dark){
+    static void road(HeartwaterFeature.Valley v,int x,int y,int z,boolean dark){
         if(!v.inside(x,z))return;
         int patch=Math.floorMod(HeartwaterFeature.Valley.mix(x,z,v.seed),13);
         Block surface;

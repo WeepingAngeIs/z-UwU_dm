@@ -1,0 +1,16 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    {
+      "item": "uwudimension:uwu_wheat"
+    },
+    {
+      "item": "uwudimension:uwu_wheat"
+    }
+  ],
+  "result": {
+    "id": "uwudimension:sakura_flour",
+    "count": 2
+  }
+}

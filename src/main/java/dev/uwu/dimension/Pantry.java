@@ -22,6 +22,9 @@ public final class Pantry {
     private static final Map<String, Supplier<Item>> FOOD = new LinkedHashMap<>();
 
     static {
+        food("petal_harvest_galette", 12, 1.0F, 16);
+        foodWithRemainder("moonlit_potato_chowder", 13, 1.0F, 1, Items.BOWL);
+        food("dewleaf_picnic_wrap", 11, 1.0F, 16);
         food("sweet_berry_cheesecake_slice", 4, 0.5F, 64);
         food("apple_pie_slice", 4, 0.5F, 64);
         food("uwu_pancake_stack", 6, 0.6F, 64);
@@ -105,6 +108,9 @@ public final class Pantry {
 
     private static FoodBuff buffFor(String id) {
         return switch (id) {
+            case "petal_harvest_galette" -> buff(MobEffects.DIG_SPEED, 12, 0);
+            case "moonlit_potato_chowder" -> buff(MobEffects.NIGHT_VISION, 20, 0);
+            case "dewleaf_picnic_wrap" -> buff(MobEffects.MOVEMENT_SPEED, 10, 0);
             case "sweet_berry_cheesecake_slice" -> buff(MobEffects.REGENERATION, 8, 0);
             case "apple_pie_slice" -> buff(MobEffects.MOVEMENT_SPEED, 8, 0);
             case "uwu_pancake_stack" -> buff(MobEffects.JUMP, 12, 0);

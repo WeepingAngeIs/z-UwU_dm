@@ -40,6 +40,9 @@ public final class PantryPlants {
     private static final List<Supplier<? extends Item>> CREATIVE_ITEMS = new ArrayList<>();
     private static final Map<String, Supplier<? extends Item>> INGREDIENT_ITEMS = new HashMap<>();
     private static final Map<String, Supplier<? extends CropBlock>> CROPS = Map.of(
+            "uwu_wheat_crop", crop("uwu_wheat_crop", "uwu_wheat_seeds", true),
+            "uwu_potato_crop", crop("uwu_potato_crop", "uwu_potato", true),
+            "uwu_lettuce_crop", crop("uwu_lettuce_crop", "uwu_lettuce_seeds", true),
             "heartberry_crop", crop("heartberry_crop", "heartberry_seeds"),
             "sakura_rice_crop", crop("sakura_rice_crop", "sakura_rice_seeds"),
             "starfruit_crop", crop("starfruit_crop", "starfruit_seeds"),
@@ -51,7 +54,7 @@ public final class PantryPlants {
     static {
         FEATURES.register("pantry_garden", PantryGarden::new);
         for (String id : List.of(
-                "heartberry", "sakura_rice", "starfruit", "frostpetal", "sweetbean_pods", "glowginger",
+                "uwu_wheat", "uwu_lettuce", "heartberry", "sakura_rice", "starfruit", "frostpetal", "sweetbean_pods", "glowginger",
                 "vanilla_bean", "moonberry", "sakura_flour", "heartberry_jam", "shaved_ice", "pink_shaved_ice",
                 "chocolate_syrup", "sweetbean_paste", "maple_syrup", "petal_sugar", "vanilla_extract")) {
             var item = ITEMS.registerSimpleItem(id, ingredientProperties());
@@ -62,12 +65,20 @@ public final class PantryPlants {
 
     private PantryPlants() {}
 
+    static CropBlock fieldCrop(String crop) {
+        return CROPS.get(crop).get();
+    }
+
     private static DeferredBlock<DimensionCropBlock> crop(String blockId, String seedId) {
+        return crop(blockId,seedId,false);
+    }
+
+    private static DeferredBlock<DimensionCropBlock> crop(String blockId,String seedId,boolean fieldSeed) {
         DeferredBlock<DimensionCropBlock> block = BLOCKS.register(blockId, () -> new DimensionCropBlock(
                 BlockBehaviour.Properties.of().noCollission().instabreak().randomTicks().sound(SoundType.CROP)));
         // Seeds remain placeable on their crop soil, and are also tiny snacks when
         // used away from a block, as requested.
-        var seed = ITEMS.register(seedId, () -> new BlockItem(block.get(), ingredientProperties()));
+        var seed = ITEMS.register(seedId, () -> fieldSeed ? new NativeFieldSeed(block.get()) : new BlockItem(block.get(), ingredientProperties()));
         CREATIVE_ITEMS.add(seed);
         return block;
     }
