@@ -26,11 +26,12 @@ public final class VillageEscorts extends SavedData {
     static final class Trip {
         final UUID player,guardian;
         final BlockPos court;
-        final long until;
+        final long duration;
+        long until;
         ChunkPos last;
         int missing;
-        Trip(UUID player,UUID guardian,BlockPos court,long until,ChunkPos last) {
-            this.player=player;this.guardian=guardian;this.court=court;this.until=until;this.last=last;
+        Trip(UUID player,UUID guardian,BlockPos court,long duration,long until,ChunkPos last) {
+            this.player=player;this.guardian=guardian;this.court=court;this.duration=duration;this.until=until;this.last=last;
         }
     }
     private final Map<UUID,Trip> trips=new HashMap<>();
@@ -42,9 +43,17 @@ public final class VillageEscorts extends SavedData {
         VillageEscorts book=data(level);
         for (ServerPlayer player:level.players()) book.observe(level,player);
         if(level.getGameTime()%40==0) for (Trip trip:List.copyOf(book.trips.values())) {
+            if(trip.until==0) {
+                var player=level.getServer().getPlayerList().getPlayer(trip.player);
+                if(player==null || player.serverLevel()!=level || !player.isAlive() || player.isSpectator())book.finish(level,trip);
+                else book.tryStart(level,player,trip);
+                continue;
+            }
             level.getChunkSource().addRegionTicket(TRAVEL,trip.last,2,trip.guardian);
             if(level.getGameTime()>=trip.until) level.getChunkSource().addRegionTicket(TRAVEL,new ChunkPos(trip.court),2,trip.guardian);
-            if(level.getEntity(trip.guardian) instanceof BlossomWarden) trip.missing=0;
+            if(level.getEntity(trip.guardian) instanceof BlossomWarden guard) {
+                trip.missing=0;book.moved(level,trip,guard.chunkPosition());
+            }
             else if(level.isPositionEntityTicking(trip.last.getMiddleBlockPosition(trip.court.getY())) && ++trip.missing>=15)
                 book.finish(level,trip);
         }
@@ -86,6 +95,19 @@ public final class VillageEscorts extends SavedData {
         }
     }
     private void depart(ServerLevel level,ServerPlayer player,BlockPos home) {
+        long duration=(MINUTES_MIN+player.getRandom().nextInt(MINUTES_MAX-MINUTES_MIN+1))*1200L;
+        Trip trip=new Trip(player.getUUID(),UUID.randomUUID(),home,duration,0,new ChunkPos(home));
+        trips.put(trip.player,trip);setDirty();tryStart(level,player,trip);
+    }
+
+    // Reserve the success before looking for a safe spawn. A closed-up gate or temporarily unloaded
+    // plaza can delay the visit without consuming another roll or shortening the chosen follow time.
+    private void tryStart(ServerLevel level,ServerPlayer player,Trip trip) {
+        BlockPos home=trip.court;
+        if(level.getEntity(trip.guardian) instanceof BlossomWarden existing && trip.player.equals(existing.escortOwner)){
+            trip.until=level.getGameTime()+trip.duration;moved(level,trip,existing.chunkPosition());setDirty();return;
+        }
+        if(!level.hasChunkAt(home))level.getChunkSource().addRegionTicket(TRAVEL,new ChunkPos(home),2,trip.guardian);
         Boolean dusk=GuardianVillageHomes.duskAt(level,home);
         if(dusk==null)return;
         BlossomWarden guard=People.BLOSSOM_WARDEN.get().create(level);
@@ -98,10 +120,9 @@ public final class VillageEscorts extends SavedData {
         if(feet==null)return;
         guard.moveTo(feet.getX()+.5,feet.getY(),feet.getZ()+.5,player.getYRot(),0);
         guard.escortOwner=player.getUUID();guard.bindVillage(home);guard.setPersistenceRequired();
-        long duration=(MINUTES_MIN+player.getRandom().nextInt(MINUTES_MAX-MINUTES_MIN+1))*1200L;
-        Trip trip=new Trip(player.getUUID(),guard.getUUID(),home,level.getGameTime()+duration,guard.chunkPosition());
+        guard.setUUID(trip.guardian);
         if(!level.addFreshEntity(guard))return;
-        trips.put(trip.player,trip);setDirty();
+        trip.until=level.getGameTime()+trip.duration;moved(level,trip,guard.chunkPosition());setDirty();
     }
     void moved(ServerLevel level,Trip trip,ChunkPos where) {
         if(!where.equals(trip.last)){
@@ -119,7 +140,7 @@ public final class VillageEscorts extends SavedData {
         VillageEscorts book=new VillageEscorts();
         for(Tag entry:tag.getList("Trips",Tag.TAG_COMPOUND)){
             var n=(CompoundTag)entry;
-            var t=new Trip(n.getUUID("Player"),n.getUUID("Guardian"),BlockPos.of(n.getLong("Court")),n.getLong("Until"),new ChunkPos(n.getLong("Chunk")));
+            var t=new Trip(n.getUUID("Player"),n.getUUID("Guardian"),BlockPos.of(n.getLong("Court")),n.getLong("Duration"),n.getLong("Until"),new ChunkPos(n.getLong("Chunk")));
             book.trips.put(t.player,t);
         }
         return book;
@@ -128,7 +149,7 @@ public final class VillageEscorts extends SavedData {
         ListTag entries=new ListTag();
         for(Trip t:trips.values()){
             CompoundTag n=new CompoundTag();n.putUUID("Player",t.player);n.putUUID("Guardian",t.guardian);
-            n.putLong("Court",t.court.asLong());n.putLong("Until",t.until);n.putLong("Chunk",t.last.toLong());entries.add(n);
+            n.putLong("Court",t.court.asLong());n.putLong("Duration",t.duration);n.putLong("Until",t.until);n.putLong("Chunk",t.last.toLong());entries.add(n);
         }
         tag.put("Trips",entries);return tag;
     }

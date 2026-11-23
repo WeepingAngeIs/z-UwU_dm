@@ -28,7 +28,7 @@ public final class ProfessionProbe {
     private BlossomVillage.Plan village;
     private BlockPos home,room,arena,barrier,covered,previous;
     private ServerPlayer player;
-    private BlossomWarden escort;
+    private BlossomWarden escort,ordinary;
     private Object book,trip;
     private long until,start;
     private int stage,ticks,stageAt;
@@ -74,6 +74,7 @@ public final class ProfessionProbe {
                 case 5 -> mining();
                 case 6 -> expiry();
                 case 7 -> returned();
+                case 8 -> ordinaryGuard();
             }
         }catch(Throwable e){done=true;System.err.println("UWU PROFESSION AND ESCORT FAILED stage="+stage+" tick="+ticks);e.printStackTrace();event.getServer().halt(false);}
     }
@@ -93,9 +94,10 @@ public final class ProfessionProbe {
                 var col=level.getChunkSource().getGenerator().getBaseColumn(mid.getX(),mid.getZ(),level,level.getChunkSource().randomState());
                 if(!c.getBlockState(mid).is(Blocks.STONE)||!c.getBlockState(mid.above()).is(Blocks.STONE)
                         ||!col.getBlock(y).is(Blocks.STONE)||!col.getBlock(y+1).is(Blocks.STONE)
+                        ||!c.getBlockState(mid.east()).is(Blocks.STONE)||!c.getBlockState(mid.east().above()).is(Blocks.STONE)
                         ||AuthoredFootprints.check(level,new net.minecraft.world.level.levelgen.structure.BoundingBox(mid).inflatedBy(4))!=AuthoredFootprints.Decision.CLEAR)continue;
                 for(int x=-6;x<=6;x++)for(int z=-3;z<=3;z++)for(int dy=-1;dy<=2;dy++){
-                    var p=mid.offset(x,dy,z);if(x==0 && z==0 && (dy==0||dy==1))continue;
+                    var p=mid.offset(x,dy,z);if((x==0||x==1) && z==0 && (dy==0||dy==1))continue;
                     var state=z==0 && x!=0 && dy>=0 && dy<=1 ? Blocks.AIR:Blocks.STONE;
                     c.setBlockState(p,state.defaultBlockState(),false);
                 }
@@ -159,8 +161,30 @@ public final class ProfessionProbe {
         if(escort.getY()>barrier.getY()+.4 && escort.getY()<barrier.getY()+2.8)sawHigher=true;
         if(escort.getY()>barrier.getY()+2.9 && escort.distanceToSqr(player)<23){
             check(sawHigher,"Appeared on wall instead of climbing");
-            actor(room.east(5));guard(room.west(1));level.getGameRules().getRule(GameRules.RULE_MOBGRIEFING).set(false,level.getServer());go(5);
+            actor(room.east(6));escort.setNoAi(true);
+            ordinary=People.BLOSSOM_WARDEN.get().create(level);
+            call(ordinary,"setFemale",true);var p=room.west(1);ordinary.moveTo(p.getX()+.5,p.getY(),p.getZ()+.5,0,0);
+            level.addFreshEntity(ordinary);go(8);
         }else check(ticks-stageAt<600,"Climb failed "+escort.position());
+    }
+    private void ordinaryGuard()throws Exception {
+        check(!(boolean)call(ordinary,"carryingEscortPick") && level.getBlockState(room).is(Blocks.STONE)
+                && level.getBlockState(room.above()).is(Blocks.STONE),"Ordinary female Guardian mined");
+        if(ticks-stageAt<135)return;
+        ordinary.discard();escort.setNoAi(false);guard(room.west(1));
+        level.getGameRules().getRule(GameRules.RULE_MOBGRIEFING).set(false,level.getServer());go(5);
+    }
+    private void claim(boolean add)throws Exception {
+        var api=Class.forName("xaero.pac.common.server.api.OpenPACServerAPI");
+        Object server=api.getMethod("get",net.minecraft.server.MinecraftServer.class).invoke(null,level.getServer());
+        var manager=api.getMethod("getServerClaimsManager");
+        Object claims=manager.invoke(server);Class<?> contract=manager.getReturnType();
+        var dimension=level.dimension().location();var chunk=new ChunkPos(room);
+        if(add) {
+            var record=contract.getMethod("claim",net.minecraft.resources.ResourceLocation.class,UUID.class,int.class,int.class,int.class,boolean.class)
+                    .invoke(claims,dimension,player.getUUID(),0,chunk.x,chunk.z,false);
+            check(record!=null,"Installed OpenPAC did not accept the disposable claim");
+        }else contract.getMethod("unclaim",net.minecraft.resources.ResourceLocation.class,int.class,int.class).invoke(claims,dimension,chunk.x,chunk.z);
     }
     private void mining()throws Exception{
         int age=ticks-stageAt;
@@ -171,24 +195,30 @@ public final class ProfessionProbe {
         }
         if(age==120){
             level.getGameRules().getRule(GameRules.RULE_MOBGRIEFING).set(true,level.getServer());
-            veto=true;
+            if(level.getSeed()==20261121L){
+                claim(true);
+                check(!(boolean)call(type("EscortStone"),"allowed",level,escort,player,room),"Even owner-claimed stone must be protected");
+            }else veto=true;
             var normal=People.BLOSSOM_WARDEN.get().create(level);
             check(!(boolean)call(type("EscortStone"),"allowed",level,normal,player,room),"Ordinary Guardian permitted to mine");
-            check((boolean)call(type("EscortStone"),"allowed",level,escort,player,room),"Natural fixture not approved");
+            if(level.getSeed()!=20261121L)check((boolean)call(type("EscortStone"),"allowed",level,escort,player,room),"Natural fixture not approved");
         }
         if(age==240){
-            check(denied>0 && level.getBlockState(room).is(Blocks.STONE) && level.getBlockState(room.above()).is(Blocks.STONE),
+            if(level.getSeed()==20261121L)claim(false);
+            check((level.getSeed()==20261121L || denied>0) && level.getBlockState(room).is(Blocks.STONE) && level.getBlockState(room.above()).is(Blocks.STONE),
                     "A protection veto was bypassed or never tested");veto=false;
         }
         sawPick|=(boolean)call(escort,"carryingEscortPick");
-        if(level.getBlockState(room).isAir()&&level.getBlockState(room.above()).isAir() && escort.getX()>room.getX()+1){
+        if(level.getBlockState(room).isAir()&&level.getBlockState(room.above()).isAir()
+                && level.getBlockState(room.east()).isAir() && level.getBlockState(room.east().above()).isAir()
+                && escort.getX()>room.getX()+2){
             check(sawPick && level.getBlockState(room.north()).is(Blocks.STONE),"Mined outside two-block opening");
             level.setBlockAndUpdate(room,Blocks.STONE.defaultBlockState());
             check(!(boolean)call(type("EscortStone"),"allowed",level,escort,player,room),"Might break player-built stone");
-            System.out.println("ESCORT native climb, wait in sight, two natural blocks mined, pick shown, placed replacement protected");
+            System.out.println("ESCORT native climb, wait in sight, two-column natural passage mined, pick shown, placed replacement protected");
             var p=village.site().pos(village.x()+20,village.road()[52]+1,village.z()+village.bends()[52]);
             hold(home);actor(p);guard(p.west(2));go(6);
-        }else check(age<620,"No mining or walk-through "+escort.position()+" pick="+sawPick);
+        }else check(age<880,"No mining or walk-through "+escort.position()+" pick="+sawPick);
     }
     private void expiry()throws Exception {
         if(level.getGameTime()<until){check(current()==trip && escort.isAlive(),"Left before chosen time");return;}

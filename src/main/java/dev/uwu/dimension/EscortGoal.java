@@ -15,7 +15,7 @@ final class EscortGoal extends Goal {
     private final BlossomWarden guard;
     private long planAt,blockedSince;
     private int strike;
-    private @Nullable BlockPos mining,exit,ledge,passageTarget;
+    private @Nullable BlockPos mining,firstColumn,exit,ledge,passageTarget;
     private @Nullable Direction wall;
     private Vec3 progress=Vec3.ZERO;
     EscortGoal(BlossomWarden guard){this.guard=guard;setFlags(EnumSet.of(Flag.MOVE,Flag.LOOK));}
@@ -26,7 +26,7 @@ final class EscortGoal extends Goal {
     @Override public void stop(){
         resetTools();guard.getNavigation().stop();guard.setSprinting(false);
     }
-    private void resetTools(){mining=exit=ledge=passageTarget=null;wall=null;strike=0;guard.showEscortPick(false);}
+    private void resetTools(){mining=firstColumn=exit=ledge=passageTarget=null;wall=null;strike=0;guard.showEscortPick(false);}
     @Override public void tick(){
         var level=(ServerLevel)guard.level();var book=VillageEscorts.data(level);var trip=book.trip(guard.escortOwner);
         if(trip==null || !trip.guardian.equals(guard.getUUID())){guard.discard();return;}
@@ -45,7 +45,8 @@ final class EscortGoal extends Goal {
         }
         if(now<planAt)return;planAt=now+20;
         BlockPos target=returning?trip.court:player.blockPosition();
-        if(!returning && guard.distanceToSqr(player)<16){
+        if(!returning && guard.distanceToSqr(player)<16 && Math.abs(guard.getY()-player.getY())<=1.5
+                && guard.hasLineOfSight(player)){
             guard.getNavigation().stop();blockedSince=0;guard.setSprinting(false);return;
         }
         var goal=target;
@@ -89,17 +90,25 @@ final class EscortGoal extends Goal {
             }
         }
         for(Direction dir:EscortRoute.toward(from,player.blockPosition())){
-            BlockPos front=from.relative(dir), end=front.relative(dir);
-            if(!EscortRoute.safe(level,guard,end) || !EscortRoute.walkFrom(level,probe,end,player.blockPosition()))continue;
-            BlockPos first=null;
-            boolean permitted=true;
-            for(int dy=1;dy>=0;dy--) {
-                BlockPos p=front.above(dy);
-                if(level.getBlockState(p).getCollisionShape(level,p).isEmpty())continue;
-                if(!EscortStone.allowed(level,guard,player,p)){permitted=false;break;}
-                if(first==null)first=p;
+            BlockPos first=null,front=from.relative(dir);
+            for(int depth=1;depth<=3;depth++){
+                BlockPos column=from.relative(dir,depth);
+                if(!level.hasChunkAt(column) || !level.getBlockState(column.below()).isFaceSturdy(level,column.below(),Direction.UP))break;
+                boolean permitted=true;
+                for(int dy=1;dy>=0;dy--){
+                    BlockPos p=column.above(dy);var state=level.getBlockState(p);
+                    if(!state.getFluidState().isEmpty()){permitted=false;break;}
+                    if(state.getCollisionShape(level,p).isEmpty())continue;
+                    if(!EscortStone.allowed(level,guard,player,p)){permitted=false;break;}
+                    if(depth==1 && first==null)first=p;
+                }
+                if(!permitted || first==null)break;
+                BlockPos end=column.relative(dir);
+                if(!EscortRoute.safe(level,guard,end) || !EscortRoute.walkFrom(level,probe,end,player.blockPosition()))continue;
+                // Complete at most the first two-block doorway from this stance, then walk and reassess.
+                mining=first;firstColumn=front;exit=end;wall=dir;passageTarget=player.blockPosition();
+                strike=0;guard.showEscortPick(true);return;
             }
-            if(permitted && first!=null){mining=first;exit=end;wall=dir;passageTarget=player.blockPosition();strike=0;guard.showEscortPick(true);return;}
         }
     }
     private void climb(ServerLevel level){
@@ -129,7 +138,7 @@ final class EscortGoal extends Goal {
         guard.swing(net.minecraft.world.InteractionHand.MAIN_HAND);
         if(strike<24)return;
         if(!EscortStone.cut(level,guard,player,mining)){resetTools();return;}
-        var foot=exit.relative(wall.getOpposite());
+        var foot=firstColumn;
         if(!foot.equals(mining) && !level.getBlockState(foot).getCollisionShape(level,foot).isEmpty()){
             mining=foot;strike=0;return;
         }

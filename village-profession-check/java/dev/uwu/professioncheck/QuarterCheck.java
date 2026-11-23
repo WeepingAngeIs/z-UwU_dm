@@ -126,7 +126,17 @@ final class QuarterCheck {
                 String plant=new String[]{"uwu_wheat","uwu_potato","uwu_lettuce"}[(j+2)/2];
                 check(id.equals("uwudimension:"+plant+"_crop") && l.getBlockState(at.below()).is(Blocks.FARMLAND),"Wrong crop "+id);
                 var drops=Block.getDrops(crop.getStateForAge(7),l,at,null);
-                check(drops.stream().anyMatch(s->s.is(item(plant)))&&drops.stream().anyMatch(s->s.is(item(plant.equals("uwu_potato")?plant:plant+"_seeds"))),"Harvest "+id+" "+drops);
+                var seed=item(plant.equals("uwu_potato")?plant:plant+"_seeds");
+                check(drops.stream().anyMatch(s->s.is(item(plant)))&&drops.stream().anyMatch(s->s.is(seed)),"Harvest "+id+" "+drops);
+                var farmer=(p.dusk()?People.DUSK_KEEPER:People.PETAL_KEEPER).get().create(l);
+                farmer.setVillagerData(farmer.getVillagerData().setProfession(net.minecraft.world.entity.npc.VillagerProfession.FARMER));
+                farmer.getInventory().addItem(new ItemStack(seed));
+                var fieldSeed=(net.neoforged.neoforge.common.SpecialPlantable)seed;
+                check(farmer.hasFarmSeeds() && fieldSeed.villagerCanPlantItem(farmer),"Unusable farmer seed "+seed);
+                l.removeBlock(at,false);
+                check(fieldSeed.canPlacePlantAtPosition(new ItemStack(seed),l,at,Direction.DOWN),"Cannot replant "+at);
+                fieldSeed.spawnPlantAtPosition(new ItemStack(seed),l,at,Direction.DOWN);
+                check(l.getBlockState(at).is(crop) && crop.getAge(l.getBlockState(at))==0,"Did not replant "+id);
             }
         }
         System.out.println("GENERATED "+(p.dusk()?"Dusk":"Petal")+" "+p.plaza()+" homes="+p.houses().size()+" jobs="+jobs);

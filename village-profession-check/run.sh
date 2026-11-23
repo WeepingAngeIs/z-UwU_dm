@@ -18,6 +18,9 @@ fetch https://cdn.modrinth.com/data/EltpO5cN/versions/ST5FHZnD/lootr-neoforge-1.
 fetch https://cdn.modrinth.com/data/ulloLmqG/versions/Q29JlZfU/another_furniture-neoforge-4.0.2.jar mods/furniture.jar c61a66c73bcc5147d9983dc72c485493a612d2dbc078fcb86e2024155e34b7dd
 fetch 'https://mediafilez.forgecdn.net/files/7675/823/Spice%20of%20Life%20Onion_NEOFORGE_v1.5.6_mc1.21.1.jar' mods/onion.jar 11605cfec2ac2e6385fc119d01bb6633b8a9ce8fdf0614cd272254630d56c0a7
 fetch 'https://mediafilez.forgecdn.net/files/8975/261/CreativeCore_NEOFORGE_v2.13.49_mc1.21.1.jar' mods/creativecore.jar 39506208ad0c7efb2c9ac8128766425faebf50c408ec869d5f5043c0742c231b
+if [[ "$seed" == 20261121 ]]; then
+    fetch 'https://mediafilez.forgecdn.net/files/9221/991/open-parties-and-claims-neoforge-1.21.1-0.33.0.jar' mods/openpac.jar 77eadbbb7cbd7298d9a99070ebde552b765dd91bdad5054c9f845a17d2931765
+fi
 timeout --kill-after=15s 6m java -Xmx1G -jar installer.jar --installServer
 printf 'eula=true\n' >eula.txt
 printf 'server-ip=127.0.0.1\nonline-mode=false\nlevel-type=minecraft:flat\nlevel-seed=%s\ndifficulty=peaceful\nspawn-protection=0\nview-distance=3\nsimulation-distance=3\nmax-tick-time=360000\n' "$seed" >server.properties
