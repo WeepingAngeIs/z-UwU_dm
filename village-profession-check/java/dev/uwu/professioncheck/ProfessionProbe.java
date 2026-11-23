@@ -143,13 +143,18 @@ public final class ProfessionProbe {
     private void guard(BlockPos p){hold(p);escort.getNavigation().stop();escort.moveTo(p.getX()+.5,p.getY(),p.getZ()+.5,0,0);escort.setDeltaMovement(Vec3.ZERO);}
     private void observe(BlockPos p)throws Exception{actor(p);call(book,"observe",level,player);}
     private Object current()throws Exception{return call(book,"trip",player.getUUID());}
+    private int expectedMinutes(){return level.getSeed()==20261121L?20:5;}
     private void departure()throws Exception {
         if(!level.isPositionEntityTicking(home)||!level.isPositionEntityTicking(room))return;
         BlockPos out=null;
         for(Direction d:Direction.Plane.HORIZONTAL){var p=home.relative(d,61);
             if(!(boolean)call(type("VillageEscorts"),"inVillage",level,home,p,8)){out=p;break;}}
         check(out!=null,"No genuine exit");
-        int lose=0,win=0;while(RandomSource.create(lose).nextInt(4)==0)lose++;while(RandomSource.create(win).nextInt(4)!=0)win++;
+        int lose=0,win=0;while(RandomSource.create(lose).nextInt(4)==0)lose++;
+        for(;;win++){
+            var random=RandomSource.create(win);
+            if(random.nextInt(4)==0 && 5+random.nextInt(16)==expectedMinutes())break;
+        }
         observe(home);player.getRandom().setSeed(lose);observe(out);check(current()==null,"Failed roll created an escort");
         for(int i=0;i<24;i++){player.getRandom().setSeed(win);observe(out);check(current()==null,"Rerolled outside");}
         observe(home);player.getRandom().setSeed(win);observe(out);trip=current();check(trip!=null,"Winning departure failed");
@@ -166,7 +171,7 @@ public final class ProfessionProbe {
         check(escort.female(),"Male selected for escort");
         check(escort.duskGuardian()==village.dusk() && home.equals(field(trip,"court")),"Origin village or faction changed");
         start=until-(long)field(trip,"duration");
-        check(until-start>=6000 && until-start<=24000 && (until-start)%1200==0,"Follow duration "+(until-start));
+        check(until-start==expectedMinutes()*1200L,"Wrong inclusive follow duration "+(until-start));
         var nbt=escort.saveWithoutId(new CompoundTag());check(nbt.getBoolean("FemaleGuardian")&&nbt.getUUID("VillageEscortOwner").equals(player.getUUID()),"Lost identity on save");
         var restored=call(type("VillageEscorts"),"load",((net.minecraft.world.level.saveddata.SavedData)book).save(new CompoundTag(),level.registryAccess()),level.registryAccess());
         check(home.equals(field(call(restored,"trip",player.getUUID()),"court")),"Return address not persisted");
