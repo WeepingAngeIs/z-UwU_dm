@@ -103,7 +103,10 @@ public final class ProfessionProbe {
                     var state=z==0 && x!=0 && dy>=0 && dy<=1 ? Blocks.AIR:Blocks.STONE;
                     c.setBlockState(p,state.defaultBlockState(),false);
                 }
-                room=mid;hold(mid);return;
+                room=mid;hold(mid);
+                for(var target:List.of(mid,mid.above(),mid.east(),mid.east().above()))
+                    check(level.getBlockState(target).is(SakuraMaterials.STONE.get()),"Post-generation obstruction "+target+" was "+level.getBlockState(target));
+                return;
             }
         }
         throw new AssertionError("No pristine natural stone for the chamber");
@@ -180,6 +183,7 @@ public final class ProfessionProbe {
         if(escort.getY()>barrier.getY()+.4 && escort.getY()<barrier.getY()+2.8)sawHigher=true;
         if(escort.getY()>barrier.getY()+2.9 && escort.distanceToSqr(player)<23){
             check(sawHigher,"Appeared on wall instead of climbing");
+            System.out.println("ESCORT climbed the unobscured three-block wall on foot");
             actor(room.east(6));escort.setNoAi(true);
             ordinary=People.BLOSSOM_WARDEN.get().create(level);
             call(ordinary,"setFemale",true);var p=room.west(1);ordinary.moveTo(p.getX()+.5,p.getY(),p.getZ()+.5,0,0);
@@ -187,9 +191,11 @@ public final class ProfessionProbe {
         }else check(ticks-stageAt<600,"Climb failed "+escort.position());
     }
     private void ordinaryGuard()throws Exception {
-        check(!(boolean)call(ordinary,"carryingEscortPick") && level.getBlockState(room).is(Blocks.STONE)
-                && level.getBlockState(room.above()).is(Blocks.STONE),"Ordinary female Guardian mined");
+        check(!(boolean)call(ordinary,"carryingEscortPick"),"Ordinary female Guardian drew an escort pick");
+        for(var target:List.of(room,room.above(),room.east(),room.east().above()))
+            check(level.getBlockState(target).is(SakuraMaterials.STONE.get()),"Ordinary encounter changed "+target+" to "+level.getBlockState(target));
         if(ticks-stageAt<135)return;
+        System.out.println("ESCORT ordinary female Guardian left all four natural obstruction blocks intact");
         ordinary.discard();escort.setNoAi(false);guard(room.west(1));
         level.getGameRules().getRule(GameRules.RULE_MOBGRIEFING).set(false,level.getServer());go(5);
     }
@@ -204,6 +210,14 @@ public final class ProfessionProbe {
                     .invoke(claims,dimension,player.getUUID(),0,chunk.x,chunk.z,false);
             check(record!=null,"Installed OpenPAC did not accept the disposable claim");
         }else contract.getMethod("unclaim",net.minecraft.resources.ResourceLocation.class,int.class,int.class).invoke(claims,dimension,chunk.x,chunk.z);
+    }
+    private String terrain()throws Exception {
+        var c=level.getChunkAt(room);var attachment=(java.util.function.Supplier<?>)field(type("EscortStone"),"PRISTINE");
+        var registered=(net.neoforged.neoforge.attachment.AttachmentType<?>)attachment.get();
+        var raw=level.getChunkSource().getGenerator().getBaseColumn(room.getX(),room.getZ(),level,level.getChunkSource().randomState()).getBlock(room.getY());
+        return " chunkFresh="+c.hasData(registered)+" references="+c.getAllReferences().size()+" raw="+raw+" wall="+level.getBlockState(room)+"/"+level.getBlockState(room.above())
+                +" next="+level.getBlockState(room.east())+"/"+level.getBlockState(room.east().above())+" below="+level.getBlockState(room.below())
+                +" owner="+player.blockPosition()+" guard="+escort.position()+" since="+(ticks-stageAt);
     }
     private void mining()throws Exception{
         int age=ticks-stageAt;
@@ -220,24 +234,25 @@ public final class ProfessionProbe {
             }else veto=true;
             var normal=People.BLOSSOM_WARDEN.get().create(level);
             check(!(boolean)call(type("EscortStone"),"allowed",level,normal,player,room),"Ordinary Guardian permitted to mine");
-            if(level.getSeed()!=20261121L)check((boolean)call(type("EscortStone"),"allowed",level,escort,player,room),"Natural fixture not approved");
+            if(level.getSeed()!=20261121L && !(boolean)call(type("EscortStone"),"allowed",level,escort,player,room))
+                throw new AssertionError("Natural Sakura Stone not approved"+terrain());
         }
         if(age==240){
             if(level.getSeed()==20261121L)claim(false);
-            check((level.getSeed()==20261121L || denied>0) && level.getBlockState(room).is(Blocks.STONE) && level.getBlockState(room.above()).is(Blocks.STONE),
+            check((level.getSeed()==20261121L || denied>0) && level.getBlockState(room).is(SakuraMaterials.STONE.get()) && level.getBlockState(room.above()).is(SakuraMaterials.STONE.get()),
                     "A protection veto was bypassed or never tested");veto=false;
         }
         sawPick|=(boolean)call(escort,"carryingEscortPick");
         if(level.getBlockState(room).isAir()&&level.getBlockState(room.above()).isAir()
                 && level.getBlockState(room.east()).isAir() && level.getBlockState(room.east().above()).isAir()
                 && escort.getX()>room.getX()+2){
-            check(sawPick && level.getBlockState(room.north()).is(Blocks.STONE),"Mined outside two-block opening");
-            level.setBlockAndUpdate(room,Blocks.STONE.defaultBlockState());
+            check(sawPick && level.getBlockState(room.north()).is(SakuraMaterials.STONE.get()),"Mined outside two-block opening");
+            level.setBlockAndUpdate(room,SakuraMaterials.STONE.get().defaultBlockState());
             check(!(boolean)call(type("EscortStone"),"allowed",level,escort,player,room),"Might break player-built stone");
             System.out.println("ESCORT native climb, wait in sight, two-column natural passage mined, pick shown, placed replacement protected");
             var p=village.site().pos(village.x()+20,village.road()[52]+1,village.z()+village.bends()[52]);
             hold(home);actor(p);guard(p.west(2));go(6);
-        }else check(age<880,"No mining or walk-through "+escort.position()+" pick="+sawPick);
+        }else if(age>=880)throw new AssertionError("No mining or walk-through; pick="+sawPick+terrain());
     }
     private void expiry()throws Exception {
         if(level.getGameTime()<until){check(current()==trip && escort.isAlive(),"Left before chosen time");return;}

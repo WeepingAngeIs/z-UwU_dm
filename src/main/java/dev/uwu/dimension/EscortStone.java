@@ -67,7 +67,7 @@ public final class EscortStone {
         var trip=VillageEscorts.data(level).trip(owner.getUUID());
         if(trip==null || !trip.guardian.equals(guard.getUUID()) || level.getGameTime()>=trip.until || owner.serverLevel()!=level)return false;
         var state=level.getBlockState(pos);
-        if(!ROCK.contains(state.getBlock()) || state.hasBlockEntity() || !state.getFluidState().isEmpty())return false;
+        if(state.hasBlockEntity() || !state.getFluidState().isEmpty())return false;
         // A roof or a wall built just across a chunk border protects the adjacent rock too.
         for(int x=(pos.getX()-4)>>4;x<=(pos.getX()+4)>>4;x++)for(int z=(pos.getZ()-4)>>4;z<=(pos.getZ()+4)>>4;z++){
             var chunk=level.getChunkSource().getChunkNow(x,z);
@@ -75,7 +75,8 @@ public final class EscortStone {
         }
         if(AuthoredFootprints.check(level,new BoundingBox(pos).inflatedBy(3))!=AuthoredFootprints.Decision.CLEAR)return false;
         var source=level.getChunkSource();
-        if(source.getGenerator().getBaseColumn(pos.getX(),pos.getZ(),level,source.randomState()).getBlock(pos.getY())!=state)return false;
+        var raw=source.getGenerator().getBaseColumn(pos.getX(),pos.getZ(),level,source.randomState()).getBlock(pos.getY());
+        if(!ROCK.contains(raw.getBlock()) || SakuraMaterials.generatedMineral(raw)!=state)return false;
         return LauncherExcavationRules.unclaimed(level,pos) && SakuraAccess.mayInteract(owner,pos) &&
                 EventHooks.canEntityGrief(level,guard) && state.canEntityDestroy(level,pos,guard);
     }

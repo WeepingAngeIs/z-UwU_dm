@@ -125,6 +125,12 @@ public final class SakuraMaterials {
         return states;
     }
 
+    static BlockState generatedMineral(BlockState raw) {
+        var palette=states;
+        if(palette==null)palette=prepare();
+        return palette.getOrDefault(raw,raw);
+    }
+
     /** Keep the positions chosen by Overworld's bedrock_floor vertical gradient. */
     public static void replaceGeneratedBedrock(ChunkAccess chunk, int minGeneratorY) {
         int bottom = Math.max(chunk.getMinBuildHeight(), minGeneratorY);
