@@ -13,3 +13,5 @@ export LIBGL_ALWAYS_SOFTWARE=1 ALSOFT_DRIVERS=null
 timeout --kill-after=20s 12m xvfb-run -a -s '-screen 0 1280x720x24' bash gradlew --no-daemon --max-workers=2 -I village-profession-check/client.gradle runEscortGallery 2>&1 | tee build/escort-gallery.log
 grep -F 'ESCORT PICK NATIVE GALLERY PASS' build/escort-gallery.log
 test "$(find build/profession-evidence/gallery -name '*.png' | wc -l)" = 12
+grep -F 'NATIVE HARVEST GALLERY PASS' build/escort-gallery.log
+test "$(find build/profession-evidence/harvest -name '*.png' | wc -l)" = 7

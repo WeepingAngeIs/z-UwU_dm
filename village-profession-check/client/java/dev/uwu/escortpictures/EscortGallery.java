@@ -27,6 +27,7 @@ public final class EscortGallery {
     private static final BlockPos STAGE=new BlockPos(8,221,8);
     private static final int COUNT=12;
     private static final Path OUT=Path.of(System.getProperty("uwu.check.evidence"));
+    private final HarvestGallery harvest=new HarvestGallery();
     private boolean opening,done;
     private int shot=-1,ticks,stable;
     private volatile Vec3 eye;
@@ -58,7 +59,7 @@ public final class EscortGallery {
             if(++ticks>2000)throw new IllegalStateException("Missing native gallery frame "+shot+" "+stable);
             if(shot<0 || stable<0){
                 shot++;
-                if(shot>=COUNT){done=true;System.out.println("ESCORT PICK NATIVE GALLERY PASS");mc.stop();return;}
+                if(shot>=COUNT){done=true;System.out.println("ESCORT PICK NATIVE GALLERY PASS");harvest.start();return;}
                 mc.options.hideGui=true;mc.options.setCameraType(CameraType.FIRST_PERSON);
                 var server=mc.getSingleplayerServer();UUID owner=mc.player.getUUID();int index=shot;
                 stable=0;work=server.submit(()->position(server.getPlayerList().getPlayer(owner),index));return;

@@ -27,7 +27,7 @@ jobs:
           bash gradlew --no-daemon --max-workers=2 -I village-profession-check/probe.gradle jar professionProbeJar
       - name: Generate villages, cook native produce and exercise the escort
         run: bash village-profession-check/run.sh ${{ matrix.seed }}
-      - name: Inspect the leafy pick on both Guardian colorways
+      - name: Inspect the Guardian pick and the village pantry in Minecraft
         if: matrix.seed == 152045 && !cancelled()
         run: |
           if ! command -v xvfb-run >/dev/null; then
