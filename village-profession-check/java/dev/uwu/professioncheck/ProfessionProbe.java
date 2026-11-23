@@ -75,6 +75,7 @@ public final class ProfessionProbe {
                 case 6 -> expiry();
                 case 7 -> returned();
                 case 8 -> ordinaryGuard();
+                case 9 -> walkIntoView();
             }
         }catch(Throwable e){done=true;System.err.println("UWU PROFESSION AND ESCORT FAILED stage="+stage+" tick="+ticks);e.printStackTrace();event.getServer().halt(false);}
     }
@@ -151,11 +152,19 @@ public final class ProfessionProbe {
         if(previous.distSqr(escort.blockPosition())>64){
             check((boolean)call(type("EscortRoute"),"concealed",level,escort,escort.blockPosition()),"Visible teleport");
             System.out.println("ESCORT catch-up hidden by solid cover "+escort.blockPosition());
+            previous=escort.blockPosition();go(9);
+        }else{previous=escort.blockPosition();check(ticks-stageAt<420,"No hidden catch-up");}
+    }
+    private void walkIntoView()throws Exception {
+        check(previous.distSqr(escort.blockPosition())<=5,"Visible appearance after hidden landing");
+        previous=escort.blockPosition();
+        if(escort.hasLineOfSight(player) && escort.distanceToSqr(player)<22){
+            System.out.println("ESCORT walked naturally into sight after concealed landing");
             // Narrow raised walkway with no concealed landing anywhere on it. The end is visible over the low wall.
             barrier=arena.south(9);for(int x=0;x<=10;x++)for(int z=-1;z<=1;z++)for(int y=0;y<3;y++)
                 level.setBlock(barrier.offset(x,y,z),Blocks.SMOOTH_STONE.defaultBlockState(),2);
             actor(barrier.east(5).above(3));guard(barrier.west(1));sawHigher=false;go(4);
-        }else{previous=escort.blockPosition();check(ticks-stageAt<420,"No hidden catch-up");}
+        }else check(ticks-stageAt<360,"Did not walk into sight after the hidden catch-up");
     }
     private void climb()throws Exception {
         if(escort.getY()>barrier.getY()+.4 && escort.getY()<barrier.getY()+2.8)sawHigher=true;

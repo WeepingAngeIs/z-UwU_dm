@@ -30,6 +30,7 @@ final class EscortGoal extends Goal {
     @Override public void tick(){
         var level=(ServerLevel)guard.level();var book=VillageEscorts.data(level);var trip=book.trip(guard.escortOwner);
         if(trip==null || !trip.guardian.equals(guard.getUUID())){guard.discard();return;}
+        if(trip.until==0){guard.getNavigation().stop();return;}
         long now=level.getGameTime();book.moved(level,trip,guard.chunkPosition());
         ServerPlayer player=level.getServer().getPlayerList().getPlayer(trip.player);
         boolean returning=now>=trip.until;

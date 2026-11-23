@@ -25,6 +25,8 @@ public final class EscortStone {
     private static final Supplier<AttachmentType<Boolean>> PRISTINE=TYPES.register("escort_untouched_terrain",
             () -> AttachmentType.builder(() -> false).serialize(Codec.BOOL,Boolean::booleanValue).build());
     private static final Set<Block> ROCK=Set.of(Blocks.STONE,Blocks.DEEPSLATE,Blocks.ANDESITE,Blocks.DIORITE,Blocks.GRANITE,Blocks.TUFF);
+    private static final com.mojang.authlib.GameProfile MINER=new com.mojang.authlib.GameProfile(
+            java.util.UUID.fromString("0474afe7-c3f7-4714-97fb-7812c11b6d5e"),"[Leafsprig]");
     private record Cut(ServerLevel level,BlockPos pos) {}
     private static final ThreadLocal<Cut> CUT=new ThreadLocal<>();
     static void register(IEventBus bus) {
@@ -80,8 +82,13 @@ public final class EscortStone {
     static boolean cut(ServerLevel level,BlossomWarden guard,ServerPlayer owner,BlockPos pos) {
         if(!allowed(level,guard,owner,pos))return false;
         var before=level.getBlockState(pos);
-        if(!EventHooks.onEntityDestroyBlock(guard,pos,before)
-                || NeoForge.EVENT_BUS.post(new BlockEvent.BreakEvent(level,pos,before,owner)).isCanceled()
+        // Give claim/protection listeners a separate, unprivileged actor. Player tools, area-mining
+        // effects, XP and loot must never fire on behalf of the visitor holding them.
+        var worker=net.neoforged.neoforge.common.util.FakePlayerFactory.get(level,MINER);
+        worker.setPos(guard.position());
+        worker.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND,net.minecraft.world.item.ItemStack.EMPTY);
+        if(!SakuraAccess.mayInteract(worker,pos) || !EventHooks.onEntityDestroyBlock(guard,pos,before)
+                || NeoForge.EVENT_BUS.post(new BlockEvent.BreakEvent(level,pos,before,worker)).isCanceled()
                 || !allowed(level,guard,owner,pos) || level.getBlockState(pos)!=before)return false;
         CUT.set(new Cut(level,pos.immutable()));
         try{return level.destroyBlock(pos,false,guard);}finally{CUT.remove();}

@@ -22,7 +22,7 @@ public final class VillageEscorts extends SavedData {
     private static final TicketType<UUID> TRAVEL=TicketType.create("uwu_escort_travel",UUID::compareTo,100);
     private static final Map<ServerPlayer,Visit> VISITS=new WeakHashMap<>();
     private static final Map<ServerPlayer,BlockPos> LAST_OUTSIDE=new WeakHashMap<>();
-    private record Visit(ServerLevel level, BlockPos court, BlockPos previous) {}
+    private record Visit(ServerLevel level, BlockPos court) {}
     static final class Trip {
         final UUID player,guardian;
         final BlockPos court;
@@ -81,9 +81,9 @@ public final class VillageEscorts extends SavedData {
     void observe(ServerLevel level,ServerPlayer player) {
         if(!player.isAlive()||player.isSpectator()){VISITS.remove(player);LAST_OUTSIDE.remove(player);return;}
         Visit visit=VISITS.get(player); BlockPos at=player.blockPosition();
-        if(visit!=null && (visit.level!=level || visit.previous.distSqr(at)>64*64)){VISITS.remove(player);visit=null;}
+        if(visit!=null && visit.level!=level){VISITS.remove(player);visit=null;}
         if(visit!=null) {
-            if(inVillage(level,visit.court,at,8)){VISITS.put(player,new Visit(level,visit.court,at));return;}
+            if(inVillage(level,visit.court,at,8))return;
             VISITS.remove(player);
             if(!trips.containsKey(player.getUUID()) && player.getRandom().nextInt(4)==0) depart(level,player,visit.court);
             return;
@@ -91,7 +91,7 @@ public final class VillageEscorts extends SavedData {
         if(at.equals(LAST_OUTSIDE.put(player,at)) && level.getGameTime()%200!=0)return;
         var home=GuardianVillageHomes.nearest(level,at);
         if(home!=null && inVillage(level,home,at,-4)) {
-            LAST_OUTSIDE.remove(player);VISITS.put(player,new Visit(level,home,at));
+            LAST_OUTSIDE.remove(player);VISITS.put(player,new Visit(level,home));
         }
     }
     private void depart(ServerLevel level,ServerPlayer player,BlockPos home) {
