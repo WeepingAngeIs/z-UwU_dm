@@ -1,0 +1,49 @@
+{
+  "vertex": "uwudimension:clock_negative",
+  "fragment": "uwudimension:clock_negative",
+  "attributes": [
+    "Position"
+  ],
+  "samplers": [
+    {
+      "name": "Scene"
+    },
+    {
+      "name": "SceneDepth"
+    }
+  ],
+  "uniforms": [
+    {
+      "name": "InvClip",
+      "type": "matrix4x4",
+      "count": 16,
+      "values": [
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1
+      ]
+    },
+    {
+      "name": "LocalEye",
+      "type": "float",
+      "count": 2,
+      "values": [
+        0,
+        0
+      ]
+    }
+  ]
+}

@@ -2,6 +2,8 @@ package dev.uwu.dimension;
 
 import com.mojang.brigadier.arguments.DoubleArgumentType;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
+import com.mojang.brigadier.builder.LiteralArgumentBuilder;
+import java.util.function.IntSupplier;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.Component;
@@ -11,12 +13,12 @@ import net.neoforged.neoforge.event.RegisterCommandsEvent;
 final class WeaponBalanceCommands {
     static void register(RegisterCommandsEvent event) {
         var root = Commands.literal("uwu");
-        var charm = Commands.literal("charmseconds")
-                .executes(c -> report(c.getSource(), "Cupid Bow enemy charm (seconds)", AcquisitionPolicy.cupidBowCharmSeconds(), false))
-                .then(Commands.argument("seconds", IntegerArgumentType.integer(1, AcquisitionPolicy.MAX_CUPID_BOW_CHARM_SECONDS))
-                        .executes(c -> save(c.getSource(), "Cupid Bow enemy charm (seconds)",
-                                AcquisitionPolicy.CUPID_BOW_CHARM_SECONDS, IntegerArgumentType.getInteger(c, "seconds"))));
-        root.then(Commands.literal("cupid").requires(LauncherExcavationControl::hasPermission).then(charm));
+        root.then(Commands.literal("cupid").requires(LauncherExcavationControl::hasPermission)
+                .then(seconds("charmseconds", "Cupid Bow enemy charm (seconds)",
+                        AcquisitionPolicy::cupidBowCharmSeconds, AcquisitionPolicy.CUPID_BOW_CHARM_SECONDS)));
+        root.then(Commands.literal("uwuzi").requires(LauncherExcavationControl::hasPermission)
+                .then(seconds("freezeseconds", "UwUzi freeze duration (seconds)",
+                        AcquisitionPolicy::uwuziFreezeSeconds, AcquisitionPolicy.UWUZI_FREEZE_SECONDS)));
         var weapons = Commands.literal("weapon").requires(LauncherExcavationControl::hasPermission)
                 .executes(c -> {
                     c.getSource().sendSuccess(() -> Component.literal("Choose a weapon and setting with Tab. Omit the value to read it. Timers use seconds."), false);
@@ -35,6 +37,14 @@ final class WeaponBalanceCommands {
             weapons.then(weapon);
         });
         event.getDispatcher().register(root.then(weapons));
+    }
+
+    private static LiteralArgumentBuilder<CommandSourceStack> seconds(String name, String label, IntSupplier current,
+                                                                      ModConfigSpec.IntValue setting) {
+        return Commands.literal(name)
+                .executes(c -> report(c.getSource(), label, current.getAsInt(), false))
+                .then(Commands.argument("seconds", IntegerArgumentType.integer(1, AcquisitionPolicy.MAX_TIMER_SECONDS))
+                        .executes(c -> save(c.getSource(), label, setting, IntegerArgumentType.getInteger(c, "seconds"))));
     }
 
     private static <T extends Number> int save(CommandSourceStack source, String label, ModConfigSpec.ConfigValue<T> setting, T value) {
