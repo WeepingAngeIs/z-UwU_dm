@@ -118,6 +118,8 @@ final class QuarterCheck {
             var station=at(p,call(c,"step",front,name.equals("FARMER")?-3:-2),floor+1);
             check(l.getBlockState(station).is((Block)field(job,"station")),"Missing "+name+" "+station);
             check(l.getPoiManager().getType(station).isPresent(),"Workstation has no actual POI "+station);
+            check(AuthoredFootprints.check(l,new net.minecraft.world.level.levelgen.structure.BoundingBox(station))==AuthoredFootprints.Decision.OVERLAP,
+                    "Workshop omitted from the escort’s protected village footprint "+name+" "+station);
             if(name.equals("TOOLSMITH"))check(l.getBlockState(at(p,call(call(c,"step",front,-1),"step",front.getClockWise(),-2),floor+1)).is(Blocks.ANVIL),"Welder anvil");
             if(name.equals("FARMER"))for(int j=-2;j<=2;j+=2){
                 var tile=call(call(c,"step",front,-2),"step",front.getClockWise(),j);var at=at(p,tile,floor+1);

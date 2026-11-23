@@ -1,12 +1,13 @@
 package dev.uwu.dimension;
 
 import com.mojang.serialization.Codec;
+import java.util.BitSet;
 import java.util.Set;
 import java.util.function.Supplier;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.level.ChunkPos;
+import net.minecraft.util.ExtraCodecs;
 import net.minecraft.world.level.GameRules;
 import net.minecraft.world.level.block.*;
 import net.minecraft.world.level.block.state.BlockState;
@@ -19,11 +20,13 @@ import net.neoforged.neoforge.event.EventHooks;
 import net.neoforged.neoforge.event.level.*;
 import net.neoforged.neoforge.registries.*;
 
-/** Positive provenance. Old chunks have no certificate. Any subsequent block replacement retires it. */
+/** New chunks receive a certificate. Changed eight-block cells and an additional four-block border are off limits. */
 public final class EscortStone {
     private static final DeferredRegister<AttachmentType<?>> TYPES=DeferredRegister.create(NeoForgeRegistries.ATTACHMENT_TYPES,"uwudimension");
     private static final Supplier<AttachmentType<Boolean>> PRISTINE=TYPES.register("escort_untouched_terrain",
             () -> AttachmentType.builder(() -> false).serialize(Codec.BOOL,Boolean::booleanValue).build());
+    private static final Supplier<AttachmentType<BitSet>> CHANGED=TYPES.register("escort_changed_ground",
+            () -> AttachmentType.builder(() -> new BitSet()).serialize(ExtraCodecs.BIT_SET,bits->!bits.isEmpty()).build());
     private static final Set<Block> ROCK=Set.of(Blocks.STONE,Blocks.DEEPSLATE,Blocks.ANDESITE,Blocks.DIORITE,Blocks.GRANITE,Blocks.TUFF);
     private static final com.mojang.authlib.GameProfile MINER=new com.mojang.authlib.GameProfile(
             java.util.UUID.fromString("0474afe7-c3f7-4714-97fb-7812c11b6d5e"),"[Leafsprig]");
@@ -38,27 +41,44 @@ public final class EscortStone {
         if(!(event.getChunk() instanceof LevelChunk chunk) || !(event.getLevel() instanceof ServerLevel level)
                 || !ReefLife.isSettlementRealm(level))return;
         if(event.isNewChunk()){chunk.setData(PRISTINE,true);chunk.setUnsaved(true);}
-        if(chunk.hasData(PRISTINE) && chunk.getData(PRISTINE))track(chunk,true);
+        if(chunk.hasData(PRISTINE) && chunk.getData(PRISTINE)) {
+            var sections=chunk.getSections();
+            for(int i=0;i<sections.length;i++)
+                ((EscortTerrainSection)(Object)sections[i]).uwu$trackEscortTerrain(chunk,chunk.getSectionYFromSectionIndex(i)<<4);
+        }
     }
     private static void placed(BlockEvent.EntityPlaceEvent event) {
         if(event.getLevel() instanceof ServerLevel level && ReefLife.isSettlementRealm(level)) {
             var at=event.getPos();var chunk=level.getChunkSource().getChunkNow(at.getX()>>4,at.getZ()>>4);
-            if(chunk!=null)retire(chunk);
+            if(chunk!=null && chunk.hasData(PRISTINE))recordEdit(chunk,at);
         }
     }
-    private static void track(LevelChunk chunk,boolean enabled) {
-        var sections=chunk.getSections();
-        for(int i=0;i<sections.length;i++)
-            ((EscortTerrainSection)(Object)sections[i]).uwu$trackEscortTerrain(enabled?chunk:null,chunk.getSectionYFromSectionIndex(i)<<4);
+    private static int cell(LevelChunk chunk,int x,int y,int z) {
+        return (((y-chunk.getMinBuildHeight())>>3)<<2) | (((z>>3)&1)<<1) | ((x>>3)&1);
     }
-    private static void retire(LevelChunk chunk) {
-        if(chunk.hasData(PRISTINE)){chunk.removeData(PRISTINE);track(chunk,false);chunk.setUnsaved(true);}
+    private static void recordEdit(LevelChunk chunk,BlockPos pos) {
+        var cells=chunk.getData(CHANGED);int i=cell(chunk,pos.getX(),pos.getY(),pos.getZ());
+        if(!cells.get(i)){cells.set(i);chunk.setUnsaved(true);}
+    }
+    // Scoping changes vertically matters here. Moving water at the surface must not disqualify an untouched cave far below.
+    static boolean untouched(ServerLevel level,BlockPos pos) {
+        int bottom=Math.max(level.getMinBuildHeight(),pos.getY()-4);
+        int top=Math.min(level.getMaxBuildHeight()-1,pos.getY()+4);
+        for(int x=(pos.getX()-4)>>3;x<=(pos.getX()+4)>>3;x++)for(int z=(pos.getZ()-4)>>3;z<=(pos.getZ()+4)>>3;z++){
+            var chunk=level.getChunkSource().getChunkNow(x>>1,z>>1);
+            if(chunk==null || !chunk.hasData(PRISTINE) || !chunk.getData(PRISTINE) || !chunk.getAllReferences().isEmpty())return false;
+            if(chunk.hasData(CHANGED)){
+                var cells=chunk.getData(CHANGED);
+                for(int y=bottom>>3;y<=top>>3;y++)if(cells.get(cell(chunk,x<<3,y<<3,z<<3)))return false;
+            }
+        }
+        return true;
     }
     public static void changed(LevelChunk chunk,BlockPos pos,BlockState state,BlockState previous) {
         if(previous==null||state==previous||previous.getBlock()==state.getBlock()||!chunk.hasData(PRISTINE))return;
         Cut exact=CUT.get();
         if(exact!=null && exact.level==chunk.getLevel() && exact.pos.equals(pos) && state.isAir()){CUT.remove();return;}
-        retire(chunk);
+        recordEdit(chunk,pos);
     }
     static boolean allowed(ServerLevel level,BlossomWarden guard,ServerPlayer owner,BlockPos pos) {
         if(guard.escortOwner==null || !guard.escortOwner.equals(owner.getUUID()) || !guard.female()
@@ -68,11 +88,7 @@ public final class EscortStone {
         if(trip==null || !trip.guardian.equals(guard.getUUID()) || level.getGameTime()>=trip.until || owner.serverLevel()!=level)return false;
         var state=level.getBlockState(pos);
         if(state.hasBlockEntity() || !state.getFluidState().isEmpty())return false;
-        // A roof or a wall built just across a chunk border protects the adjacent rock too.
-        for(int x=(pos.getX()-4)>>4;x<=(pos.getX()+4)>>4;x++)for(int z=(pos.getZ()-4)>>4;z<=(pos.getZ()+4)>>4;z++){
-            var chunk=level.getChunkSource().getChunkNow(x,z);
-            if(chunk==null || !chunk.hasData(PRISTINE) || !chunk.getData(PRISTINE) || !chunk.getAllReferences().isEmpty())return false;
-        }
+        if(!untouched(level,pos))return false;
         if(AuthoredFootprints.check(level,new BoundingBox(pos).inflatedBy(3))!=AuthoredFootprints.Decision.CLEAR)return false;
         var source=level.getChunkSource();
         var raw=source.getGenerator().getBaseColumn(pos.getX(),pos.getZ(),level,source.randomState()).getBlock(pos.getY());

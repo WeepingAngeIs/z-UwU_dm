@@ -34,6 +34,7 @@ public final class ProfessionProbe {
     private int stage,ticks,stageAt;
     private boolean done,sawPick,sawHigher,followed,veto;
     private int denied;
+    private final Map<BlockPos,Integer> strikeFlashes=new HashMap<>();
     public ProfessionProbe(){CandidateJarProbe.verify();NeoForge.EVENT_BUS.addListener(this::tick);
         NeoForge.EVENT_BUS.addListener((net.neoforged.neoforge.event.entity.living.LivingDestroyBlockEvent e)->{
             if(veto && e.getEntity()==escort){denied++;e.setCanceled(true);}
@@ -53,7 +54,14 @@ public final class ProfessionProbe {
                 var wire=new net.minecraft.network.Connection(net.minecraft.network.protocol.PacketFlow.SERVERBOUND);
                 new net.minecraft.server.network.ServerGamePacketListenerImpl(level.getServer(),wire,player,
                         net.minecraft.server.network.CommonListenerCookie.createInitial(player.getGameProfile(),false)){
-                    @Override public void send(net.minecraft.network.protocol.Packet<?> packet,net.minecraft.network.PacketSendListener listener){}
+                    @Override public void send(net.minecraft.network.protocol.Packet<?> packet,net.minecraft.network.PacketSendListener listener){
+                        if(stage==5 && packet instanceof net.minecraft.network.protocol.game.ClientboundLevelParticlesPacket flash
+                                && flash.getParticle().getType()==net.minecraft.core.particles.ParticleTypes.END_ROD && flash.getCount()==2) {
+                            // In this corridor the chips leave the west face of the eastward cut.
+                            BlockPos struck=BlockPos.containing(flash.getX()+.5,flash.getY(),flash.getZ());
+                            if(struck.distSqr(room)<=2)strikeFlashes.merge(struck,1,Integer::sum);
+                        }
+                    }
                 };
                 new io.netty.channel.embedded.EmbeddedChannel(wire);
                 player.setInvulnerable(true);player.setNoGravity(true);player.setPos(Vec3.atBottomCenterOf(home));
@@ -104,6 +112,7 @@ public final class ProfessionProbe {
                     c.setBlockState(p,state.defaultBlockState(),false);
                 }
                 room=mid;hold(mid);
+                System.out.println("ESCORT selected native rock at "+room+" untouched="+call(type("EscortStone"),"untouched",level,room));
                 for(var target:List.of(mid,mid.above(),mid.east(),mid.east().above()))
                     check(level.getBlockState(target).is(SakuraMaterials.STONE.get()),"Post-generation obstruction "+target+" was "+level.getBlockState(target));
                 return;
@@ -217,7 +226,7 @@ public final class ProfessionProbe {
         var raw=level.getChunkSource().getGenerator().getBaseColumn(room.getX(),room.getZ(),level,level.getChunkSource().randomState()).getBlock(room.getY());
         return " chunkFresh="+c.hasData(registered)+" references="+c.getAllReferences().size()+" raw="+raw+" wall="+level.getBlockState(room)+"/"+level.getBlockState(room.above())
                 +" next="+level.getBlockState(room.east())+"/"+level.getBlockState(room.east().above())+" below="+level.getBlockState(room.below())
-                +" owner="+player.blockPosition()+" guard="+escort.position()+" since="+(ticks-stageAt);
+                +" untouched="+call(type("EscortStone"),"untouched",level,room)+" owner="+player.blockPosition()+" guard="+escort.position()+" since="+(ticks-stageAt);
     }
     private void mining()throws Exception{
         int age=ticks-stageAt;
@@ -247,9 +256,11 @@ public final class ProfessionProbe {
                 && level.getBlockState(room.east()).isAir() && level.getBlockState(room.east().above()).isAir()
                 && escort.getX()>room.getX()+2){
             check(sawPick && level.getBlockState(room.north()).is(SakuraMaterials.STONE.get()),"Mined outside two-block opening");
+            for(var cut:List.of(room,room.above(),room.east(),room.east().above()))
+                check(strikeFlashes.getOrDefault(cut,0)>=3,"Missing player-visible strike flashes at "+cut+" "+strikeFlashes);
             level.setBlockAndUpdate(room,SakuraMaterials.STONE.get().defaultBlockState());
             check(!(boolean)call(type("EscortStone"),"allowed",level,escort,player,room),"Might break player-built stone");
-            System.out.println("ESCORT native climb, wait in sight, two-column natural passage mined, pick shown, placed replacement protected");
+            System.out.println("ESCORT native climb, wait in sight, two-column natural passage mined, leafy pick and per-strike flashes shown, placed replacement protected");
             var p=village.site().pos(village.x()+20,village.road()[52]+1,village.z()+village.bends()[52]);
             hold(home);actor(p);guard(p.west(2));go(6);
         }else if(age>=880)throw new AssertionError("No mining or walk-through; pick="+sawPick+terrain());
