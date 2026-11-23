@@ -30,7 +30,7 @@ public final class ProfessionProbe {
     private ServerPlayer player;
     private BlossomWarden escort,ordinary;
     private Object book,trip;
-    private long until,start;
+    private long until,start,loadDeadline;
     private int stage,ticks,stageAt;
     private boolean done,sawPick,sawHigher,followed,veto;
     private int denied;
@@ -70,7 +70,9 @@ public final class ProfessionProbe {
                 level.addNewPlayer(player);
                 call(type("GuardianVillageHomes"),"remember",level,home);
                 book=call(type("VillageEscorts"),"data",level);
-                level.getServer().tickRateManager().requestGameToSprint(30000);
+                // Chunk entity storage completes asynchronously. Let it warm up at normal server speed,
+                // then accelerate the five- or twenty-minute travel portion only.
+                loadDeadline=System.nanoTime()+java.util.concurrent.TimeUnit.SECONDS.toNanos(90);
                 stage=1;return;
             }
             check(ticks<26800,"Timeout stage="+stage+" actor="+(escort==null?null:escort.position()));
@@ -145,7 +147,10 @@ public final class ProfessionProbe {
     private Object current()throws Exception{return call(book,"trip",player.getUUID());}
     private int expectedMinutes(){return level.getSeed()==20261121L?20:5;}
     private void departure()throws Exception {
-        if(!level.isPositionEntityTicking(home)||!level.isPositionEntityTicking(room))return;
+        if(!level.isPositionEntityTicking(home)||!level.isPositionEntityTicking(room)
+                || !level.areEntitiesLoaded(ChunkPos.asLong(home)) || !level.areEntitiesLoaded(ChunkPos.asLong(room))){
+            check(System.nanoTime()<loadDeadline,"Fresh village and quarry entity storage did not become available");return;
+        }
         BlockPos out=null;
         for(Direction d:Direction.Plane.HORIZONTAL){var p=home.relative(d,61);
             if(!(boolean)call(type("VillageEscorts"),"inVillage",level,home,p,8)){out=p;break;}}
@@ -159,13 +164,13 @@ public final class ProfessionProbe {
         for(int i=0;i<24;i++){player.getRandom().setSeed(win);observe(out);check(current()==null,"Rerolled outside");}
         observe(home);player.getRandom().setSeed(win);observe(out);trip=current();check(trip!=null,"Winning departure failed");
         observe(home);player.getRandom().setSeed(win);observe(out);check(trip==current(),"Duplicate on another departure");
-        go(10);
+        loadDeadline=System.nanoTime()+java.util.concurrent.TimeUnit.SECONDS.toNanos(60);go(10);
     }
     private void spawned()throws Exception {
         until=(long)field(trip,"until");
         escort=(BlossomWarden)level.getEntity((UUID)field(trip,"guardian"));
         if(until==0 || escort==null){
-            check(ticks-stageAt<240,"Reserved escort not tracked: until="+until+" chunk="+field(trip,"last")
+            check(System.nanoTime()<loadDeadline,"Reserved escort not tracked: until="+until+" chunk="+field(trip,"last")
                     +" owner="+player.position()+" home="+home+" sameTrip="+(current()==trip)
                     +" tracking="+level.isPositionEntityTicking(((ChunkPos)field(trip,"last")).getMiddleBlockPosition(home.getY()))
                     +" loadedEntities="+level.areEntitiesLoaded(((ChunkPos)field(trip,"last")).toLong()));return;
@@ -177,6 +182,7 @@ public final class ProfessionProbe {
         var nbt=escort.saveWithoutId(new CompoundTag());check(nbt.getBoolean("FemaleGuardian")&&nbt.getUUID("VillageEscortOwner").equals(player.getUUID()),"Lost identity on save");
         var restored=call(type("VillageEscorts"),"load",((net.minecraft.world.level.saveddata.SavedData)book).save(new CompoundTag(),level.registryAccess()),level.registryAccess());
         check(home.equals(field(call(restored,"trip",player.getUUID()),"court")),"Return address not persisted");
+        level.getServer().tickRateManager().requestGameToSprint(30000);
         level.setDayTime(14500);
         actor(arena.east(10));guard(arena.west(9));go(2);
     }
