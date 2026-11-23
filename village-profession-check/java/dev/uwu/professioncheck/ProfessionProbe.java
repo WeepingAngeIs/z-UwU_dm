@@ -166,7 +166,9 @@ public final class ProfessionProbe {
         escort=(BlossomWarden)level.getEntity((UUID)field(trip,"guardian"));
         if(until==0 || escort==null){
             check(ticks-stageAt<240,"Reserved escort not tracked: until="+until+" chunk="+field(trip,"last")
-                    +" owner="+player.position()+" home="+home+" sameTrip="+(current()==trip));return;
+                    +" owner="+player.position()+" home="+home+" sameTrip="+(current()==trip)
+                    +" tracking="+level.isPositionEntityTicking(((ChunkPos)field(trip,"last")).getMiddleBlockPosition(home.getY()))
+                    +" loadedEntities="+level.areEntitiesLoaded(((ChunkPos)field(trip,"last")).toLong()));return;
         }
         check(escort.female(),"Male selected for escort");
         check(escort.duskGuardian()==village.dusk() && home.equals(field(trip,"court")),"Origin village or faction changed");

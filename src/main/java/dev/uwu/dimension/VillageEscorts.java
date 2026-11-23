@@ -116,13 +116,21 @@ public final class VillageEscorts extends SavedData {
         Vec3 inward=Vec3.atBottomCenterOf(home).subtract(player.position()).multiply(1,0,1).normalize();
         BlockPos gate=BlockPos.containing(player.position().add(inward.scale(8)));
         BlockPos feet=EscortRoute.nearGround(level,guard,gate,5);
-        if(feet==null)feet=EscortRoute.nearGround(level,guard,home,4);
+        if(feet==null || !level.isPositionEntityTicking(feet)){
+            BlockPos atHome=EscortRoute.nearGround(level,guard,home,4);
+            if(atHome!=null && (feet==null || level.isPositionEntityTicking(atHome)))feet=atHome;
+        }
         if(feet==null)return;
+        var spawnChunk=new ChunkPos(feet);
+        level.getChunkSource().addRegionTicket(TRAVEL,spawnChunk,2,trip.guardian);
+        moved(level,trip,spawnChunk);
+        // A full terrain chunk can still lack a tracking section for entities. Keep the winning roll pending
+        // until a placed Guardian will really be tracked and can begin her trip.
+        if(!level.isPositionEntityTicking(feet) || !level.areEntitiesLoaded(spawnChunk.toLong()))return;
         guard.moveTo(feet.getX()+.5,feet.getY(),feet.getZ()+.5,player.getYRot(),0);
         guard.escortOwner=player.getUUID();guard.bindVillage(home);guard.setPersistenceRequired();
         guard.setUUID(trip.guardian);
         if(!level.addFreshEntity(guard))return;
-        level.getChunkSource().addRegionTicket(TRAVEL,guard.chunkPosition(),2,trip.guardian);
         trip.until=level.getGameTime()+trip.duration;moved(level,trip,guard.chunkPosition());setDirty();
     }
     void moved(ServerLevel level,Trip trip,ChunkPos where) {
