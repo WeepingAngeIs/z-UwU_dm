@@ -1,0 +1,9 @@
+modLoader="javafml"
+loaderVersion="[4,)"
+license="All Rights Reserved"
+[[mods]]
+modId="uwu_escort_pictures"
+version="1.0"
+displayName="Disposable travelling Guardian gallery"
+[[mixins]]
+config="uwu_escort_pictures.mixins.json"

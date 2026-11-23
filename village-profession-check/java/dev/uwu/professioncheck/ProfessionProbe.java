@@ -27,7 +27,7 @@ public final class ProfessionProbe {
     private ServerLevel level;
     private BlossomVillage.Plan village;
     private BlockPos home,room,arena,barrier,covered,previous;
-    private FakePlayer player;
+    private ServerPlayer player;
     private BlossomWarden escort;
     private Object book,trip;
     private long until,start;
@@ -47,9 +47,15 @@ public final class ProfessionProbe {
                 level.getGameRules().getRule(GameRules.RULE_DOMOBSPAWNING).set(false,event.getServer());
                 level.getGameRules().getRule(GameRules.RULE_DAYLIGHT).set(false,event.getServer());
                 recipes(level);
-                village=QuarterCheck.villages(level).getFirst();home=village.plaza();
+                village=QuarterCheck.villages(level).stream().filter(v->v.dusk()==(level.getSeed()==20261121L)).findFirst().orElseThrow();home=village.plaza();
                 chamber();arena=home.above(85);platform();
-                player=new FakePlayer(level,new GameProfile(UUID.randomUUID(),"EscortVisitor"));
+                player=new ServerPlayer(level.getServer(),level,new GameProfile(UUID.randomUUID(),"EscortVisitor"),ClientInformation.createDefault());
+                var wire=new net.minecraft.network.Connection(net.minecraft.network.protocol.PacketFlow.SERVERBOUND);
+                new net.minecraft.server.network.ServerGamePacketListenerImpl(level.getServer(),wire,player,
+                        net.minecraft.server.network.CommonListenerCookie.createInitial(player.getGameProfile(),false)){
+                    @Override public void send(net.minecraft.network.protocol.Packet<?> packet,net.minecraft.network.PacketSendListener listener){}
+                };
+                new io.netty.channel.embedded.EmbeddedChannel(wire);
                 player.setInvulnerable(true);player.setNoGravity(true);player.setPos(Vec3.atBottomCenterOf(home));
                 ((List<ServerPlayer>)field(level.getServer().getPlayerList(),"players")).add(player);
                 ((Map<UUID,ServerPlayer>)field(level.getServer().getPlayerList(),"playersByUUID")).put(player.getUUID(),player);
@@ -118,7 +124,7 @@ public final class ProfessionProbe {
         for(int i=0;i<24;i++){player.getRandom().setSeed(win);observe(out);check(current()==null,"Rerolled outside");}
         observe(home);player.getRandom().setSeed(win);observe(out);trip=current();check(trip!=null,"Winning departure failed");
         escort=(BlossomWarden)level.getEntity((UUID)field(trip,"guardian"));check(escort!=null && escort.female(),"Escort was not female");
-        check(home.equals(field(trip,"court")),"Origin village changed");
+        check(escort.duskGuardian()==village.dusk() && home.equals(field(trip,"court")),"Origin village or faction changed");
         observe(home);player.getRandom().setSeed(win);observe(out);check(trip==current(),"Duplicate on another departure");
         start=level.getGameTime();until=(long)field(trip,"until");
         check(until-start>=6000 && until-start<=24000 && (until-start)%1200==0,"Follow duration "+(until-start));

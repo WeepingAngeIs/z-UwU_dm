@@ -1,0 +1,11 @@
+{
+  "required": true,
+  "package": "dev.uwu.escortpictures",
+  "compatibilityLevel": "JAVA_21",
+  "client": [
+    "PickDraw"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

@@ -27,6 +27,13 @@ jobs:
           bash gradlew --no-daemon --max-workers=2 -I village-profession-check/probe.gradle jar professionProbeJar
       - name: Generate villages, cook native produce and exercise the escort
         run: bash village-profession-check/run.sh ${{ matrix.seed }}
+      - name: Inspect the leafy pick on both Guardian colorways
+        if: matrix.seed == 152045 && !cancelled()
+        run: |
+          if ! command -v xvfb-run >/dev/null; then
+            sudo apt-get update -qq && sudo apt-get install -y xvfb xauth libgl1-mesa-dri libopenal1
+          fi
+          bash village-profession-check/gallery.sh
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         if: always()
         with:

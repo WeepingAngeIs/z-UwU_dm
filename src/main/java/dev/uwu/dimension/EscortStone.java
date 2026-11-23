@@ -33,8 +33,10 @@ public final class EscortStone {
         NeoForge.EVENT_BUS.addListener(EscortStone::placed);
     }
     private static void newChunk(ChunkEvent.Load event) {
-        if(event.isNewChunk() && event.getLevel() instanceof ServerLevel level && ReefLife.isSettlementRealm(level)
-                && event.getChunk() instanceof LevelChunk chunk) {chunk.setData(PRISTINE,true);chunk.setUnsaved(true);}
+        if(!(event.getChunk() instanceof LevelChunk chunk) || !(event.getLevel() instanceof ServerLevel level)
+                || !ReefLife.isSettlementRealm(level))return;
+        if(event.isNewChunk()){chunk.setData(PRISTINE,true);chunk.setUnsaved(true);}
+        if(chunk.hasData(PRISTINE) && chunk.getData(PRISTINE))track(chunk,true);
     }
     private static void placed(BlockEvent.EntityPlaceEvent event) {
         if(event.getLevel() instanceof ServerLevel level && ReefLife.isSettlementRealm(level)) {
@@ -42,8 +44,13 @@ public final class EscortStone {
             if(chunk!=null)retire(chunk);
         }
     }
+    private static void track(LevelChunk chunk,boolean enabled) {
+        var sections=chunk.getSections();
+        for(int i=0;i<sections.length;i++)
+            ((EscortTerrainSection)(Object)sections[i]).uwu$trackEscortTerrain(enabled?chunk:null,chunk.getSectionYFromSectionIndex(i)<<4);
+    }
     private static void retire(LevelChunk chunk) {
-        if(chunk.hasData(PRISTINE)){chunk.removeData(PRISTINE);chunk.setUnsaved(true);}
+        if(chunk.hasData(PRISTINE)){chunk.removeData(PRISTINE);track(chunk,false);chunk.setUnsaved(true);}
     }
     public static void changed(LevelChunk chunk,BlockPos pos,BlockState state,BlockState previous) {
         if(previous==null||state==previous||previous.getBlock()==state.getBlock()||!chunk.hasData(PRISTINE))return;

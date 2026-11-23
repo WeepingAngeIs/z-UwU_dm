@@ -78,13 +78,13 @@ final class QuarterCheck {
                 for(var plot:plots(layout))jobs.add(call(plot,"job").toString());
                 check(jobs.size()==Integer.bitCount(mask),"Selected plots dropped");
                 boolean additional=jobs.stream().anyMatch(j->!seen.contains(j));
-                if(!jobs.isEmpty() && ((dark?!dusk:!petal) || additional && samples<7)){
+                if(!jobs.isEmpty() && ((dark?!dusk:!petal) || additional)){
                     verifyBlocks(level,p,layout);seen.addAll(jobs);plans.add(p);dusk|=dark;petal|=!dark;samples++;
                 }
                 if(dusk&&petal&&seen.size()==13)break;
             }
         }
-        check(petal&&dusk&&samples>=2,"No representative villages");
+        check(petal&&dusk&&samples>=2&&seen.size()==13,"Missing generated professions "+seen);
         var p=plans.getFirst();var all=call(cls,"design",level,p,8191);check(plots(all).size()==13,"All-selected village");
         check(plots(call(cls,"design",level,p,0)).isEmpty(),"None-selected village");
         var single=new int[13];int joint=0;

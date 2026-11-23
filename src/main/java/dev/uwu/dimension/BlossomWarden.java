@@ -131,6 +131,10 @@ public final class BlossomWarden extends PathfinderMob {
     }
 
     @Nullable UUID escortOwner;
+    @Override public boolean canUsePortal(boolean allowPassengers) {
+        return escortOwner==null && super.canUsePortal(allowPassengers);
+    }
+
     private boolean summoned;
     private boolean seeksVillage;
     @Override public net.minecraft.world.entity.SpawnGroupData finalizeSpawn(
@@ -334,7 +338,7 @@ public final class BlossomWarden extends PathfinderMob {
         }
         if (guard == null) {
             guard = level.getEntitiesOfClass(BlossomWarden.class, victim.getBoundingBox().inflate(64),
-                e -> e.isAlive() && (home == null || home.equals(e.guardCourt()))).stream()
+                e -> e.isAlive() && e.escortOwner==null && (home == null || home.equals(e.guardCourt()))).stream()
                 .min(Comparator.comparingDouble(victim::distanceToSqr)).orElse(null);
         }
         if (guard != null) guard.alertRescue(culprit);
@@ -751,7 +755,7 @@ public final class BlossomWarden extends PathfinderMob {
 
     private void acquireThreat(ServerLevel level) {
         unreachableUntil.values().removeIf(delay -> delay.expires <= level.getGameTime());
-        BlockPos origin = guardCourt();
+        BlockPos origin = escortOwner==null ? guardCourt() : blockPosition();
         AABB area = new AABB(origin).inflate(GuardianVillageHomes.PRECINCT_RADIUS);
         List<Keeper> keepers = level.getEntitiesOfClass(Keeper.class, area,
                 keeper -> keeper.isAlive()
