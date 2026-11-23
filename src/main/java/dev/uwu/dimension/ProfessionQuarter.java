@@ -142,6 +142,20 @@ final class ProfessionQuarter {
             v.part("profession_"+plot.job.name().toLowerCase(Locale.ROOT), () -> ProfessionPavilion.build(v,village,plot));
     }
 
+    static void indexStations(HeartwaterFeature.Valley valley, BlossomVillage.Plan village) {
+        if(!valley.overlaps(village.x()-REACH,village.z()-WING,village.x()+REACH,village.z()+WING))return;
+        var level=valley.level.getLevel();
+        var pois=level.getPoiManager();
+        for(Plot p:plan(level,village).plots) {
+            Tile point=p.center.step(p.front,p.job==Job.FARMER?-3:-2);
+            if(!valley.inside(point.x,point.z))continue;
+            BlockPos at=village.site().pos(point.x,p.floor+1,point.z);
+            var state=valley.chunk.getBlockState(at);
+            if(state.is(p.job.station) && pois.getType(at).isEmpty())
+                net.minecraft.world.entity.ai.village.poi.PoiTypes.forState(state).ifPresent(type->pois.add(at,type));
+        }
+    }
+
     static boolean nearWork(Layout layout, int x, int z, int margin) {
         for (Plot p : layout.plots) if (Math.abs(x-p.center.x)<=3+margin && Math.abs(z-p.center.z)<=3+margin) return true;
         for (Tile t : layout.street) if (Math.abs(x-t.x)<=margin && Math.abs(z-t.z)<=margin) return true;

@@ -32,8 +32,12 @@ public final class ProfessionProbe {
     private Object book,trip;
     private long until,start;
     private int stage,ticks,stageAt;
-    private boolean done,sawPick,sawHigher,followed;
-    public ProfessionProbe(){CandidateJarProbe.verify();NeoForge.EVENT_BUS.addListener(this::tick);}
+    private boolean done,sawPick,sawHigher,followed,veto;
+    private int denied;
+    public ProfessionProbe(){CandidateJarProbe.verify();NeoForge.EVENT_BUS.addListener(this::tick);
+        NeoForge.EVENT_BUS.addListener((net.neoforged.neoforge.event.entity.living.LivingDestroyBlockEvent e)->{
+            if(veto && e.getEntity()==escort){denied++;e.setCanceled(true);}
+        });}
     private void tick(ServerTickEvent.Post event){
         if(done)return;
         try{
@@ -161,9 +165,14 @@ public final class ProfessionProbe {
         }
         if(age==120){
             level.getGameRules().getRule(GameRules.RULE_MOBGRIEFING).set(true,level.getServer());
+            veto=true;
             var normal=People.BLOSSOM_WARDEN.get().create(level);
             check(!(boolean)call(type("EscortStone"),"allowed",level,normal,player,room),"Ordinary Guardian permitted to mine");
             check((boolean)call(type("EscortStone"),"allowed",level,escort,player,room),"Natural fixture not approved");
+        }
+        if(age==240){
+            check(denied>0 && level.getBlockState(room).is(Blocks.STONE) && level.getBlockState(room.above()).is(Blocks.STONE),
+                    "A protection veto was bypassed or never tested");veto=false;
         }
         sawPick|=(boolean)call(escort,"carryingEscortPick");
         if(level.getBlockState(room).isAir()&&level.getBlockState(room.above()).isAir() && escort.getX()>room.getX()+1){

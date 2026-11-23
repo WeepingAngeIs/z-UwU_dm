@@ -53,6 +53,7 @@ final class EscortRoute {
     }
     static boolean walkFrom(ServerLevel level,BlossomWarden probe,BlockPos from,BlockPos target) {
         probe.moveTo(from.getX()+.5,from.getY(),from.getZ()+.5,0,0);
+        probe.setOnGround(true);
         var path=probe.getNavigation().createPath(target,2);
         return path!=null && path.canReach();
     }

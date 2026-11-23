@@ -92,6 +92,8 @@ public final class HeartwaterFeature extends Feature<NoneFeatureConfiguration> {
             valley.buriedStairs();
             LushGeodes.placeFirstGroveLedge(event, site, ReachArchitecture.paving(true));
         }
+        if(valley.overlaps(-229,-205,229,40))for(boolean dusk:new boolean[]{false,true})
+            BlossomVillage.plan(level,site,dusk).ifPresent(p->ProfessionQuarter.indexStations(valley,p));
         if(valley.overlaps(-182,-155,182,35))for(boolean dusk:new boolean[]{false,true}){
             var plan=BlossomVillage.plan(level,site,dusk);
             if(plan.isPresent()){

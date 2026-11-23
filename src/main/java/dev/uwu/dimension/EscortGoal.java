@@ -15,7 +15,7 @@ final class EscortGoal extends Goal {
     private final BlossomWarden guard;
     private long planAt,blockedSince;
     private int strike;
-    private @Nullable BlockPos mining,exit,ledge;
+    private @Nullable BlockPos mining,exit,ledge,passageTarget;
     private @Nullable Direction wall;
     private Vec3 progress=Vec3.ZERO;
     EscortGoal(BlossomWarden guard){this.guard=guard;setFlags(EnumSet.of(Flag.MOVE,Flag.LOOK));}
@@ -26,7 +26,7 @@ final class EscortGoal extends Goal {
     @Override public void stop(){
         resetTools();guard.getNavigation().stop();guard.setSprinting(false);
     }
-    private void resetTools(){mining=exit=ledge=null;wall=null;strike=0;guard.showEscortPick(false);}
+    private void resetTools(){mining=exit=ledge=passageTarget=null;wall=null;strike=0;guard.showEscortPick(false);}
     @Override public void tick(){
         var level=(ServerLevel)guard.level();var book=VillageEscorts.data(level);var trip=book.trip(guard.escortOwner);
         if(trip==null || !trip.guardian.equals(guard.getUUID())){guard.discard();return;}
@@ -99,7 +99,7 @@ final class EscortGoal extends Goal {
                 if(!EscortStone.allowed(level,guard,player,p)){permitted=false;break;}
                 if(first==null)first=p;
             }
-            if(permitted && first!=null){mining=first;exit=end;wall=dir;strike=0;guard.showEscortPick(true);return;}
+            if(permitted && first!=null){mining=first;exit=end;wall=dir;passageTarget=player.blockPosition();strike=0;guard.showEscortPick(true);return;}
         }
     }
     private void climb(ServerLevel level){
@@ -117,10 +117,12 @@ final class EscortGoal extends Goal {
         }
     }
     private void strike(ServerLevel level,ServerPlayer player){
-        if(guard.blockPosition().distSqr(mining)>8 || !EscortRoute.safe(level,guard,exit)
+        if(player.blockPosition().distSqr(passageTarget)>9 || guard.blockPosition().distSqr(mining)>8 || !EscortRoute.safe(level,guard,exit)
                 || !EscortStone.allowed(level,guard,player,mining)){resetTools();return;}
         guard.getLookControl().setLookAt(Vec3.atCenterOf(mining));
         if(++strike%8!=0)return;
+        var open=guard.getNavigation().createPath(player,1);
+        if(open!=null && open.canReach()){resetTools();planAt=0;return;}
         var face=Vec3.atCenterOf(mining).add(-.52*wall.getStepX(),.15,-.52*wall.getStepZ());
         level.sendParticles(ParticleTypes.END_ROD,face.x,face.y,face.z,2,.04,.04,.04,.005);
         level.playSound(null,mining,SoundType.STONE.getHitSound(),net.minecraft.sounds.SoundSource.NEUTRAL,.38F,1.25F);
