@@ -99,13 +99,14 @@ public final class ProfessionProbe {
             int cx=60035+attempt*61,cz=-60040;
             var cp=new ChunkPos(cx,cz);var c=level.getChunkSource().getChunk(cx,cz,ChunkStatus.FEATURES,true);
             if(c instanceof LevelChunk || c instanceof ImposterProtoChunk || !c.getAllReferences().isEmpty())continue;
-            for(int y=25;y<44;y++){
+            for(int y=10;y<43;y+=2){
                 var mid=new BlockPos(cp.getMinBlockX()+8,y,cp.getMinBlockZ()+8);
                 var col=level.getChunkSource().getGenerator().getBaseColumn(mid.getX(),mid.getZ(),level,level.getChunkSource().randomState());
                 if(!c.getBlockState(mid).is(Blocks.STONE)||!c.getBlockState(mid.above()).is(Blocks.STONE)
                         ||!col.getBlock(y).is(Blocks.STONE)||!col.getBlock(y+1).is(Blocks.STONE)
                         ||!c.getBlockState(mid.east()).is(Blocks.STONE)||!c.getBlockState(mid.east().above()).is(Blocks.STONE)
-                        ||AuthoredFootprints.check(level,new net.minecraft.world.level.levelgen.structure.BoundingBox(mid).inflatedBy(4))!=AuthoredFootprints.Decision.CLEAR)continue;
+                        ||AuthoredFootprints.check(level,new net.minecraft.world.level.levelgen.structure.BoundingBox(mid).inflatedBy(4))!=AuthoredFootprints.Decision.CLEAR
+                        ||!dryQuarry(c,mid))continue;
                 for(int x=-6;x<=6;x++)for(int z=-3;z<=3;z++)for(int dy=-1;dy<=2;dy++){
                     var p=mid.offset(x,dy,z);if((x==0||x==1) && z==0 && (dy==0||dy==1))continue;
                     var state=z==0 && x!=0 && dy>=0 && dy<=1 ? Blocks.AIR:Blocks.STONE;
@@ -119,6 +120,19 @@ public final class ProfessionProbe {
             }
         }
         throw new AssertionError("No pristine natural stone for the chamber");
+    }
+    // Flowing cave water and falling gravel are real ground changes. Select a dry, stable volume so this
+    // positive control stays untouched throughout the test. The protection in the actual mod still sees every write.
+    private static boolean dryQuarry(ChunkAccess chunk,BlockPos mid) {
+        int low=((mid.getY()-4)&~7)-1,high=((mid.getY()+5)|7)+1;
+        BlockPos.MutableBlockPos pos=new BlockPos.MutableBlockPos();var cp=chunk.getPos();
+        for(int y=low;y<=high;y++)for(int x=cp.getMinBlockX();x<=cp.getMaxBlockX();x++)
+            for(int z=cp.getMinBlockZ();z<=cp.getMaxBlockZ();z++){
+                pos.set(x,y,z);var state=chunk.getBlockState(pos);
+                if(!state.isSolidRender(chunk,pos)||!state.getFluidState().isEmpty() || state.isRandomlyTicking()
+                        ||state.getBlock() instanceof FallingBlock)return false;
+            }
+        return true;
     }
     private void platform() {
         hold(arena);for(int x=-23;x<=23;x++)for(int z=-14;z<=14;z++){
@@ -193,6 +207,7 @@ public final class ProfessionProbe {
         if(escort.getY()>barrier.getY()+2.9 && escort.distanceToSqr(player)<23){
             check(sawHigher,"Appeared on wall instead of climbing");
             System.out.println("ESCORT climbed the unobscured three-block wall on foot");
+            if(!(boolean)call(type("EscortStone"),"untouched",level,room))chamber();
             actor(room.east(6));escort.setNoAi(true);
             ordinary=People.BLOSSOM_WARDEN.get().create(level);
             call(ordinary,"setFemale",true);var p=room.west(1);ordinary.moveTo(p.getX()+.5,p.getY(),p.getZ()+.5,0,0);
@@ -224,7 +239,9 @@ public final class ProfessionProbe {
         var c=level.getChunkAt(room);var attachment=(java.util.function.Supplier<?>)field(type("EscortStone"),"PRISTINE");
         var registered=(net.neoforged.neoforge.attachment.AttachmentType<?>)attachment.get();
         var raw=level.getChunkSource().getGenerator().getBaseColumn(room.getX(),room.getZ(),level,level.getChunkSource().randomState()).getBlock(room.getY());
-        return " chunkFresh="+c.hasData(registered)+" references="+c.getAllReferences().size()+" raw="+raw+" wall="+level.getBlockState(room)+"/"+level.getBlockState(room.above())
+        var changes=(java.util.function.Supplier<?>)field(type("EscortStone"),"CHANGED");
+        var changed=(net.neoforged.neoforge.attachment.AttachmentType<?>)changes.get();
+        return " changedCells="+(c.hasData(changed)?c.getData(changed):"none")+" chunkFresh="+c.hasData(registered)+" references="+c.getAllReferences().size()+" raw="+raw+" wall="+level.getBlockState(room)+"/"+level.getBlockState(room.above())
                 +" next="+level.getBlockState(room.east())+"/"+level.getBlockState(room.east().above())+" below="+level.getBlockState(room.below())
                 +" untouched="+call(type("EscortStone"),"untouched",level,room)+" owner="+player.blockPosition()+" guard="+escort.position()+" since="+(ticks-stageAt);
     }
