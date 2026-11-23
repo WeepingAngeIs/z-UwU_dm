@@ -18,11 +18,18 @@ public final class SakuraAchievements {
     private SakuraAchievements(){}
     private static final Set<String> EVENTS=Set.of("garden/harvest","garden/fruit","garden/giant","garden/chakram",
         "community/contribute","community/keepsake","community/court",
-        "guardians/feed","guardians/family","guardians/together","utility/hammer","utility/return",
+        "guardians/feed","guardians/family","guardians/together","utility/hammer","utility/return","pantry/toaster",
         "cupid/charm","cupid/player","cupid/wish","cupid/player_wish","cupid/witness","cupid/command");
     private static final Set<String> REPORTED=java.util.concurrent.ConcurrentHashMap.newKeySet();
     static void register(){
         NeoForge.EVENT_BUS.addListener(SakuraAchievements::damage);
+        NeoForge.EVENT_BUS.addListener(SakuraAchievements::inspectToaster);
+    }
+    private static void inspectToaster(net.neoforged.neoforge.event.entity.player.PlayerInteractEvent.RightClickBlock event) {
+        if (event.getEntity() instanceof ServerPlayer player && !player.isFakePlayer()
+                && ReefLife.isReach(player.serverLevel())
+                && player.level().getBlockState(event.getPos()).getBlock() instanceof BakerToaster)
+            at(player,event.getPos(),"pantry/toaster");
     }
     static void award(Player actor,String id){
         if(!(actor instanceof ServerPlayer player)||!player.isAlive()||player.isSpectator()||!EVENTS.contains(id))return;

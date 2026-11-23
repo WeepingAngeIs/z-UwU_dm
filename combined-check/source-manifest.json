@@ -1,966 +1,441 @@
 {
-  "base_commit": "bb5c6a926c24fa0433f1d63e10e6a01718f1d9bd",
-  "base_tree": "0e9335564693095f91754565a507c68be2bae34d",
-  "zip_sha256": "827ad25f615acd1176663cf7f146b6b1060be1fcff446b1118c6cc4d9275dbdf",
-  "patch_sha256": "2e22a11083fcd85710d9d938197cc1792c764c3ba5d623bdd0996f7e46f7593d",
+  "schema": 2,
+  "base_commit": "c1c0802be13d0cd5a01149ffa357018f7a863c5c",
+  "qa_overlay_commit": "2ccbe45776bdce8e0fdd4e724f1c31d90a49c7bf",
+  "handoffs": {
+    "uwuzi": "687071e25616fbf6d9f2107c151b8827c2ba3ef7",
+    "breakfast": "d33e34cdd812bf4c1b53a0308bd114055d2c931e",
+    "clipping": "3681aacf39fb7675802c25814282aba71f15297f"
+  },
   "files": [
     {
-      "path": "src/main/java/dev/uwu/dimension/Arsenal.java",
-      "old": "31ad0a0",
-      "new": "87d061d",
-      "added": false,
-      "base_sha": "31ad0a0742059234c32f8371b7f49fcfbaffb3d1",
-      "candidate_sha": "87d061d632f8d9c75302916d4a96b496884cfc1b",
-      "sha256": "33f7c686d35070cc75226b9e412588da1b7c910acc7f3fd778aa967cf23c64cc",
-      "size": 17093,
-      "before": "31ad0a0742059234c32f8371b7f49fcfbaffb3d1",
-      "after": "87d061d632f8d9c75302916d4a96b496884cfc1b"
+      "path": "build.gradle",
+      "before": "a1926430ee927a92641fc9539afa710ca3b2f658",
+      "after": "d3ea0b64abb766769509607af1a230ce9a5f646f",
+      "sha256": "69bca8f8d32ddd775bd6414f12af32a0244447387509e83e41c8d9a71b35f874",
+      "handoff": "uwuzi"
     },
     {
-      "path": "src/main/java/dev/uwu/dimension/BlossomArts.java",
-      "old": "e330ef4",
-      "new": "4b78f7a",
-      "added": false,
-      "base_sha": "e330ef4ced22827e4ed9986f9d5d28ae91908cb3",
-      "candidate_sha": "4b78f7aecc69eb09cd1b0bcc72cbeacf476f2730",
-      "sha256": "15b72222ed2302afb15ebb0b51d210a55577d94e413030b8ff3de5d26ba329ff",
-      "size": 30488,
-      "before": "e330ef4ced22827e4ed9986f9d5d28ae91908cb3",
-      "after": "4b78f7aecc69eb09cd1b0bcc72cbeacf476f2730"
+      "path": "src/main/java/dev/uwu/dimension/AcquisitionPolicy.java",
+      "before": "05e285b2d52854dbf964916d4e3bd1b4c3faba29",
+      "after": "68478bc707eb1756310d2c93b3d26284e86589cd",
+      "sha256": "96b8ea4cad37f4d8ba93911a6d87f2ddddfe300df037ff27da268edd8978eacc",
+      "handoff": "uwuzi"
     },
     {
-      "path": "src/main/java/dev/uwu/dimension/CounterArsenal.java",
-      "old": "0a70457",
-      "new": "9fa3627",
-      "added": false,
-      "base_sha": "0a704573a4513b27de4c03c2182a09482af4b53b",
-      "candidate_sha": "9fa3627e814d97095c291bfadbb3e75200311d8f",
-      "sha256": "32f2830820b5eccc8170904e5f786e6eb217f87a38e70ecaaa931bc65ab19d59",
-      "size": 11959,
-      "before": "0a704573a4513b27de4c03c2182a09482af4b53b",
-      "after": "9fa3627e814d97095c291bfadbb3e75200311d8f"
+      "path": "src/main/java/dev/uwu/dimension/BakerToaster.java",
+      "before": "ae5c3e50bdb6df44f58414185ad12bd808e16bb2",
+      "after": "b4a4ae7759b248d57a072d33830bb4b4d3df54a0",
+      "sha256": "629ff0d7430fae45c97935ce1c7d2fe46f8b7482a12fa388e7ce2d65c3b12c80",
+      "handoff": "breakfast"
     },
     {
-      "path": "src/main/java/dev/uwu/dimension/DawnpetalAbility.java",
-      "old": "b2fa0da",
-      "new": "5f76c3a",
-      "added": false,
-      "base_sha": "b2fa0da5c9339988e7cb652a45ccd84935e8b076",
-      "candidate_sha": "5f76c3ae6884b2d0c6c59adcb75336e7d294a7df",
-      "sha256": "3625fa9d3c947300bcfa273ea41837af3efa3d525a91d821e207f3e8e6c73272",
-      "size": 1348,
-      "before": "b2fa0da5c9339988e7cb652a45ccd84935e8b076",
-      "after": "5f76c3ae6884b2d0c6c59adcb75336e7d294a7df"
+      "path": "src/main/java/dev/uwu/dimension/SakuraAchievements.java",
+      "before": "c2733be0b545f40e2eb44bc1ab1837bff5897040",
+      "after": "f62ddaf3a0bd4a6ed1f0823f1d4335e8506e0eb6",
+      "sha256": "5c2aaf76d45e96ef73a293adfb41e8eb3e89ea0cc5d36db241c47dac2cc8580f",
+      "handoff": "breakfast"
     },
     {
-      "path": "src/main/java/dev/uwu/dimension/GlitchBow.java",
-      "old": "d08a6ad",
-      "new": "3973147",
-      "added": false,
-      "base_sha": "d08a6ad58e892687591d902e68ccfa8c13fb5fce",
-      "candidate_sha": "397314723ee427bb8ba66c658eee4173173a1074",
-      "sha256": "04ca74e4ace793d0ee2f0e45ab972cb4076c776cbe339d8961f527ad23ae9f3b",
-      "size": 20027,
-      "before": "d08a6ad58e892687591d902e68ccfa8c13fb5fce",
-      "after": "397314723ee427bb8ba66c658eee4173173a1074"
-    },
-    {
-      "path": "src/main/java/dev/uwu/dimension/HeartLauncher.java",
-      "old": "d1f9e7b",
-      "new": "6cfbe3a",
-      "added": false,
-      "base_sha": "d1f9e7b3080132f1c555cf83218b2852a53048e4",
-      "candidate_sha": "6cfbe3abd3983b98568f308bbe7e809d634ae4be",
-      "sha256": "43b070ec237fb6f0575665d03bf9ac536f7d744fa1f9bafcaef67f3f32eae8ee",
-      "size": 11312,
-      "before": "d1f9e7b3080132f1c555cf83218b2852a53048e4",
-      "after": "6cfbe3abd3983b98568f308bbe7e809d634ae4be"
-    },
-    {
-      "path": "src/main/java/dev/uwu/dimension/OffhandShieldPriority.java",
-      "old": "0000000",
-      "new": "06e5c6d",
-      "added": true,
-      "base_sha": null,
-      "candidate_sha": "06e5c6d2b2761d3b72a293c6b77cec5979f19ebb",
-      "sha256": "6a2de38778e1a8fe36fefc23ad369f750b95321ca7c2087bdec991e3185d6039",
-      "size": 846,
+      "path": "src/main/java/dev/uwu/dimension/TimePocket.java",
       "before": null,
-      "after": "06e5c6d2b2761d3b72a293c6b77cec5979f19ebb"
+      "after": "37e0d9722a20e62deb70454977ddb79067e8c820",
+      "sha256": "7b866ac6041079c068c78725b90ac435ebc6e256cbed5c70f983f599ea2f699d",
+      "handoff": "uwuzi"
     },
     {
-      "path": "src/main/java/dev/uwu/dimension/RevivalBlossoms.java",
-      "old": "44f707d",
-      "new": "190fdfd",
-      "added": false,
-      "base_sha": "44f707dd42837b3be933b439b7ff4d0266c1b63b",
-      "candidate_sha": "190fdfdab5840186439ca50c77cd203b2445f54c",
-      "sha256": "767e43c3ffce807bc38e428dff022ab37f2c672c4857220aca2c956b3d26b18d",
-      "size": 13881,
-      "before": "44f707dd42837b3be933b439b7ff4d0266c1b63b",
-      "after": "190fdfdab5840186439ca50c77cd203b2445f54c"
+      "path": "src/main/java/dev/uwu/dimension/UwUDimension.java",
+      "before": "f74afa8ce49d6dacde92c765bc2bd65909b13b5d",
+      "after": "af61a0f8814f444c8544dd7cbccd0a3fdee515e1",
+      "sha256": "02c37a4f80c6adff33c0b31dd7d2b8f0dcdb927f29ac56eb368aae2989206604",
+      "handoff": "uwuzi"
     },
     {
-      "path": "src/main/java/dev/uwu/dimension/SharedAbilityHotbar.java",
-      "old": "0700845",
-      "new": "c996817",
-      "added": false,
-      "base_sha": "07008455481eee3f4a58b6299756a25fce6d8e40",
-      "candidate_sha": "c99681796c6f2682d63d7f0cd8a9fdb844be0167",
-      "sha256": "c24ddde53a5bf8896159abc032db28a2013aac086787e215b0a1f03c47481b9e",
-      "size": 11533,
-      "before": "07008455481eee3f4a58b6299756a25fce6d8e40",
-      "after": "c99681796c6f2682d63d7f0cd8a9fdb844be0167"
+      "path": "src/main/java/dev/uwu/dimension/WeaponBalanceCommands.java",
+      "before": "14b6453a4d25fae1d36b19fb962ba1be6f51b690",
+      "after": "e58d7cde69940fb8c718d5c5c3f886ae51f34288",
+      "sha256": "2ea58772a9a41dc952dbb429a9dbcef3651ae3881a486d101d1b1820f6573cb1",
+      "handoff": "uwuzi"
     },
     {
-      "path": "src/main/java/dev/uwu/dimension/mixin/SharedAbilityInputMixin.java",
-      "old": "77be134",
-      "new": "316b733",
-      "added": false,
-      "base_sha": "77be134a8b541ff7530adfd69def0ec54a9df32d",
-      "candidate_sha": "316b7334b876492c18d476c37a5efca55fe8ecf6",
-      "sha256": "05af230de736eec10acb9df5875799bb83b9a7e17675be48c524abef036580d9",
-      "size": 1566,
-      "before": "77be134a8b541ff7530adfd69def0ec54a9df32d",
-      "after": "316b7334b876492c18d476c37a5efca55fe8ecf6"
+      "path": "src/main/java/dev/uwu/dimension/client/TimePocketAcoustics.java",
+      "before": null,
+      "after": "de58fd66b97ac28d45f901b24c86754d617efaaf",
+      "sha256": "9062bd06e433943e9c3b93f6844fb29b1c589fa00be5035e191be27931a2b55a",
+      "handoff": "uwuzi"
+    },
+    {
+      "path": "src/main/java/dev/uwu/dimension/client/TimePocketAudio.java",
+      "before": null,
+      "after": "df315dad5385964f269701d71fc4b26c811d4802",
+      "sha256": "29f394d0370039b83164bf3d0954e016886d42a148d284ee5d372f8fe5e5738d",
+      "handoff": "uwuzi"
+    },
+    {
+      "path": "src/main/java/dev/uwu/dimension/client/TimePocketClient.java",
+      "before": null,
+      "after": "13fbb666a30f11f5891b0cabfd33e60c0960e695",
+      "sha256": "ab5de2afa0b1910c7e63fd1d37dda3d091be96d6b4bcd5f335d91140d2b84408",
+      "handoff": "uwuzi"
+    },
+    {
+      "path": "src/main/java/dev/uwu/dimension/client/TimePocketNegative.java",
+      "before": null,
+      "after": "1bddb70c3d081f6c8f4f39d1c64a5850e7136358",
+      "sha256": "74d1022f4d17655be55f10cb9860e0169bf007d0c9ba198f5691f0016be9a8e8",
+      "handoff": "uwuzi"
+    },
+    {
+      "path": "src/main/java/dev/uwu/dimension/client/UwuziInventoryIcon.java",
+      "before": null,
+      "after": "9e3171a260312fd89493c5613079b358a647a726",
+      "sha256": "96833b5da0c1693d24202ec8d2f2a0f910344f1a3abe6812b05617e9090ab783",
+      "handoff": "uwuzi"
+    },
+    {
+      "path": "src/main/java/dev/uwu/dimension/mixin/TimePocketChannelMixin.java",
+      "before": null,
+      "after": "2c9cc52522da9c119155a043096443a04bebc665",
+      "sha256": "6cc850f034d6c080983b91f31c2cc77e3001371c715f409063f192c7bd6951c9",
+      "handoff": "uwuzi"
+    },
+    {
+      "path": "src/main/java/dev/uwu/dimension/mixin/TimePocketEmitterMixin.java",
+      "before": null,
+      "after": "9a4d46ea11fdc39b0a53c0b02652c4e76f9f14a9",
+      "sha256": "bd93554835dfe104622b16bb7282714414d1abe69f3735303e710ac79696cd54",
+      "handoff": "uwuzi"
+    },
+    {
+      "path": "src/main/java/dev/uwu/dimension/mixin/TimePocketEntityRenderMixin.java",
+      "before": null,
+      "after": "47d359f3f5285cbc53f8fefdea3eb9eb73871eb6",
+      "sha256": "b64abf807db14e5663cd5486dc93d548afc9bbbcab14bc45e39012d8861b964e",
+      "handoff": "uwuzi"
+    },
+    {
+      "path": "src/main/java/dev/uwu/dimension/mixin/TimePocketParticleHistory.java",
+      "before": null,
+      "after": "8d5224ddac2e342ff68ab8fb6c465bd8e8bfead2",
+      "sha256": "f9f7091af119919bfb6d5cefb6af95c2a460e5073aecb767ee6a57a08ce868d3",
+      "handoff": "uwuzi"
+    },
+    {
+      "path": "src/main/java/dev/uwu/dimension/mixin/TimePocketParticleMixin.java",
+      "before": null,
+      "after": "990f60c72dc25ac73adea039c8135fb50d3ae9de",
+      "sha256": "1f40ee56a6b3d31cc97eb87a2c4dca3cd1017d7872b2f033dd9d4bdda6aeadcc",
+      "handoff": "uwuzi"
+    },
+    {
+      "path": "src/main/java/dev/uwu/dimension/mixin/TimePocketSoundMixin.java",
+      "before": null,
+      "after": "56a920ff9fddc3c15e48be0e5588a061f8ea928d",
+      "sha256": "18a7971c9ecc07c25c09d68c465bd832dd15de496ca2fddc35196dcfef4b2162",
+      "handoff": "uwuzi"
+    },
+    {
+      "path": "src/main/resources/META-INF/neoforge.mods.toml",
+      "before": "e7ff00a6eb237a72f945f42341980f30d730acf1",
+      "after": "c89c93d315c1fca4d3ecfad2806054ff37d79040",
+      "sha256": "2ad42011e262d10140ca353eb6eb795bc8948eaaf890683f23af6eb40857fe84",
+      "handoff": "uwuzi"
     },
     {
       "path": "src/main/resources/assets/uwudimension/lang/en_us.json",
-      "old": "5ff73d1",
-      "new": "00b61ec",
-      "added": false,
-      "base_sha": "5ff73d115b014a010516c9cec9460ab610a8866f",
-      "candidate_sha": "00b61ec1f03b8b62efcc15363df958fe8101540a",
-      "sha256": "b83e7f23760532e191f979d0c5153188ab1ea7cd213304f75f873a94712a13d8",
-      "size": 40536,
-      "before": "5ff73d115b014a010516c9cec9460ab610a8866f",
-      "after": "00b61ec1f03b8b62efcc15363df958fe8101540a"
+      "before": "00b61ec1f03b8b62efcc15363df958fe8101540a",
+      "after": "a641c6b3208a9d2463ddc3c585acedca174b1dc1",
+      "sha256": "9391acc2b7ec220ee450408c38f5b158d6404fbec2057f933c3933b97787a851",
+      "handoff": "merged-language"
     },
     {
-      "path": "src/main/resources/assets/uwudimension/models/item/chakram/single_flower_ring.mtl",
-      "old": "0000000",
-      "new": "837e85c",
-      "added": true,
-      "base_sha": null,
-      "candidate_sha": "837e85cf39783b787da4d1433d0abd3b25504394",
-      "sha256": "06efe54ee305463a8a0593695bbe490b35d39bb008fd27528b2d8f3e6128dc71",
-      "size": 101,
+      "path": "src/main/resources/assets/uwudimension/models/item/clock_star.json",
       "before": null,
-      "after": "837e85cf39783b787da4d1433d0abd3b25504394"
-    },
-    {
-      "path": "src/main/resources/assets/uwudimension/models/item/chakram/single_flower_ring.obj",
-      "old": "0000000",
-      "new": "86f054d",
-      "added": true,
-      "base_sha": null,
-      "candidate_sha": "86f054de16e0005bc00003f006bf1df84aec54b9",
-      "sha256": "e4f406eaf71d743934cddc4373ed1233b0a6d263ca13d27d7aaf7191e6b6567b",
-      "size": 332381,
-      "before": null,
-      "after": "86f054de16e0005bc00003f006bf1df84aec54b9"
+      "after": "4b0c4b5cc6fea9332af6074d268d05d0ebc76307",
+      "sha256": "35ee5df84514d90b79c89d8bf53c2f28c527701669b6cf759304652a92e730bc",
+      "handoff": "uwuzi"
     },
     {
       "path": "src/main/resources/assets/uwudimension/models/item/counter_diamond_katana.json",
-      "old": "bf35e38",
-      "new": "e34d93c",
-      "added": false,
-      "base_sha": "bf35e38eeef0b3f1baed0db107486103046c71da",
-      "candidate_sha": "e34d93c4f49db43090d050e71ea96ececb7657cc",
-      "sha256": "2057a8187b5f697aee31eef6d0c0014ad33b33015854670fab17cc033e92ab0d",
-      "size": 5827,
-      "before": "bf35e38eeef0b3f1baed0db107486103046c71da",
-      "after": "e34d93c4f49db43090d050e71ea96ececb7657cc"
+      "before": "e34d93c4f49db43090d050e71ea96ececb7657cc",
+      "after": "9fddb1c0705b70f0ce156bd3a7091b83eede9218",
+      "sha256": "ce1b01dcfdbe6970b0bc6a4d3b3b9795c5e642a1c14625ed49e4d26470767ea9",
+      "handoff": "clipping"
     },
     {
       "path": "src/main/resources/assets/uwudimension/models/item/counter_diamond_rapier.json",
-      "old": "52cf0c6",
-      "new": "e182668",
-      "added": false,
-      "base_sha": "52cf0c6324766dc4111d2d61bb105e43d91c621e",
-      "candidate_sha": "e1826680cac7a4a9099cfaae5d9a953cb873188d",
-      "sha256": "2ba372639a46c38b47db1fcfc216109151d9591517e164f6904d9913d9b53f7e",
-      "size": 5827,
-      "before": "52cf0c6324766dc4111d2d61bb105e43d91c621e",
-      "after": "e1826680cac7a4a9099cfaae5d9a953cb873188d"
+      "before": "e1826680cac7a4a9099cfaae5d9a953cb873188d",
+      "after": "8ec5a5146023177fa2371bac9a1836b93f18b143",
+      "sha256": "4c751ec0f1528b094aad7c4923fd509aefc47487528655631ed5461a706c35ee",
+      "handoff": "clipping"
     },
     {
       "path": "src/main/resources/assets/uwudimension/models/item/counter_diamond_sai.json",
-      "old": "909a690",
-      "new": "2835dfc",
-      "added": false,
-      "base_sha": "909a690c77a7f24ee15ec022aac890129b93aa9f",
-      "candidate_sha": "2835dfcc170b9b2b8ca35a29a62c9a5e1abf35ca",
-      "sha256": "b64e6decca62df54812ade6b96548e4f7a2a9facc4d1b9ad99f1e3e9e0e8b020",
-      "size": 5809,
-      "before": "909a690c77a7f24ee15ec022aac890129b93aa9f",
-      "after": "2835dfcc170b9b2b8ca35a29a62c9a5e1abf35ca"
+      "before": "2835dfcc170b9b2b8ca35a29a62c9a5e1abf35ca",
+      "after": "6b72d7497096e346fd697bf49aa49cab2ee67cb7",
+      "sha256": "f63551413385f541e416e4dd2818a4e524fb4822008b15498b25ca0cea080a76",
+      "handoff": "clipping"
     },
     {
       "path": "src/main/resources/assets/uwudimension/models/item/counter_diamond_twinblade.json",
-      "old": "3fd994a",
-      "new": "28cd590",
-      "added": false,
-      "base_sha": "3fd994a3203734e84dabdc035b3137d513573d56",
-      "candidate_sha": "28cd5907069123f3c5cb1af80fee2fbe95cefdaf",
-      "sha256": "1d2fffeb3ea1b98a4210c228f87365ae30b924333dd9a137fe9cd6c647401bc5",
-      "size": 5845,
-      "before": "3fd994a3203734e84dabdc035b3137d513573d56",
-      "after": "28cd5907069123f3c5cb1af80fee2fbe95cefdaf"
+      "before": "28cd5907069123f3c5cb1af80fee2fbe95cefdaf",
+      "after": "ebd0170722d75a49c1608fdda4df6f8e14cd9c45",
+      "sha256": "38aa2f91006c93e13672eaf700c338bfbf35ea7e24a5f25f8fe92f6926c2f092",
+      "handoff": "clipping"
     },
     {
       "path": "src/main/resources/assets/uwudimension/models/item/counter_gold_katana.json",
-      "old": "2c83bff",
-      "new": "701a8f1",
-      "added": false,
-      "base_sha": "2c83bffcdefc720965d2ce65c6c4ae7a7e6152ae",
-      "candidate_sha": "701a8f15d9ac2c964d804c6933dea01a7ab3e1fe",
-      "sha256": "947a3f33f06cc9ccee9236e9309b31b43bca407c60ad736f2c0a0ef526a5f995",
-      "size": 5809,
-      "before": "2c83bffcdefc720965d2ce65c6c4ae7a7e6152ae",
-      "after": "701a8f15d9ac2c964d804c6933dea01a7ab3e1fe"
+      "before": "701a8f15d9ac2c964d804c6933dea01a7ab3e1fe",
+      "after": "df14e70669951bcbe4ed23372f71e4edb1f56004",
+      "sha256": "11c1e4c0cb672875d239519c3e15a7a10dd8e405e94d474d6bca0527c9ac28a2",
+      "handoff": "clipping"
     },
     {
       "path": "src/main/resources/assets/uwudimension/models/item/counter_gold_rapier.json",
-      "old": "293886c",
-      "new": "aa1ba54",
-      "added": false,
-      "base_sha": "293886c173bcdd1de74db4b87438d6c7d1a8a9bf",
-      "candidate_sha": "aa1ba547a1ae9121a7e511cf9a5a52980c17c3a4",
-      "sha256": "653b018f1e231ff2fd9e625e5781baf651e7b2d777a9c9ade662aadc03392373",
-      "size": 5809,
-      "before": "293886c173bcdd1de74db4b87438d6c7d1a8a9bf",
-      "after": "aa1ba547a1ae9121a7e511cf9a5a52980c17c3a4"
+      "before": "aa1ba547a1ae9121a7e511cf9a5a52980c17c3a4",
+      "after": "09f6e277c232d8242d2fae488e7c78f3fe20e75a",
+      "sha256": "be45dcdd511b0828ef0abe7961797fa8f2645857527fe415615cc29ddc3b32e4",
+      "handoff": "clipping"
     },
     {
       "path": "src/main/resources/assets/uwudimension/models/item/counter_gold_sai.json",
-      "old": "94cb104",
-      "new": "fd7584e",
-      "added": false,
-      "base_sha": "94cb10461ec1c0558a0defb0ec0588a6facedb1d",
-      "candidate_sha": "fd7584e20d7e0a0fe8ca6765a3a87a6d705e52a7",
-      "sha256": "446217c5e13308632695c631dd8074f1a2e4b9871184c2aa139d50d483c69402",
-      "size": 5791,
-      "before": "94cb10461ec1c0558a0defb0ec0588a6facedb1d",
-      "after": "fd7584e20d7e0a0fe8ca6765a3a87a6d705e52a7"
+      "before": "fd7584e20d7e0a0fe8ca6765a3a87a6d705e52a7",
+      "after": "d698c0918dfa888929a0c7403e41dd0838d1572c",
+      "sha256": "6286095ac2f47afbf1fbca29ad4ae9e0761d0bab021fb98318a90595bdce77bc",
+      "handoff": "clipping"
     },
     {
       "path": "src/main/resources/assets/uwudimension/models/item/counter_gold_twinblade.json",
-      "old": "23f1e57",
-      "new": "f8616da",
-      "added": false,
-      "base_sha": "23f1e574c5522e5f703a746226f0de55f1daf48e",
-      "candidate_sha": "f8616da93b7ed82cc681e5f4cb4528ddfa037936",
-      "sha256": "52f41236aea82e2ba4306b3011c70e3879a5d7fcfa1ea323df83106a4ecd8797",
-      "size": 5848,
-      "before": "23f1e574c5522e5f703a746226f0de55f1daf48e",
-      "after": "f8616da93b7ed82cc681e5f4cb4528ddfa037936"
+      "before": "f8616da93b7ed82cc681e5f4cb4528ddfa037936",
+      "after": "845361f2927bd740e40bf64905c0625f1866091d",
+      "sha256": "d5c37896212a4d7474b3803f6eee3cf61f6b7e5b9bce1a77a3e4ba7b9e181830",
+      "handoff": "clipping"
     },
     {
       "path": "src/main/resources/assets/uwudimension/models/item/counter_iron_katana.json",
-      "old": "b09cdf9",
-      "new": "96946fe",
-      "added": false,
-      "base_sha": "b09cdf98baa593e12259f7e0215f414ca245a2af",
-      "candidate_sha": "96946fe06b92f8abf60d5c1d25b464ee71b0693b",
-      "sha256": "2a0a4c5fa2bb7d48d22e385ebf7012c667635ef13efa65719e4b8b0b31bf9a92",
-      "size": 5809,
-      "before": "b09cdf98baa593e12259f7e0215f414ca245a2af",
-      "after": "96946fe06b92f8abf60d5c1d25b464ee71b0693b"
+      "before": "96946fe06b92f8abf60d5c1d25b464ee71b0693b",
+      "after": "30ff19534f98f5b8c3f8e1402dfc40ad21b79ee3",
+      "sha256": "0efa3f962fa012d44d1aad04e7e268708c649a777edfd353a5a24168df5a6d49",
+      "handoff": "clipping"
     },
     {
       "path": "src/main/resources/assets/uwudimension/models/item/counter_iron_rapier.json",
-      "old": "d3384ea",
-      "new": "fec1f73",
-      "added": false,
-      "base_sha": "d3384ea5ffdcf9ce4211ce17da2bc88453b4e60c",
-      "candidate_sha": "fec1f7371cc8c6554ad216a649ee28ef44b721e9",
-      "sha256": "d0cd590c099ba16ce114cbc709d49873a0e5db1b54d46df3359214b9fda37d4a",
-      "size": 5830,
-      "before": "d3384ea5ffdcf9ce4211ce17da2bc88453b4e60c",
-      "after": "fec1f7371cc8c6554ad216a649ee28ef44b721e9"
+      "before": "fec1f7371cc8c6554ad216a649ee28ef44b721e9",
+      "after": "a314b20dcd523582911d64c3af27895414293ccc",
+      "sha256": "090baf2d5b655c6dadf94020863d76225bf8b262d93acea5b4f22e41b0d036cc",
+      "handoff": "clipping"
     },
     {
       "path": "src/main/resources/assets/uwudimension/models/item/counter_iron_sai.json",
-      "old": "4276c22",
-      "new": "f5ba0f2",
-      "added": false,
-      "base_sha": "4276c2211b4fddcc8e1139dc760c880a89b0352d",
-      "candidate_sha": "f5ba0f2883fc9645997e58f15f99afd53fddcd71",
-      "sha256": "79f73ebde53dc6c6b9e30f0cd240d18fa3a3552094bd94150c1bf7d49c4e0a40",
-      "size": 5791,
-      "before": "4276c2211b4fddcc8e1139dc760c880a89b0352d",
-      "after": "f5ba0f2883fc9645997e58f15f99afd53fddcd71"
+      "before": "f5ba0f2883fc9645997e58f15f99afd53fddcd71",
+      "after": "d653924d596f2031a33ee2b140c3bf9860bf5274",
+      "sha256": "5b99a4965889362868b78a99210194f99492034301a1e539d8dfc02459e09aac",
+      "handoff": "clipping"
     },
     {
       "path": "src/main/resources/assets/uwudimension/models/item/counter_iron_twinblade.json",
-      "old": "3cd8a7d",
-      "new": "9a36e03",
-      "added": false,
-      "base_sha": "3cd8a7d2e81deb8ee71320d1c2e95f46d78ead99",
-      "candidate_sha": "9a36e0304d9a4fae44656868f3fd24e05f92bb9f",
-      "sha256": "2805f45323d0a61c15f65892008ad6e286948093f6f3d39f78aff6becc5b8271",
-      "size": 11179,
-      "before": "3cd8a7d2e81deb8ee71320d1c2e95f46d78ead99",
-      "after": "9a36e0304d9a4fae44656868f3fd24e05f92bb9f"
+      "before": "9a36e0304d9a4fae44656868f3fd24e05f92bb9f",
+      "after": "572f12e838cafd4f3152664861a73dd0ff757659",
+      "sha256": "a1775619cad2f2e10e4eeb08cdfa77c77a1eb60166378c907054e3002123cea4",
+      "handoff": "clipping"
     },
     {
       "path": "src/main/resources/assets/uwudimension/models/item/counter_netherite_katana.json",
-      "old": "0c11258",
-      "new": "b57baf8",
-      "added": false,
-      "base_sha": "0c1125840e395b43a428d75800259b04e133e5ee",
-      "candidate_sha": "b57baf82094e1f95961b19840e965af666c4887d",
-      "sha256": "36d61b940f232a480a3799e8d15991d45f6e3f40538a4fafa3a7239fbc9df063",
-      "size": 5839,
-      "before": "0c1125840e395b43a428d75800259b04e133e5ee",
-      "after": "b57baf82094e1f95961b19840e965af666c4887d"
+      "before": "b57baf82094e1f95961b19840e965af666c4887d",
+      "after": "35426a4f2a1be6a1a5996708ed6744048873c44d",
+      "sha256": "c4ccdc0fa7a72158dbdb53059f28a17227537a1d0041049495b58151e629f985",
+      "handoff": "clipping"
     },
     {
       "path": "src/main/resources/assets/uwudimension/models/item/counter_netherite_rapier.json",
-      "old": "d37ec2e",
-      "new": "a8b7452",
-      "added": false,
-      "base_sha": "d37ec2e0471fe40064dcf413568faeae7aa3fa80",
-      "candidate_sha": "a8b74528c302bd5831163cd9036985adb9621985",
-      "sha256": "a8480431185b9b8d5aa10619f15f16097c99f36b53f6c292098e5833f3e999f5",
-      "size": 5839,
-      "before": "d37ec2e0471fe40064dcf413568faeae7aa3fa80",
-      "after": "a8b74528c302bd5831163cd9036985adb9621985"
+      "before": "a8b74528c302bd5831163cd9036985adb9621985",
+      "after": "478ae86e3a4bcf11aed57f893b1653f2f0068e3d",
+      "sha256": "7827cde1b9de80e731c8c2f5c03cc816cd976dfc23214dca1ce4fb26cbede72d",
+      "handoff": "clipping"
     },
     {
       "path": "src/main/resources/assets/uwudimension/models/item/counter_netherite_sai.json",
-      "old": "edc5722",
-      "new": "3b75f69",
-      "added": false,
-      "base_sha": "edc57221c4cd5d5dcc06443a04f04bdac5706a8d",
-      "candidate_sha": "3b75f698d705a025bb6b871dd7374cb0bf1afdcc",
-      "sha256": "dc6bb7b65581e20da8c78cdeb9905364f4a90c38f325b4e0fe71fbc93a30b356",
-      "size": 5821,
-      "before": "edc57221c4cd5d5dcc06443a04f04bdac5706a8d",
-      "after": "3b75f698d705a025bb6b871dd7374cb0bf1afdcc"
+      "before": "3b75f698d705a025bb6b871dd7374cb0bf1afdcc",
+      "after": "b6529d62a54a68d05381281d0a38e8e6d91938ba",
+      "sha256": "ac8e46e1f4b88733a96675fb2ccf2ae3a1609d45fded8e39ed6e3f00d25d551f",
+      "handoff": "clipping"
     },
     {
       "path": "src/main/resources/assets/uwudimension/models/item/counter_netherite_twinblade.json",
-      "old": "712504a",
-      "new": "c4d81a0",
-      "added": false,
-      "base_sha": "712504a8a0cbce9369a06a2a900f5232aab317ee",
-      "candidate_sha": "c4d81a08f44a3359b8bd1d4eb1c89ea194ddbf1d",
-      "sha256": "fb899411425d36701c2fad7a7ca97a6f9e745d628e59d0154cea20b02a2b9fb6",
-      "size": 5857,
-      "before": "712504a8a0cbce9369a06a2a900f5232aab317ee",
-      "after": "c4d81a08f44a3359b8bd1d4eb1c89ea194ddbf1d"
+      "before": "c4d81a08f44a3359b8bd1d4eb1c89ea194ddbf1d",
+      "after": "60c6981f9c8d8aa8999cb4ea70d324c8c198ae6a",
+      "sha256": "4969db52785d6871ff193394b934d40e9f52e3084ba3add800542580a881db75",
+      "handoff": "clipping"
     },
     {
       "path": "src/main/resources/assets/uwudimension/models/item/counter_runic_katana.json",
-      "old": "e92742b",
-      "new": "9c29ccc",
-      "added": false,
-      "base_sha": "e92742b1a81de3ba37f629354b8e4eabf6bd5954",
-      "candidate_sha": "9c29cccce376e5b2d961bf834bd293c519bc9e29",
-      "sha256": "f1ad086befd3bc3bec606bf4ca0add517e0d4b11ff1c78260cd9efedcaa363be",
-      "size": 5809,
-      "before": "e92742b1a81de3ba37f629354b8e4eabf6bd5954",
-      "after": "9c29cccce376e5b2d961bf834bd293c519bc9e29"
+      "before": "9c29cccce376e5b2d961bf834bd293c519bc9e29",
+      "after": "372e3a8d6274c55f380815f65293d4387c4f0bc3",
+      "sha256": "38f130d78bb09b8e5717690d6de370145da7af4cbd74104dbc90590e51b507c3",
+      "handoff": "clipping"
     },
     {
       "path": "src/main/resources/assets/uwudimension/models/item/counter_runic_rapier.json",
-      "old": "5e5aed9",
-      "new": "1cf20c1",
-      "added": false,
-      "base_sha": "5e5aed93419751eee8981727e173024cbb82ca13",
-      "candidate_sha": "1cf20c12d6fbe40d86294b35f54936d098c06f7a",
-      "sha256": "d878534f41544fe7945d57f21a4ba1354c83b6da18f1c2ed05d2eee0ae37e451",
-      "size": 5836,
-      "before": "5e5aed93419751eee8981727e173024cbb82ca13",
-      "after": "1cf20c12d6fbe40d86294b35f54936d098c06f7a"
+      "before": "1cf20c12d6fbe40d86294b35f54936d098c06f7a",
+      "after": "268e20583200afc94e0202a8c68c0f505f7967f4",
+      "sha256": "4e7f9846111251e74c6ba78b91eb39cd93f6d4c64aecb1ab772c3e4edd7cbce4",
+      "handoff": "clipping"
     },
     {
       "path": "src/main/resources/assets/uwudimension/models/item/counter_runic_sai.json",
-      "old": "eba270d",
-      "new": "c3591e5",
-      "added": false,
-      "base_sha": "eba270d83b38b16f537d926ad2ccf956f9807736",
-      "candidate_sha": "c3591e5d3cd4e0ada16ebbde4215395ce7ee4589",
-      "sha256": "703f0908c892dc244ebf1b4a6e707305fe6c9621f229c57ef192ef159c80b6c5",
-      "size": 5791,
-      "before": "eba270d83b38b16f537d926ad2ccf956f9807736",
-      "after": "c3591e5d3cd4e0ada16ebbde4215395ce7ee4589"
+      "before": "c3591e5d3cd4e0ada16ebbde4215395ce7ee4589",
+      "after": "df6b0fd45015dc060d2bfda9791bc2c1bd710536",
+      "sha256": "37e1503a5b661dc7ea0a59536f3217e021e51cc613143a41694aea5500023163",
+      "handoff": "clipping"
     },
     {
       "path": "src/main/resources/assets/uwudimension/models/item/counter_runic_twinblade.json",
-      "old": "040a6ec",
-      "new": "aa69268",
-      "added": false,
-      "base_sha": "040a6ec58be8b3a0456c66f61e8e2b3cae63204f",
-      "candidate_sha": "aa692682cd967c6349281b5cc9c5117319fbe2b2",
-      "sha256": "d838a6b29a7c61ff35d75f7e5f998997012d1710efde4de5496ddd3b3346564c",
-      "size": 11189,
-      "before": "040a6ec58be8b3a0456c66f61e8e2b3cae63204f",
-      "after": "aa692682cd967c6349281b5cc9c5117319fbe2b2"
+      "before": "aa692682cd967c6349281b5cc9c5117319fbe2b2",
+      "after": "1b5af50bf400bf618fee07448f491f0ba5835301",
+      "sha256": "048141068a091f6e1ee49f352dd218456dbc59ba18183cc80c13bde180fbd265",
+      "handoff": "clipping"
     },
     {
-      "path": "src/main/resources/assets/uwudimension/textures/item/animated/counter_diamond_katana_glint.png",
-      "old": "fb383cf4ce0c8aff5e2261d6579428c905f1bf35",
-      "new": "d130d712dfa3a121ccd241944a4000697dbce03c",
-      "added": false,
-      "base_sha": "fb383cf4ce0c8aff5e2261d6579428c905f1bf35",
-      "candidate_sha": "d130d712dfa3a121ccd241944a4000697dbce03c",
-      "sha256": "83429c790e8ab88110dbc3b4ccafb52d76a913ebf8eb62c776a1f496f9ace183",
-      "size": 3096,
-      "before": "fb383cf4ce0c8aff5e2261d6579428c905f1bf35",
-      "after": "d130d712dfa3a121ccd241944a4000697dbce03c"
+      "path": "src/main/resources/assets/uwudimension/models/item/pocket_clock_prototype.json",
+      "before": null,
+      "after": "f153d29a6f01f18d130e58e72c523092b585ccd8",
+      "sha256": "9b9999d2f8e9f972bda5f640acd833fc4a0c10f0abd902382dfc0806810ab190",
+      "handoff": "uwuzi"
     },
     {
-      "path": "src/main/resources/assets/uwudimension/textures/item/animated/counter_diamond_rapier_glint.png",
-      "old": "7ee6f2980db9cf5abd39ca1af6fed0f859f5f231",
-      "new": "eea71be31e8884793e3b3a00b0c899e4d47e455c",
-      "added": false,
-      "base_sha": "7ee6f2980db9cf5abd39ca1af6fed0f859f5f231",
-      "candidate_sha": "eea71be31e8884793e3b3a00b0c899e4d47e455c",
-      "sha256": "d3be4496eef9b2b362d332e65f4531a9a4bfdcbdb6628d9fd3b7d9717ff4b7db",
-      "size": 3988,
-      "before": "7ee6f2980db9cf5abd39ca1af6fed0f859f5f231",
-      "after": "eea71be31e8884793e3b3a00b0c899e4d47e455c"
+      "path": "src/main/resources/assets/uwudimension/models/item/uwuzi_inventory.json",
+      "before": null,
+      "after": "9f6a9df85f4921c84ed5bd65d58c2f93bc45edb6",
+      "sha256": "89f178b72cf1e46af411279c345a3e19749d3e454aea4779286e2b8b6ecb795c",
+      "handoff": "uwuzi"
     },
     {
-      "path": "src/main/resources/assets/uwudimension/textures/item/animated/counter_diamond_sai_glint.png",
-      "old": "9fceb1507ba0dbbd5b3617481d1b989fd0a54f84",
-      "new": "5e5cc25eae57f9af283c3c56a2262b4143f7b30e",
-      "added": false,
-      "base_sha": "9fceb1507ba0dbbd5b3617481d1b989fd0a54f84",
-      "candidate_sha": "5e5cc25eae57f9af283c3c56a2262b4143f7b30e",
-      "sha256": "5c85bb0f51ea8c237fc7e38f00c271aa3028420fb25b16f6c909be66234c28d5",
-      "size": 3422,
-      "before": "9fceb1507ba0dbbd5b3617481d1b989fd0a54f84",
-      "after": "5e5cc25eae57f9af283c3c56a2262b4143f7b30e"
+      "path": "src/main/resources/assets/uwudimension/models/item/uwuzi_no_cooldown.json",
+      "before": null,
+      "after": "27e0e91bdce0f81b733e7b941e8ad976e813df77",
+      "sha256": "d0621cd86fd77a499daa0157b8ddced802472f71b3bcccb06db415007ce14233",
+      "handoff": "uwuzi"
     },
     {
-      "path": "src/main/resources/assets/uwudimension/textures/item/animated/counter_diamond_twinblade_glint.png",
-      "old": "9d4a6a66e3017d44247dac6652a6b79d3d038757",
-      "new": "865d2f2f25d5cb0fd5352f5764d546bff1c779f1",
-      "added": false,
-      "base_sha": "9d4a6a66e3017d44247dac6652a6b79d3d038757",
-      "candidate_sha": "865d2f2f25d5cb0fd5352f5764d546bff1c779f1",
-      "sha256": "51f27d5948cbb6852087dbbfbf0bffaf49225c9ab7cfc5a2939f1ac1eac9b3bd",
-      "size": 3308,
-      "before": "9d4a6a66e3017d44247dac6652a6b79d3d038757",
-      "after": "865d2f2f25d5cb0fd5352f5764d546bff1c779f1"
+      "path": "src/main/resources/assets/uwudimension/shaders/core/clock_negative.fsh",
+      "before": null,
+      "after": "09ed09c523e3836bd2fb364f84bb6d45ec804778",
+      "sha256": "28873de734ed8ccf8b4726657c7ed7fdfa716bfa1164ca50a3f92f00150f4a64",
+      "handoff": "uwuzi"
     },
     {
-      "path": "src/main/resources/assets/uwudimension/textures/item/animated/counter_gold_katana_glint.png",
-      "old": "e95093b94c2f216be35a2f671275da57d038a03b",
-      "new": "e65884d37f0d47df30a1857dd029cf4c55aaf32d",
-      "added": false,
-      "base_sha": "e95093b94c2f216be35a2f671275da57d038a03b",
-      "candidate_sha": "e65884d37f0d47df30a1857dd029cf4c55aaf32d",
-      "sha256": "e5a139aae8ac26a571f1efa1f52e813723f591f0c7a517cac19038093e6d50bd",
-      "size": 3224,
-      "before": "e95093b94c2f216be35a2f671275da57d038a03b",
-      "after": "e65884d37f0d47df30a1857dd029cf4c55aaf32d"
+      "path": "src/main/resources/assets/uwudimension/shaders/core/clock_negative.json",
+      "before": null,
+      "after": "42fca6e99b36153504c1c8b5f9a246dd15f8c731",
+      "sha256": "aad3ec04dae4f287431555d16c7b13e816ea3ac4ebe29ed8a9b851c2b679353e",
+      "handoff": "uwuzi"
     },
     {
-      "path": "src/main/resources/assets/uwudimension/textures/item/animated/counter_gold_rapier_glint.png",
-      "old": "8e4607420888d61bc2d2f53599d9cfe04a36ee88",
-      "new": "2b2d8b106f76f89e5f6a78687c75d2ca0fa7f6f4",
-      "added": false,
-      "base_sha": "8e4607420888d61bc2d2f53599d9cfe04a36ee88",
-      "candidate_sha": "2b2d8b106f76f89e5f6a78687c75d2ca0fa7f6f4",
-      "sha256": "6458df494c4e04da9ad53fa71783ee08afceee00e3aaf9958954964f28a8dc1d",
-      "size": 3227,
-      "before": "8e4607420888d61bc2d2f53599d9cfe04a36ee88",
-      "after": "2b2d8b106f76f89e5f6a78687c75d2ca0fa7f6f4"
+      "path": "src/main/resources/assets/uwudimension/shaders/core/clock_negative.vsh",
+      "before": null,
+      "after": "a4e3ee1638c8bc5883d4ce799cfc48232109b4b2",
+      "sha256": "96462d7bc0805f9a5e4c2641282e4dfee5a16cbfcc22d18bdb283c4b0d2b1f87",
+      "handoff": "uwuzi"
     },
     {
-      "path": "src/main/resources/assets/uwudimension/textures/item/animated/counter_gold_sai_glint.png",
-      "old": "ed6efeef68f6c7a34f8477541c7f4528e2abb308",
-      "new": "a13ff779c303bf0a81cc7e17106a7a153e6b3dd4",
-      "added": false,
-      "base_sha": "ed6efeef68f6c7a34f8477541c7f4528e2abb308",
-      "candidate_sha": "a13ff779c303bf0a81cc7e17106a7a153e6b3dd4",
-      "sha256": "245a2c0d773ad480a5db48469bcb0e3a2f37930cd8e7567e3a4165ffcd68278a",
-      "size": 3424,
-      "before": "ed6efeef68f6c7a34f8477541c7f4528e2abb308",
-      "after": "a13ff779c303bf0a81cc7e17106a7a153e6b3dd4"
+      "path": "src/main/resources/assets/uwudimension/sounds.json",
+      "before": "85da7e7479f740786469a98b4f196aef5d022358",
+      "after": "0d27824c04468d01df1ff0a465a4d40ab5f4db9d",
+      "sha256": "f6208ac5d1005bb8278513c335b53fef71b9b300dc0ca8dfdb30342758cbf04f",
+      "handoff": "uwuzi"
     },
     {
-      "path": "src/main/resources/assets/uwudimension/textures/item/animated/counter_gold_twinblade_glint.png",
-      "old": "e95093b94c2f216be35a2f671275da57d038a03b",
-      "new": "e65884d37f0d47df30a1857dd029cf4c55aaf32d",
-      "added": false,
-      "base_sha": "e95093b94c2f216be35a2f671275da57d038a03b",
-      "candidate_sha": "e65884d37f0d47df30a1857dd029cf4c55aaf32d",
-      "sha256": "e5a139aae8ac26a571f1efa1f52e813723f591f0c7a517cac19038093e6d50bd",
-      "size": 3224,
-      "before": "e95093b94c2f216be35a2f671275da57d038a03b",
-      "after": "e65884d37f0d47df30a1857dd029cf4c55aaf32d"
+      "path": "src/main/resources/assets/uwudimension/sounds/pocket_tick.ogg",
+      "before": null,
+      "after": "23a4d8ededc308e045c418524c4d3e48221b8659",
+      "sha256": "e958b2f6f412658d8f61cb5d5f98725c595337121d777aa94a56126c09c56709",
+      "handoff": "uwuzi"
     },
     {
-      "path": "src/main/resources/assets/uwudimension/textures/item/animated/counter_iron_katana_glint.png",
-      "old": "ea5ea393baa8d7a09bf81a1c9756a5c6b9113904",
-      "new": "1bc0d0f05eaaede356afa3e2ee2f6d8c81a32fc7",
-      "added": false,
-      "base_sha": "ea5ea393baa8d7a09bf81a1c9756a5c6b9113904",
-      "candidate_sha": "1bc0d0f05eaaede356afa3e2ee2f6d8c81a32fc7",
-      "sha256": "f093b7461e0fe9108bc33843a048bf471eef0dadf16b16fe12cc9473235b52dc",
-      "size": 3068,
-      "before": "ea5ea393baa8d7a09bf81a1c9756a5c6b9113904",
-      "after": "1bc0d0f05eaaede356afa3e2ee2f6d8c81a32fc7"
+      "path": "src/main/resources/assets/uwudimension/sounds/pocket_tock.ogg",
+      "before": null,
+      "after": "6e9ce3e84fdcc49b1d53a2386dbb0cb2b6c482ce",
+      "sha256": "1e5b1814345b8ec800801ae6fef149e6b1c9c718ed6c1c006d28b832f553735c",
+      "handoff": "uwuzi"
     },
     {
-      "path": "src/main/resources/assets/uwudimension/textures/item/animated/counter_iron_rapier_glint.png",
-      "old": "efa029e5a3858d6b7aba22f18ddc2adb8679c4fe",
-      "new": "ddee39984a45f35ca2e9fe67a8c837eec1b08782",
-      "added": false,
-      "base_sha": "efa029e5a3858d6b7aba22f18ddc2adb8679c4fe",
-      "candidate_sha": "ddee39984a45f35ca2e9fe67a8c837eec1b08782",
-      "sha256": "417dc7302931d28246709c68789d603e126244633a3a83b179216d7d6e401a37",
-      "size": 3916,
-      "before": "efa029e5a3858d6b7aba22f18ddc2adb8679c4fe",
-      "after": "ddee39984a45f35ca2e9fe67a8c837eec1b08782"
+      "path": "src/main/resources/assets/uwudimension/sounds/uwuzi/clock_loop.ogg",
+      "before": null,
+      "after": "b0c23d33cffe308d32a85e34aa5d01d74da3f751",
+      "sha256": "f16f7e3657657645ad4e4fd4c4c67b084ccc116c399914b8710a91831de83f66",
+      "handoff": "uwuzi"
     },
     {
-      "path": "src/main/resources/assets/uwudimension/textures/item/animated/counter_iron_sai_glint.png",
-      "old": "caa772c7f387b0efe2a3ed1b6a5c8b70c6552051",
-      "new": "b15bbb3b234dd995157731b73f83282eba9c116f",
-      "added": false,
-      "base_sha": "caa772c7f387b0efe2a3ed1b6a5c8b70c6552051",
-      "candidate_sha": "b15bbb3b234dd995157731b73f83282eba9c116f",
-      "sha256": "cff4572145c9f9836dd888ba12d555e5ac555d7c21128e77855e08cb11d3a87e",
-      "size": 3412,
-      "before": "caa772c7f387b0efe2a3ed1b6a5c8b70c6552051",
-      "after": "b15bbb3b234dd995157731b73f83282eba9c116f"
+      "path": "src/main/resources/assets/uwudimension/sounds/uwuzi/opening.ogg",
+      "before": null,
+      "after": "9876ae7c9bc66fea744f92477fc3ca00b7829124",
+      "sha256": "137a9585b99d8e6572a3e40c426a771651f9ea5adea292f35d4c9335755bf71e",
+      "handoff": "uwuzi"
     },
     {
-      "path": "src/main/resources/assets/uwudimension/textures/item/animated/counter_iron_twinblade_glint.png",
-      "old": "100ed86df4c956c20bf63b9ea67700e10a3c033f",
-      "new": "6a1186a6ae0f15ea4a3f91b355026019e5c171ad",
-      "added": false,
-      "base_sha": "100ed86df4c956c20bf63b9ea67700e10a3c033f",
-      "candidate_sha": "6a1186a6ae0f15ea4a3f91b355026019e5c171ad",
-      "sha256": "2198ec672df2537997249ddbdebf78a6c48a3b154e23579128b9b6fc34cf591c",
-      "size": 3281,
-      "before": "100ed86df4c956c20bf63b9ea67700e10a3c033f",
-      "after": "6a1186a6ae0f15ea4a3f91b355026019e5c171ad"
+      "path": "src/main/resources/assets/uwudimension/sounds/uwuzi/thaw.ogg",
+      "before": null,
+      "after": "f83648035e40f6736b24730661e83033766f29a8",
+      "sha256": "d630b4708a2c6958dfe0f68669cfb5233c65fff38f303c2a452216c7323728b0",
+      "handoff": "uwuzi"
     },
     {
-      "path": "src/main/resources/assets/uwudimension/textures/item/animated/counter_netherite_katana_glint.png",
-      "old": "d22dd11b2c394ca347499c75195ea61598c0ebb1",
-      "new": "ea3ef71144bf0d634408d4cc560142648e82180c",
-      "added": false,
-      "base_sha": "d22dd11b2c394ca347499c75195ea61598c0ebb1",
-      "candidate_sha": "ea3ef71144bf0d634408d4cc560142648e82180c",
-      "sha256": "5cfe26f9233aae6dd088f3dd85f14dbb5105e36e6e73117c781053c44ecaeba0",
-      "size": 3064,
-      "before": "d22dd11b2c394ca347499c75195ea61598c0ebb1",
-      "after": "ea3ef71144bf0d634408d4cc560142648e82180c"
+      "path": "src/main/resources/assets/uwudimension/textures/item/uwuzi_inventory.png",
+      "before": null,
+      "after": "c725089068e77ff2643b0025ef38398285364cd8",
+      "sha256": "69462ef5424ec1a8ae001189ca073730f0663cd0d437b47378e11afb387c30d7",
+      "handoff": "uwuzi"
     },
     {
-      "path": "src/main/resources/assets/uwudimension/textures/item/animated/counter_netherite_rapier_glint.png",
-      "old": "bce349825dc6032a5477b7e42d22f3e0e34341ea",
-      "new": "1c1eff38d4fa50d1418557eefca89bacec99033e",
-      "added": false,
-      "base_sha": "bce349825dc6032a5477b7e42d22f3e0e34341ea",
-      "candidate_sha": "1c1eff38d4fa50d1418557eefca89bacec99033e",
-      "sha256": "7a28b6762121abb181e41f910ffde97d7894491385d39869f1456adfedd22bfa",
-      "size": 3967,
-      "before": "bce349825dc6032a5477b7e42d22f3e0e34341ea",
-      "after": "1c1eff38d4fa50d1418557eefca89bacec99033e"
+      "path": "src/main/resources/data/uwudimension/advancement/activities/pantry/chowder.json",
+      "before": null,
+      "after": "226029d22b604bde9ed5b43b7eab4b1749acbd2a",
+      "sha256": "7d28412e4f983b6bd59a50f7312a697468fb12bc86a225cf1db46ee08114b19e",
+      "handoff": "breakfast"
     },
     {
-      "path": "src/main/resources/assets/uwudimension/textures/item/animated/counter_netherite_sai_glint.png",
-      "old": "e351ffea16114f6886848a448221c96d3008fa31",
-      "new": "4577ec0d42a7eb03a3eefeae4eb2798ccbc4d084",
-      "added": false,
-      "base_sha": "e351ffea16114f6886848a448221c96d3008fa31",
-      "candidate_sha": "4577ec0d42a7eb03a3eefeae4eb2798ccbc4d084",
-      "sha256": "9c558b0e6478e916648c908059bb5fc08997a4a1e0ad73d4a8eb493994a4fab1",
-      "size": 3431,
-      "before": "e351ffea16114f6886848a448221c96d3008fa31",
-      "after": "4577ec0d42a7eb03a3eefeae4eb2798ccbc4d084"
+      "path": "src/main/resources/data/uwudimension/advancement/activities/pantry/galette.json",
+      "before": null,
+      "after": "a8afb243fc054751c5f23568021c19143126d6b8",
+      "sha256": "d76b621bb19bd2705e75a605a083b348378c3ee3ac918472f23af71374aa7374",
+      "handoff": "breakfast"
     },
     {
-      "path": "src/main/resources/assets/uwudimension/textures/item/animated/counter_netherite_twinblade_glint.png",
-      "old": "c9ddba34b995382e783ea0bea933387c260fbcf9",
-      "new": "7c6075a1a3cc2400e2653daf5a7450640a82fac3",
-      "added": false,
-      "base_sha": "c9ddba34b995382e783ea0bea933387c260fbcf9",
-      "candidate_sha": "7c6075a1a3cc2400e2653daf5a7450640a82fac3",
-      "sha256": "12befbcec47e20f72849d8d1a326c897b6b48b6c787bb684906f70e3b38377e2",
-      "size": 3192,
-      "before": "c9ddba34b995382e783ea0bea933387c260fbcf9",
-      "after": "7c6075a1a3cc2400e2653daf5a7450640a82fac3"
+      "path": "src/main/resources/data/uwudimension/advancement/activities/pantry/loaf.json",
+      "before": null,
+      "after": "86226abb5c72fd98edc2c177c48dc12059db23e9",
+      "sha256": "23c67012a44f3cf48bcfda5bfb853e20dce3db252f6e89a37e3c91d7087b06ef",
+      "handoff": "breakfast"
     },
     {
-      "path": "src/main/resources/assets/uwudimension/textures/item/animated/counter_runic_katana_glint.png",
-      "old": "e9b575fdf712a22c8d770a485c9547e36b9b1c44",
-      "new": "54d153cd81c72b4775385ee6cf012b76a0bdb0ca",
-      "added": false,
-      "base_sha": "e9b575fdf712a22c8d770a485c9547e36b9b1c44",
-      "candidate_sha": "54d153cd81c72b4775385ee6cf012b76a0bdb0ca",
-      "sha256": "4b88d0ce1c8d528c960f0be42112a665225f267caa99dfc95d42624e997613d2",
-      "size": 3437,
-      "before": "e9b575fdf712a22c8d770a485c9547e36b9b1c44",
-      "after": "54d153cd81c72b4775385ee6cf012b76a0bdb0ca"
+      "path": "src/main/resources/data/uwudimension/advancement/activities/pantry/toaster.json",
+      "before": null,
+      "after": "8afe07d0097a4e144e2f2d37d9713643289b5c59",
+      "sha256": "3cb9b713405cdb2cfc944b9fbd5478b33413562895c071bdbd226b2d64265ce8",
+      "handoff": "breakfast"
     },
     {
-      "path": "src/main/resources/assets/uwudimension/textures/item/animated/counter_runic_rapier_glint.png",
-      "old": "b4cd87c71becf92aebcd0ddb5d3dc298eb473a21",
-      "new": "bd17118b1753d41bcf9cb9514096513b790584c2",
-      "added": false,
-      "base_sha": "b4cd87c71becf92aebcd0ddb5d3dc298eb473a21",
-      "candidate_sha": "bd17118b1753d41bcf9cb9514096513b790584c2",
-      "sha256": "ca4209fe32a064707023a10f6ac73197ced5a1b738fb73b807f9d58c46203bc1",
-      "size": 3455,
-      "before": "b4cd87c71becf92aebcd0ddb5d3dc298eb473a21",
-      "after": "bd17118b1753d41bcf9cb9514096513b790584c2"
+      "path": "src/main/resources/data/uwudimension/advancement/activities/pantry/wrap.json",
+      "before": null,
+      "after": "88f04238884f2a282ec5081cb9a15cf9ed69b2fc",
+      "sha256": "a9a7639bade3f4190551de8c9eafe6fdf57d45e4b5a9efad03e6f96bdf960456",
+      "handoff": "breakfast"
     },
     {
-      "path": "src/main/resources/assets/uwudimension/textures/item/animated/counter_runic_sai_glint.png",
-      "old": "9ba5d0533ac001b98d6258660ba0f557af4c26ea",
-      "new": "db4635750da46c8757883a25901a914a25bd187a",
-      "added": false,
-      "base_sha": "9ba5d0533ac001b98d6258660ba0f557af4c26ea",
-      "candidate_sha": "db4635750da46c8757883a25901a914a25bd187a",
-      "sha256": "e7d250a89270bbf1703c47fe7a17d3496442d6f4364b453396f1729b1a2f67fc",
-      "size": 3411,
-      "before": "9ba5d0533ac001b98d6258660ba0f557af4c26ea",
-      "after": "db4635750da46c8757883a25901a914a25bd187a"
-    },
-    {
-      "path": "src/main/resources/assets/uwudimension/textures/item/animated/counter_runic_twinblade_glint.png",
-      "old": "d855f21b784e2ab5cebaf39ac0ecf70256db8031",
-      "new": "25d7ba6ac324ce43340fc93b650d02ceaa95a5bc",
-      "added": false,
-      "base_sha": "d855f21b784e2ab5cebaf39ac0ecf70256db8031",
-      "candidate_sha": "25d7ba6ac324ce43340fc93b650d02ceaa95a5bc",
-      "sha256": "b297c48f50c4a9113bdbc9fa01fe1f4a00117ccdfaeb3f1311f990f29af64303",
-      "size": 3461,
-      "before": "d855f21b784e2ab5cebaf39ac0ecf70256db8031",
-      "after": "25d7ba6ac324ce43340fc93b650d02ceaa95a5bc"
-    },
-    {
-      "path": "src/main/resources/assets/uwudimension/textures/item/counter_diamond_katana.png",
-      "old": "b65e48620c9aa3f4587793b79c27ca2fcf5f71e2",
-      "new": "088cf537574d389cfc95317fdde50e36bd706328",
-      "added": false,
-      "base_sha": "b65e48620c9aa3f4587793b79c27ca2fcf5f71e2",
-      "candidate_sha": "088cf537574d389cfc95317fdde50e36bd706328",
-      "sha256": "5318ea71262cb001a9f0813938bfb5ee05a78fb2ee967241de3e9cb41ce07c6f",
-      "size": 16661,
-      "before": "b65e48620c9aa3f4587793b79c27ca2fcf5f71e2",
-      "after": "088cf537574d389cfc95317fdde50e36bd706328"
-    },
-    {
-      "path": "src/main/resources/assets/uwudimension/textures/item/counter_diamond_rapier.png",
-      "old": "b65e48620c9aa3f4587793b79c27ca2fcf5f71e2",
-      "new": "c1001603d911489c7e247b3f19f59134015800b5",
-      "added": false,
-      "base_sha": "b65e48620c9aa3f4587793b79c27ca2fcf5f71e2",
-      "candidate_sha": "c1001603d911489c7e247b3f19f59134015800b5",
-      "sha256": "591c119d0ea87d18c9920e3339acbf8affccb508cb437a991ba4c4ed30316613",
-      "size": 17639,
-      "before": "b65e48620c9aa3f4587793b79c27ca2fcf5f71e2",
-      "after": "c1001603d911489c7e247b3f19f59134015800b5"
-    },
-    {
-      "path": "src/main/resources/assets/uwudimension/textures/item/counter_diamond_sai.png",
-      "old": "b65e48620c9aa3f4587793b79c27ca2fcf5f71e2",
-      "new": "d1948c2d4dd547e05f54a036780c34dc6c552f59",
-      "added": false,
-      "base_sha": "b65e48620c9aa3f4587793b79c27ca2fcf5f71e2",
-      "candidate_sha": "d1948c2d4dd547e05f54a036780c34dc6c552f59",
-      "sha256": "005d39748b943da5af3e1b1d28744017ea35dd1b992850f0526d45bb9443c355",
-      "size": 18053,
-      "before": "b65e48620c9aa3f4587793b79c27ca2fcf5f71e2",
-      "after": "d1948c2d4dd547e05f54a036780c34dc6c552f59"
-    },
-    {
-      "path": "src/main/resources/assets/uwudimension/textures/item/counter_diamond_twinblade.png",
-      "old": "b65e48620c9aa3f4587793b79c27ca2fcf5f71e2",
-      "new": "58a94f41c6018c77e5bf2bd13a40899ccaeb0dbb",
-      "added": false,
-      "base_sha": "b65e48620c9aa3f4587793b79c27ca2fcf5f71e2",
-      "candidate_sha": "58a94f41c6018c77e5bf2bd13a40899ccaeb0dbb",
-      "sha256": "37ce20d2ef693827c33e7fedfad3ded70ad0194063c732c2740b3fee0624d62d",
-      "size": 18150,
-      "before": "b65e48620c9aa3f4587793b79c27ca2fcf5f71e2",
-      "after": "58a94f41c6018c77e5bf2bd13a40899ccaeb0dbb"
-    },
-    {
-      "path": "src/main/resources/assets/uwudimension/textures/item/counter_gold_katana.png",
-      "old": "873fe4344c29e382abcccc49b10639bb53117b6b",
-      "new": "0c29198c21a461414be32e8b9fd9e1eb07b21347",
-      "added": false,
-      "base_sha": "873fe4344c29e382abcccc49b10639bb53117b6b",
-      "candidate_sha": "0c29198c21a461414be32e8b9fd9e1eb07b21347",
-      "sha256": "7953dfec5ca6a3d33b77fe08edf7d0cb8d2e7de9f6bb136d88fd8776a40ffe86",
-      "size": 16491,
-      "before": "873fe4344c29e382abcccc49b10639bb53117b6b",
-      "after": "0c29198c21a461414be32e8b9fd9e1eb07b21347"
-    },
-    {
-      "path": "src/main/resources/assets/uwudimension/textures/item/counter_gold_rapier.png",
-      "old": "873fe4344c29e382abcccc49b10639bb53117b6b",
-      "new": "9a2fd1b82ac7ca7795d4ff129b5badab70d1ce7f",
-      "added": false,
-      "base_sha": "873fe4344c29e382abcccc49b10639bb53117b6b",
-      "candidate_sha": "9a2fd1b82ac7ca7795d4ff129b5badab70d1ce7f",
-      "sha256": "0fd3f5fbc6cc472d4a3406d432320f5cf6103f0fcfd58ecd79b1f5eb8e1b0d4c",
-      "size": 17343,
-      "before": "873fe4344c29e382abcccc49b10639bb53117b6b",
-      "after": "9a2fd1b82ac7ca7795d4ff129b5badab70d1ce7f"
-    },
-    {
-      "path": "src/main/resources/assets/uwudimension/textures/item/counter_gold_sai.png",
-      "old": "873fe4344c29e382abcccc49b10639bb53117b6b",
-      "new": "920883a3ee98a20c322b7a9e2292f92ce091fd89",
-      "added": false,
-      "base_sha": "873fe4344c29e382abcccc49b10639bb53117b6b",
-      "candidate_sha": "920883a3ee98a20c322b7a9e2292f92ce091fd89",
-      "sha256": "f9636e60b13acafcfef451edf8e81bea2f2c14a329b85cc7466ac7aab5653571",
-      "size": 17890,
-      "before": "873fe4344c29e382abcccc49b10639bb53117b6b",
-      "after": "920883a3ee98a20c322b7a9e2292f92ce091fd89"
-    },
-    {
-      "path": "src/main/resources/assets/uwudimension/textures/item/counter_gold_twinblade.png",
-      "old": "873fe4344c29e382abcccc49b10639bb53117b6b",
-      "new": "54d71cf77b1916742c9356f990a4f68d1d895f40",
-      "added": false,
-      "base_sha": "873fe4344c29e382abcccc49b10639bb53117b6b",
-      "candidate_sha": "54d71cf77b1916742c9356f990a4f68d1d895f40",
-      "sha256": "140f318093a441d01f12835a1091b18ccc346478314800d298972e238d29d115",
-      "size": 18058,
-      "before": "873fe4344c29e382abcccc49b10639bb53117b6b",
-      "after": "54d71cf77b1916742c9356f990a4f68d1d895f40"
-    },
-    {
-      "path": "src/main/resources/assets/uwudimension/textures/item/counter_iron_katana.png",
-      "old": "b7b82c5723daadf7953e8e64011893a519c4a6d6",
-      "new": "8337b33e89c2aa1941285d550da918f3329ce0dc",
-      "added": false,
-      "base_sha": "b7b82c5723daadf7953e8e64011893a519c4a6d6",
-      "candidate_sha": "8337b33e89c2aa1941285d550da918f3329ce0dc",
-      "sha256": "fbd99795ef370bd2a4d03356333210833f7cb5404de8936e84605678d7c5b801",
-      "size": 19819,
-      "before": "b7b82c5723daadf7953e8e64011893a519c4a6d6",
-      "after": "8337b33e89c2aa1941285d550da918f3329ce0dc"
-    },
-    {
-      "path": "src/main/resources/assets/uwudimension/textures/item/counter_iron_rapier.png",
-      "old": "9f0e209ef8cb2a43d820edec925261aad9801dc3",
-      "new": "0f863692ebfab750f73dbd8fcb7362cda51d6c0e",
-      "added": false,
-      "base_sha": "9f0e209ef8cb2a43d820edec925261aad9801dc3",
-      "candidate_sha": "0f863692ebfab750f73dbd8fcb7362cda51d6c0e",
-      "sha256": "1591c496600e472c00e82adf89a7a4ffedfef94d515451f61a6d7ac1e06b6ffb",
-      "size": 17521,
-      "before": "9f0e209ef8cb2a43d820edec925261aad9801dc3",
-      "after": "0f863692ebfab750f73dbd8fcb7362cda51d6c0e"
-    },
-    {
-      "path": "src/main/resources/assets/uwudimension/textures/item/counter_iron_sai.png",
-      "old": "b7b82c5723daadf7953e8e64011893a519c4a6d6",
-      "new": "1401664c551a70b66bf18b0c093a49d6f452c61f",
-      "added": false,
-      "base_sha": "b7b82c5723daadf7953e8e64011893a519c4a6d6",
-      "candidate_sha": "1401664c551a70b66bf18b0c093a49d6f452c61f",
-      "sha256": "b32b2051684125d384a0e80b4c63bb7849b4239e7e91b1400a22eb42c1824b13",
-      "size": 17871,
-      "before": "b7b82c5723daadf7953e8e64011893a519c4a6d6",
-      "after": "1401664c551a70b66bf18b0c093a49d6f452c61f"
-    },
-    {
-      "path": "src/main/resources/assets/uwudimension/textures/item/counter_iron_twinblade.png",
-      "old": "53502e82af527d89c9760639ed65f28aa7ddb98e",
-      "new": "f9aa82fcb2bef709a775cf2e6ca5e35496234b13",
-      "added": false,
-      "base_sha": "53502e82af527d89c9760639ed65f28aa7ddb98e",
-      "candidate_sha": "f9aa82fcb2bef709a775cf2e6ca5e35496234b13",
-      "sha256": "4637ad94a981b30a79ffb8c26232f895773035c60e8cbf8db09e90962e77e9f2",
-      "size": 18581,
-      "before": "53502e82af527d89c9760639ed65f28aa7ddb98e",
-      "after": "f9aa82fcb2bef709a775cf2e6ca5e35496234b13"
-    },
-    {
-      "path": "src/main/resources/assets/uwudimension/textures/item/counter_netherite_katana.png",
-      "old": "9896255a4ea3b7c42d1d7eaab9bf2f2b13769526",
-      "new": "474e18e5a943c1c9404f39a582bf311197b5d5f4",
-      "added": false,
-      "base_sha": "9896255a4ea3b7c42d1d7eaab9bf2f2b13769526",
-      "candidate_sha": "474e18e5a943c1c9404f39a582bf311197b5d5f4",
-      "sha256": "fbfd6c377598d7c27980e72740ff82d9e6903c095d859c9de03611e1ff48361c",
-      "size": 16321,
-      "before": "9896255a4ea3b7c42d1d7eaab9bf2f2b13769526",
-      "after": "474e18e5a943c1c9404f39a582bf311197b5d5f4"
-    },
-    {
-      "path": "src/main/resources/assets/uwudimension/textures/item/counter_netherite_rapier.png",
-      "old": "9896255a4ea3b7c42d1d7eaab9bf2f2b13769526",
-      "new": "3a06ce62a49173e03fed24dc57605ce055aed7d1",
-      "added": false,
-      "base_sha": "9896255a4ea3b7c42d1d7eaab9bf2f2b13769526",
-      "candidate_sha": "3a06ce62a49173e03fed24dc57605ce055aed7d1",
-      "sha256": "07e5cf939a9466cc94b12936ea93867aee2075215e634ac822ec8c7d82540a59",
-      "size": 17205,
-      "before": "9896255a4ea3b7c42d1d7eaab9bf2f2b13769526",
-      "after": "3a06ce62a49173e03fed24dc57605ce055aed7d1"
-    },
-    {
-      "path": "src/main/resources/assets/uwudimension/textures/item/counter_netherite_sai.png",
-      "old": "9896255a4ea3b7c42d1d7eaab9bf2f2b13769526",
-      "new": "15f558dee689378d8d6f07a27a9bd5c52c6bfb7e",
-      "added": false,
-      "base_sha": "9896255a4ea3b7c42d1d7eaab9bf2f2b13769526",
-      "candidate_sha": "15f558dee689378d8d6f07a27a9bd5c52c6bfb7e",
-      "sha256": "507c1c48bbdc916d7494ce23942ee89f471e11effa2ed23d92a61e037fcc573c",
-      "size": 17764,
-      "before": "9896255a4ea3b7c42d1d7eaab9bf2f2b13769526",
-      "after": "15f558dee689378d8d6f07a27a9bd5c52c6bfb7e"
-    },
-    {
-      "path": "src/main/resources/assets/uwudimension/textures/item/counter_netherite_twinblade.png",
-      "old": "9896255a4ea3b7c42d1d7eaab9bf2f2b13769526",
-      "new": "d016abfb32a9a551ae3156f14949d8b359b361c4",
-      "added": false,
-      "base_sha": "9896255a4ea3b7c42d1d7eaab9bf2f2b13769526",
-      "candidate_sha": "d016abfb32a9a551ae3156f14949d8b359b361c4",
-      "sha256": "f5651260ca5e7a5b3d860064275ea77f7c2e7722bfaf24e98cc03c18568729c1",
-      "size": 17741,
-      "before": "9896255a4ea3b7c42d1d7eaab9bf2f2b13769526",
-      "after": "d016abfb32a9a551ae3156f14949d8b359b361c4"
-    },
-    {
-      "path": "src/main/resources/assets/uwudimension/textures/item/counter_runic_katana.png",
-      "old": "b09de1f29eb5b6c10b18cecdb760222fa0a7b13f",
-      "new": "91661e4a65dabba28c7f3cced38885352a3cc846",
-      "added": false,
-      "base_sha": "b09de1f29eb5b6c10b18cecdb760222fa0a7b13f",
-      "candidate_sha": "91661e4a65dabba28c7f3cced38885352a3cc846",
-      "sha256": "d2dd09c8c5d50341d873268539eeaa89204b8ec1316d3b5a952c6577fb171fd8",
-      "size": 16588,
-      "before": "b09de1f29eb5b6c10b18cecdb760222fa0a7b13f",
-      "after": "91661e4a65dabba28c7f3cced38885352a3cc846"
-    },
-    {
-      "path": "src/main/resources/assets/uwudimension/textures/item/counter_runic_rapier.png",
-      "old": "ba1011f1ba21478cc96f0d24140794be9afea919",
-      "new": "aa585bf4568a57ef022f3d746e4055d6276454ac",
-      "added": false,
-      "base_sha": "ba1011f1ba21478cc96f0d24140794be9afea919",
-      "candidate_sha": "aa585bf4568a57ef022f3d746e4055d6276454ac",
-      "sha256": "9817045ac92d640eae84c61125165c6c5077c927524d08a638eb6e253ad9af86",
-      "size": 17369,
-      "before": "ba1011f1ba21478cc96f0d24140794be9afea919",
-      "after": "aa585bf4568a57ef022f3d746e4055d6276454ac"
-    },
-    {
-      "path": "src/main/resources/assets/uwudimension/textures/item/counter_runic_sai.png",
-      "old": "b09de1f29eb5b6c10b18cecdb760222fa0a7b13f",
-      "new": "385eb456d82f58f63f4dce49b9e349737e3c24bf",
-      "added": false,
-      "base_sha": "b09de1f29eb5b6c10b18cecdb760222fa0a7b13f",
-      "candidate_sha": "385eb456d82f58f63f4dce49b9e349737e3c24bf",
-      "sha256": "c06529880dbf5376dc863bd132a941e93ce1ade66fd47c86145c38f73941bad6",
-      "size": 17856,
-      "before": "b09de1f29eb5b6c10b18cecdb760222fa0a7b13f",
-      "after": "385eb456d82f58f63f4dce49b9e349737e3c24bf"
-    },
-    {
-      "path": "src/main/resources/assets/uwudimension/textures/item/counter_runic_twinblade.png",
-      "old": "34c80df02db6627d9c91f2707108bc08f6b0aa25",
-      "new": "3f6bfd770de55dc92652b52061dbd1244b60144c",
-      "added": false,
-      "base_sha": "34c80df02db6627d9c91f2707108bc08f6b0aa25",
-      "candidate_sha": "3f6bfd770de55dc92652b52061dbd1244b60144c",
-      "sha256": "f98a4deed95a5b0d9a8762c3dfc43ece0e7e076fc6f1def4e9793f84521826b9",
-      "size": 18090,
-      "before": "34c80df02db6627d9c91f2707108bc08f6b0aa25",
-      "after": "3f6bfd770de55dc92652b52061dbd1244b60144c"
+      "path": "src/main/resources/uwudimension.mixins.json",
+      "before": "36ecb752f750f3d362d83fd680cb3b916b205986",
+      "after": "f6b719048a87478f5d45944a8f3f4a6cd449e5d0",
+      "sha256": "b02bb8f6f6c606fd1aa9434d305d9e18daab6e765c52b16fe068d822d3dd32a4",
+      "handoff": "uwuzi"
     }
   ],
-  "display_checks": [
-    {
-      "path": "src/main/resources/assets/uwudimension/models/item/counter_diamond_katana.json",
-      "all_display_equal": true
-    },
-    {
-      "path": "src/main/resources/assets/uwudimension/models/item/counter_diamond_rapier.json",
-      "all_display_equal": true
-    },
-    {
-      "path": "src/main/resources/assets/uwudimension/models/item/counter_diamond_sai.json",
-      "all_display_equal": true
-    },
-    {
-      "path": "src/main/resources/assets/uwudimension/models/item/counter_diamond_twinblade.json",
-      "all_display_equal": true
-    },
-    {
-      "path": "src/main/resources/assets/uwudimension/models/item/counter_gold_katana.json",
-      "all_display_equal": true
-    },
-    {
-      "path": "src/main/resources/assets/uwudimension/models/item/counter_gold_rapier.json",
-      "all_display_equal": true
-    },
-    {
-      "path": "src/main/resources/assets/uwudimension/models/item/counter_gold_sai.json",
-      "all_display_equal": true
-    },
-    {
-      "path": "src/main/resources/assets/uwudimension/models/item/counter_gold_twinblade.json",
-      "all_display_equal": true
-    },
-    {
-      "path": "src/main/resources/assets/uwudimension/models/item/counter_iron_katana.json",
-      "all_display_equal": true
-    },
-    {
-      "path": "src/main/resources/assets/uwudimension/models/item/counter_iron_rapier.json",
-      "all_display_equal": true
-    },
-    {
-      "path": "src/main/resources/assets/uwudimension/models/item/counter_iron_sai.json",
-      "all_display_equal": true
-    },
-    {
-      "path": "src/main/resources/assets/uwudimension/models/item/counter_iron_twinblade.json",
-      "all_display_equal": true
-    },
-    {
-      "path": "src/main/resources/assets/uwudimension/models/item/counter_netherite_katana.json",
-      "all_display_equal": true
-    },
-    {
-      "path": "src/main/resources/assets/uwudimension/models/item/counter_netherite_rapier.json",
-      "all_display_equal": true
-    },
-    {
-      "path": "src/main/resources/assets/uwudimension/models/item/counter_netherite_sai.json",
-      "all_display_equal": true
-    },
-    {
-      "path": "src/main/resources/assets/uwudimension/models/item/counter_netherite_twinblade.json",
-      "all_display_equal": true
-    },
-    {
-      "path": "src/main/resources/assets/uwudimension/models/item/counter_runic_katana.json",
-      "all_display_equal": true
-    },
-    {
-      "path": "src/main/resources/assets/uwudimension/models/item/counter_runic_rapier.json",
-      "all_display_equal": true
-    },
-    {
-      "path": "src/main/resources/assets/uwudimension/models/item/counter_runic_sai.json",
-      "all_display_equal": true
-    },
-    {
-      "path": "src/main/resources/assets/uwudimension/models/item/counter_runic_twinblade.json",
-      "all_display_equal": true
+  "public_audio_authorization": {
+    "repository": "WeepingAngeIs/z-UwU_dm",
+    "scope": "Exactly three derived UwUzi game cues and this test candidate; no original MP3 or unrelated private files; no release or main merge",
+    "cues": {
+      "src/main/resources/assets/uwudimension/sounds/uwuzi/opening.ogg": "137a9585b99d8e6572a3e40c426a771651f9ea5adea292f35d4c9335755bf71e",
+      "src/main/resources/assets/uwudimension/sounds/uwuzi/clock_loop.ogg": "f16f7e3657657645ad4e4fd4c4c67b084ccc116c399914b8710a91831de83f66",
+      "src/main/resources/assets/uwudimension/sounds/uwuzi/thaw.ogg": "d630b4708a2c6958dfe0f68669cfb5233c65fff38f303c2a452216c7323728b0"
     }
-  ]
+  }
 }

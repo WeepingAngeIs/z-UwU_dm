@@ -1,4 +1,4 @@
-name: Combined approved UwU candidate and native acceptance
+name: Combined UwUzi, breakfast and Velvetguard acceptance
 on:
   push:
     branches: ['codex/combined-approved-20261123']
@@ -23,7 +23,7 @@ jobs:
         with: {persist-credentials: false, fetch-depth: 0}
       - uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880
         with: {distribution: temurin, java-version: '21'}
-      - name: Verify the approved base, ZIP manifest and exact product scope
+      - name: Verify the tested base, three handoffs and exact combined scope
         run: python3 combined-check/verify-source.py
       - name: Select initial build or immutable candidate reuse
         id: mode
@@ -52,7 +52,7 @@ jobs:
         with:
           name: uwu-combined-candidate-${{ github.sha }}
           path: build/combined-candidate/
-          retention-days: 14
+          retention-days: 7
           compression-level: 0
           if-no-files-found: error
       - name: Record exact candidate identity
@@ -61,7 +61,7 @@ jobs:
           CANDIDATE_SOURCE: ${{ steps.seal.outputs.source_commit }}
           CANDIDATE_URL: ${{ steps.candidate.outputs.artifact-url }}
         run: |
-          printf 'Candidate source: `%s`\n\nJAR SHA-256: `%s`\n\nArtifact: %s\n\nAcceptance results are reported by the independent gameplay, visual and village jobs.\n' "$CANDIDATE_SOURCE" "$CANDIDATE_HASH" "$CANDIDATE_URL" >> "$GITHUB_STEP_SUMMARY"
+          printf 'Candidate source: `%s`\n\nJAR SHA-256: `%s`\n\nArtifact: %s\n\nAcceptance results are reported by the gameplay, visual, village, UwUzi and breakfast jobs.\n' "$CANDIDATE_SOURCE" "$CANDIDATE_HASH" "$CANDIDATE_URL" >> "$GITHUB_STEP_SUMMARY"
   client:
     needs: package
     runs-on: ubuntu-24.04
@@ -103,7 +103,7 @@ jobs:
             build/combined-evidence/${{ matrix.mode }}/
             build/combined-candidate/BUILD_PROVENANCE.json
             build/combined-candidate/SHA256SUMS.txt
-          retention-days: 14
+          retention-days: 7
           compression-level: 1
           if-no-files-found: warn
   village:
@@ -145,6 +145,84 @@ jobs:
             build/combined-evidence/village-${{ matrix.seed }}/
             build/combined-candidate/BUILD_PROVENANCE.json
             build/combined-candidate/SHA256SUMS.txt
-          retention-days: 14
+          retention-days: 7
+          compression-level: 1
+          if-no-files-found: warn
+
+  pocket:
+    needs: package
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix: {side: [client, server]}
+
+    env:
+      UWU_EXPECTED_JAR_SHA256: ${{ needs.package.outputs.hash }}
+      UWU_JAR: ${{ github.workspace }}/build/combined-candidate/${{ needs.package.outputs.jar_filename }}
+      POCKET_SIDE: ${{ matrix.side }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with: {persist-credentials: false}
+      - uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880
+        with: {distribution: temurin, java-version: '21'}
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
+        with:
+          name: uwu-combined-candidate-${{ github.sha }}
+          path: build/combined-candidate
+          digest-mismatch: error
+      - name: Verify the sealed combined candidate
+        run: python3 combined-check/candidate.py check
+      - name: Exercise embedded cues, zone boundaries, duration and both UwUzi variants
+        run: bash combined-check/run-pocket.sh
+      - name: Recheck candidate bytes after acceptance
+        if: always()
+        run: python3 combined-check/candidate.py check
+      - if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: uwu-combined-pocket-${{ matrix.side }}-${{ github.sha }}
+          path: |
+            build/combined-evidence/pocket-${{ matrix.side }}/
+            build/combined-candidate/BUILD_PROVENANCE.json
+            build/combined-candidate/SHA256SUMS.txt
+          retention-days: 7
+          compression-level: 1
+          if-no-files-found: warn
+
+  breakfast:
+    needs: package
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+
+    env:
+      UWU_EXPECTED_JAR_SHA256: ${{ needs.package.outputs.hash }}
+      UWU_JAR: ${{ github.workspace }}/build/combined-candidate/${{ needs.package.outputs.jar_filename }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with: {persist-credentials: false}
+      - uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880
+        with: {distribution: temurin, java-version: '21'}
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
+        with:
+          name: uwu-combined-candidate-${{ github.sha }}
+          path: build/combined-candidate
+          digest-mismatch: error
+      - name: Verify the sealed combined candidate
+        run: python3 combined-check/candidate.py check
+      - name: Exercise original loaf and independent empty-toaster advancement paths
+        run: bash combined-check/run-breakfast.sh
+      - name: Recheck candidate bytes after acceptance
+        if: always()
+        run: python3 combined-check/candidate.py check
+      - if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: uwu-combined-breakfast-${{ github.sha }}
+          path: |
+            build/combined-evidence/breakfast/
+            build/combined-candidate/BUILD_PROVENANCE.json
+            build/combined-candidate/SHA256SUMS.txt
+          retention-days: 7
           compression-level: 1
           if-no-files-found: warn

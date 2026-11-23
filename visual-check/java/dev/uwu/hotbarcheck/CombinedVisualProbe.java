@@ -98,7 +98,7 @@ public final class CombinedVisualProbe {
     private static final List<Map<String, Object>> FRAMES = new ArrayList<>();
     private static final List<Map<String, Object>> EXCEPTIONS = new ArrayList<>();
     private static final Map<String, Object> MODELS = new LinkedHashMap<>();
-    private static boolean opening, prepared, done, active, equipped, drawing, saved;
+    private static boolean opening, prepared, done, active, equipped, drawing, saved, motionStarted;
     private static int index, requestedAt, settledAt, retries, frameNumber, requestedFrame;
     private static long startedNanos;
     private static volatile int serverAck = -1;
@@ -187,7 +187,14 @@ public final class CombinedVisualProbe {
                 begin(client);
                 return;
             }
-            if (index == TRIALS.size()) { finish(client); return; }
+            if (index == TRIALS.size()) {
+                if (!motionStarted) {
+                    motionStarted = true;
+                    CombinedChakramMotion.start(client, OUT);
+                }
+                if (CombinedChakramMotion.tick(client)) finish(client);
+                return;
+            }
             Trial trial = TRIALS.get(index);
             var player = client.player;
             require(player.tickCount - requestedAt < 260, "Visual trial timed out " + trial.label()
@@ -289,7 +296,13 @@ public final class CombinedVisualProbe {
 
     private static void frame(RenderFrameEvent.Post event) {
         frameNumber++;
-        if (!active || done || !prepared || !equipped || saved || index >= TRIALS.size()) return;
+        if (!active || done || !prepared) return;
+        if (motionStarted) {
+            try { CombinedChakramMotion.frame(Minecraft.getInstance()); }
+            catch (Throwable failure) { fail(Minecraft.getInstance(), failure); }
+            return;
+        }
+        if (!equipped || saved || index >= TRIALS.size()) return;
         var client = Minecraft.getInstance();
         try {
             Trial trial = TRIALS.get(index);
@@ -324,6 +337,8 @@ public final class CombinedVisualProbe {
             Files.createDirectories(OUT.resolve("screenshots"));
             String name = String.format("%03d-%s.png", index, trial.label());
             try (NativeImage pixels = Screenshot.takeScreenshot(client.getMainRenderTarget())) {
+                require(pixels.getWidth() == 1280 && pixels.getHeight() == 720,
+                        "Native comparison requires actual 1280x720 pixels");
                 pixels.writeToFile(OUT.resolve("screenshots").resolve(name));
             }
             var record = new LinkedHashMap<String, Object>();
@@ -385,11 +400,14 @@ public final class CombinedVisualProbe {
             require(FRAMES.stream().anyMatch(frame -> look.label().equals(frame.get("look"))
                             && requiredView.equals(frame.get("view")) && "REST".equals(frame.get("pose"))),
                     "Required main-hand view was not captured: " + look.label() + " " + requiredView);
+        require(motionStarted && CombinedChakramMotion.successful(),
+                "Native motion contains unverified trials; inspect motion/motion-results.json");
         writeManifest(true, null);
         done = true;
         System.out.println("COMBINED VISUAL CAPTURES PASS native_views=" + FRAMES.size()
                 + " intentional_offhand_exceptions=" + EXCEPTIONS.size()
-                + " chakrams=20 bow_looks=2 all_supported_bow_draw_poses=true missing_models=0 missing_textures=0");
+                + " chakrams=20 bow_looks=2 all_supported_bow_draw_poses=true missing_models=0 missing_textures=0"
+                + " native_motion=" + CombinedChakramMotion.summary());
         System.out.println("COMBINED VISUAL REVIEW REQUIRED inspect retained pixels for grip, orientation, bow curvature, clipping and flicker; capture completion is not an artistic acceptance verdict");
         client.stop();
     }
@@ -403,12 +421,15 @@ public final class CombinedVisualProbe {
         document.put("nativeScreenshotFrames", FRAMES);
         document.put("intentionalOffhandExceptions", EXCEPTIONS);
         document.put("bakedModels", MODELS);
+        document.put("motionEvidence", "motion/motion-results.json");
+        document.put("motionSummary", CombinedChakramMotion.summary());
         document.put("captureMethod", "Screenshot.takeScreenshot on the unmodified Minecraft main render target, after the native world, held-item and HUD render");
         document.put("closeViewMethod", "Native third-person camera with FOV 35 versus normal FOV 70; camera distance is unchanged");
         document.put("remainingManualChecks", List.of("all twenty chakram silhouettes and grip against the approved art",
                 "both Cupid Bow hotbar curves point upper left at rest and in every draw pose",
                 "visible clipping/intersections and flicker between the small native camera nudges",
-                "motion/throw transitions beyond the retained resting chakram views"));
+                "first-person crop in the retained native attack, throw, catch and return frames",
+                "unrecorded poses and continuous flicker outside the retained native frame samples"));
         if (failure != null) document.put("failure", failure.toString());
         Files.writeString(OUT.resolve("visual-captures.json"), new GsonBuilder().setPrettyPrinting().create().toJson(document));
     }
@@ -417,6 +438,7 @@ public final class CombinedVisualProbe {
         if (done) return;
         done = true;
         release(client);
+        CombinedChakramMotion.abort(client, failure);
         System.err.println("COMBINED VISUAL FAILED " + failure);
         failure.printStackTrace();
         try { writeManifest(false, failure); } catch (Throwable secondary) { secondary.printStackTrace(); }

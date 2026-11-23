@@ -1,0 +1,22 @@
+gradle.beforeProject { project ->
+    project.plugins.withId('net.neoforged.moddev') {
+        def path = System.getenv('UWU_JAR')?.trim()
+        def hash = System.getenv('UWU_EXPECTED_JAR_SHA256')?.trim()
+        if (!path || !hash?.matches('(?i)[0-9a-f]{64}') || !project.file(path).isFile())
+            throw new org.gradle.api.GradleException('Breakfast QA requires sealed UWU_JAR and UWU_EXPECTED_JAR_SHA256')
+        def probe = project.sourceSets.create('breakfastCheck')
+        probe.java.srcDirs = [project.file('breakfast-check/java')]
+        probe.resources.srcDirs = [project.file('breakfast-check/resources')]
+        // The observer links only the shipped candidate, never main.output/classes.
+        probe.compileClasspath += project.sourceSets.main.compileClasspath + project.files(project.file(path).canonicalFile)
+        project.tasks.register('breakfastProbeJar', Jar) {
+            archiveFileName.set('breakfast-probe.jar')
+            destinationDirectory.set(project.layout.buildDirectory.dir('breakfast-check'))
+            from(probe.output)
+        }
+    }
+}
+gradle.taskGraph.whenReady { graph ->
+    def prohibited = graph.allTasks.findAll { it.path in [':compileJava', ':processResources', ':classes', ':jar'] }
+    if (!prohibited.isEmpty()) throw new org.gradle.api.GradleException('Breakfast QA must not compile product: ' + prohibited)
+}

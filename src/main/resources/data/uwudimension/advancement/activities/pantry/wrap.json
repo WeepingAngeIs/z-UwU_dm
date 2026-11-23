@@ -1,0 +1,33 @@
+{
+  "parent": "uwudimension:a_rather_pretty_place",
+  "display": {
+    "icon": {
+      "id": "uwudimension:dewleaf_picnic_wrap"
+    },
+    "title": {
+      "translate": "advancements.uwudimension.activities.pantry/wrap.title"
+    },
+    "description": {
+      "translate": "advancements.uwudimension.activities.pantry/wrap.description"
+    },
+    "frame": "task",
+    "show_toast": true,
+    "announce_to_chat": false,
+    "hidden": false
+  },
+  "criteria": {
+    "done": {
+      "trigger": "minecraft:consume_item",
+      "conditions": {
+        "item": {
+          "items": "uwudimension:dewleaf_picnic_wrap"
+        }
+      }
+    }
+  },
+  "requirements": [
+    [
+      "done"
+    ]
+  ]
+}

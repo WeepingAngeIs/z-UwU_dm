@@ -1,0 +1,10 @@
+modLoader="javafml"
+loaderVersion="[4,)"
+license="All Rights Reserved"
+[[mods]]
+modId="uwu_pocket_check"
+version="1"
+displayName="Disposable regional time pocket check"
+[[mixins]]
+config="uwu_pocket_check.mixins.json"
+

@@ -1,4 +1,42 @@
 {
+  "uwuzi_opening": {
+    "subtitle": "subtitles.uwudimension.uwuzi_opening",
+    "sounds": [
+      {
+        "name": "uwudimension:uwuzi/opening",
+        "stream": false,
+        "preload": true
+      }
+    ]
+  },
+  "uwuzi_clock_loop": {
+    "subtitle": "subtitles.uwudimension.uwuzi_clock_loop",
+    "sounds": [
+      {
+        "name": "uwudimension:uwuzi/clock_loop",
+        "stream": false,
+        "preload": true
+      }
+    ]
+  },
+  "uwuzi_thaw": {
+    "subtitle": "subtitles.uwudimension.uwuzi_thaw",
+    "sounds": [
+      {
+        "name": "uwudimension:uwuzi/thaw",
+        "stream": false,
+        "preload": true
+      }
+    ]
+  },
+  "pocket_tick": {
+    "subtitle": "subtitles.uwudimension.pocket_clock",
+    "sounds": ["uwudimension:pocket_tick"]
+  },
+  "pocket_tock": {
+    "subtitle": "subtitles.uwudimension.pocket_clock",
+    "sounds": ["uwudimension:pocket_tock"]
+  },
   "dusk_chest_open": {
     "subtitle": "subtitles.uwudimension.dusk_chest_open",
     "sounds": [

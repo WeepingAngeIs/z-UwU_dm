@@ -1,0 +1,51 @@
+gradle.beforeProject { project ->
+    project.plugins.withId('net.neoforged.moddev') {
+        def path = System.getenv('UWU_JAR')?.trim()
+        def hash = System.getenv('UWU_EXPECTED_JAR_SHA256')?.trim()
+        if (!path || !(hash ==~ /[0-9a-f]{64}/)) {
+            throw new GradleException('A packaged time-pocket candidate and checksum are required')
+        }
+        def candidate = project.file(path).canonicalFile
+        if (!candidate.isFile()) throw new GradleException('Missing sealed candidate JAR')
+        if (System.getenv('UWUZI_PRIVATE_PACK')) throw new GradleException('Only the three embedded approved cues are allowed')
+        def mode = System.getenv('POCKET_SIDE')
+        if (!(mode in ['client', 'server'])) throw new GradleException('POCKET_SIDE must be client or server')
+        def probe = project.sourceSets.create('timePocketCheck')
+        probe.java.srcDirs = [project.file('time-pocket-check/java')]
+        probe.java.include('dev/uwu/pocketcheck/**')
+        probe.resources.srcDirs = [project.file('time-pocket-check/resources')]
+        // Dependencies and the sealed binary only. Never add main.output to a QA source set.
+        probe.compileClasspath += project.sourceSets.main.compileClasspath + project.files(candidate)
+        project.configurations.getByName(probe.runtimeClasspathConfigurationName)
+                .extendsFrom(project.configurations.getByName(project.sourceSets.main.runtimeClasspathConfigurationName))
+        project.dependencies.add(probe.runtimeOnlyConfigurationName, project.files(candidate))
+        project.dependencies.add(probe.runtimeOnlyConfigurationName, project.fileTree('build/combined-deps') { include '*.jar' })
+        def fixture = project.neoForge.mods.create('uwu_pocket_check') { sourceSet(probe) }
+        project.neoForge.runs.create('pocketCheck') {
+            if (mode == 'client') {
+                client()
+                programArgument('--width')
+                programArgument('896')
+                programArgument('--height')
+                programArgument('504')
+            } else {
+                server()
+                programArgument('--nogui')
+            }
+            sourceSet = probe
+            loadedMods = [fixture]
+            gameDirectory = project.file('build/pocket-' + mode)
+            jvmArgument('-Xmx4G')
+            jvmArgument('-Duwu.check.candidateJar=' + candidate.absolutePath)
+            jvmArgument('-Duwu.check.candidateSha256=' + hash)
+            jvmArgument('-Duwu.pocket.evidence=' + project.file('build/combined-evidence/pocket-' + mode).absolutePath)
+            jvmArgument('-Duwu.pocket.stage=' + (System.getenv('POCKET_RUN_STAGE') ?: 'client'))
+            jvmArgument('-Duwu.pocket.embeddedAudio=true')
+        }
+    }
+}
+gradle.taskGraph.whenReady { graph ->
+    def prohibited = graph.allTasks.findAll { it.path in [':compileJava', ':processResources', ':classes', ':jar'] }
+    if (!prohibited.isEmpty()) throw new GradleException('QA must not compile product: ' + prohibited)
+}
+

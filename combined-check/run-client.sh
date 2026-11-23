@@ -58,6 +58,7 @@ timeout --kill-after=20s 25m xvfb-run -a -s '-screen 0 1280x720x24' \
 grep -F 'UWU WEAPONS PACKAGED CANDIDATE PASS' "$uwu_out/client.log"
 case "$UWU_COMBINED_MODE" in
     gameplay) grep -F 'COMBINED GAMEPLAY PASS' "$uwu_out/client.log" ;;
-    visuals) grep -F 'COMBINED VISUAL CAPTURES PASS' "$uwu_out/client.log" ;;
+    visuals) grep -F 'COMBINED VISUAL CAPTURES PASS' "$uwu_out/client.log"
+             grep -F 'COMBINED VISUAL MOTION PASS' "$uwu_out/client.log" ;;
 esac
 printf '%s  %s\n' "$UWU_EXPECTED_JAR_SHA256" "$UWU_JAR" | sha256sum --check
