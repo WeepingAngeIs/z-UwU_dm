@@ -558,10 +558,14 @@ public final class HotbarProbe {
         });
         waitFor("client fixture synchronized " + name, 100, 6, client -> {
             var held = client.player.getMainHandItem();
+            // Better Combat intentionally masks the effective offhand accessor for a
+            // two-handed weapon. Fixture synchronization must inspect the actual
+            // inventory slot, before planShield classifies that supported exception.
+            var storedOffhand = client.player.getInventory().getItem(40);
             int actual = held.getOrDefault(DataComponents.CUSTOM_DATA, CustomData.EMPTY).copyTag().getInt("combined_fixture");
             return actual == fixtureToken && client.player.getInventory().selected == slot
                     && client.player.distanceToSqr(home) < .06 && Math.abs(client.player.getXRot() - pitch) < 2F
-                    && (shield.isEmpty() ? client.player.getOffhandItem().isEmpty() : client.player.getOffhandItem().is(stack(shield).getItem()));
+                    && (shield.isEmpty() ? storedOffhand.isEmpty() : storedOffhand.is(stack(shield).getItem()));
         });
         pause("equip and attack cooldown settle " + name, 18);
     }
@@ -748,6 +752,11 @@ public final class HotbarProbe {
     private static String diagnostic(Minecraft client) {
         return "counts=" + Snapshot.now() + ", cell=" + SharedAbilityHotbar.selectedCell() + ", physicalSlot="
                 + client.player.getInventory().selected + ", held=" + client.player.getMainHandItem()
+                + ", storedOffhand=" + client.player.getInventory().getItem(40)
+                + ", effectiveOffhand=" + client.player.getOffhandItem()
+                + ", fixtureToken=" + client.player.getMainHandItem().getOrDefault(DataComponents.CUSTOM_DATA, CustomData.EMPTY).copyTag().getInt("combined_fixture")
+                + ", homeDistanceSquared=" + (home == null ? "unset" : client.player.distanceToSqr(home))
+                + ", pitch=" + client.player.getXRot()
                 + ", emptyClient/server=" + clientEmpty + "/" + serverEmpty + ", landed=" + serverLanded;
     }
     private static void success() {

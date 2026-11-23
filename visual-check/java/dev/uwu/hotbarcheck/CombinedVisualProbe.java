@@ -96,6 +96,7 @@ public final class CombinedVisualProbe {
     private static final List<Look> LOOKS = looks();
     private static final List<Trial> TRIALS = trials();
     private static final List<Map<String, Object>> FRAMES = new ArrayList<>();
+    private static final List<Map<String, Object>> EXCEPTIONS = new ArrayList<>();
     private static final Map<String, Object> MODELS = new LinkedHashMap<>();
     private static boolean opening, prepared, done, active, equipped, drawing, saved;
     private static int index, requestedAt, settledAt, retries, frameNumber, requestedFrame;
@@ -191,9 +192,27 @@ public final class CombinedVisualProbe {
             var player = client.player;
             require(player.tickCount - requestedAt < 260, "Visual trial timed out " + trial.label()
                     + " ack=" + serverAck + " expected=" + expected + " held=" + player.getItemInHand(trial.view.hand)
+                    + " storedOffhand=" + player.getInventory().getItem(40)
                     + " useTicks=" + player.getTicksUsingItem());
             if (saved) { release(client); index++; if (index < TRIALS.size()) begin(client); return; }
-            if (serverAck != index || !ItemStack.isSameItemSameComponents(player.getItemInHand(trial.view.hand), expected)) return;
+            // Better Combat intentionally returns EMPTY from the effective OFF_HAND
+            // accessor when the offhand weapon itself is two-handed. Synchronize the
+            // actual inventory first, then report that policy without bypassing it.
+            ItemStack stored = trial.view.hand == InteractionHand.OFF_HAND
+                    ? player.getInventory().getItem(40) : player.getMainHandItem();
+            if (serverAck != index || !ItemStack.isSameItemSameComponents(stored, expected)) return;
+            if (trial.view.hand == InteractionHand.OFF_HAND && player.getItemInHand(trial.view.hand).isEmpty()
+                    && isTwoHanded(stored)) {
+                var reason = "The shipped Better Combat two-handed profile intentionally masks this offhand item";
+                EXCEPTIONS.add(Map.of("item", "uwudimension:" + trial.look.id, "look", trial.look.label(),
+                        "view", trial.view.label, "pose", trial.pose.name(), "reason", reason,
+                        "storedSlot40", stored.toString(), "captured", false));
+                System.out.println("COMBINED VISUAL INTENTIONAL EXCEPTION " + trial.label() + ": " + reason);
+                saved = true;
+                writeManifest(false, null);
+                return;
+            }
+            if (!ItemStack.isSameItemSameComponents(player.getItemInHand(trial.view.hand), expected)) return;
             if (!equipped) { equipped = true; settledAt = player.tickCount; }
             if (player.tickCount - settledAt < 18 || player.getAttackStrengthScale(0) < .99F) return;
             if (!MODELS.containsKey(trial.look.label())) inspectModels(client, trial.look, expected);
@@ -226,6 +245,9 @@ public final class CombinedVisualProbe {
         requestedFrame = frameNumber;
         serverAck = -1;
         client.options.setCameraType(trial.view.camera);
+        // Retain the native hotbar in first-person views, but do not cover the
+        // third-person weapon and grip with health, ability or item-name overlays.
+        client.options.hideGui = trial.view.camera != CameraType.FIRST_PERSON;
         client.options.fov().set(trial.view.fov);
         equip(client, trial);
     }
@@ -356,12 +378,18 @@ public final class CombinedVisualProbe {
     }
 
     private static void finish(Minecraft client) throws Exception {
-        require(FRAMES.size() == TRIALS.size() && MODELS.size() == 22,
-                "Incomplete visual coverage frames=" + FRAMES.size() + "/" + TRIALS.size() + " looks=" + MODELS.size());
+        require(FRAMES.size() + EXCEPTIONS.size() == TRIALS.size() && MODELS.size() == 22,
+                "Incomplete visual coverage frames=" + FRAMES.size() + " exceptions=" + EXCEPTIONS.size()
+                        + "/" + TRIALS.size() + " looks=" + MODELS.size());
+        for (Look look : LOOKS) for (String requiredView : List.of("first-main", "third-front", "third-side", "third-rear"))
+            require(FRAMES.stream().anyMatch(frame -> look.label().equals(frame.get("look"))
+                            && requiredView.equals(frame.get("view")) && "REST".equals(frame.get("pose"))),
+                    "Required main-hand view was not captured: " + look.label() + " " + requiredView);
         writeManifest(true, null);
         done = true;
         System.out.println("COMBINED VISUAL CAPTURES PASS native_views=" + FRAMES.size()
-                + " chakrams=20 bow_looks=2 all_bow_draw_poses=true missing_models=0 missing_textures=0");
+                + " intentional_offhand_exceptions=" + EXCEPTIONS.size()
+                + " chakrams=20 bow_looks=2 all_supported_bow_draw_poses=true missing_models=0 missing_textures=0");
         System.out.println("COMBINED VISUAL REVIEW REQUIRED inspect retained pixels for grip, orientation, bow curvature, clipping and flicker; capture completion is not an artistic acceptance verdict");
         client.stop();
     }
@@ -373,6 +401,7 @@ public final class CombinedVisualProbe {
         document.put("expectedLooks", 22);
         document.put("expectedFrames", TRIALS.size());
         document.put("nativeScreenshotFrames", FRAMES);
+        document.put("intentionalOffhandExceptions", EXCEPTIONS);
         document.put("bakedModels", MODELS);
         document.put("captureMethod", "Screenshot.takeScreenshot on the unmodified Minecraft main render target, after the native world, held-item and HUD render");
         document.put("closeViewMethod", "Native third-person camera with FOV 35 versus normal FOV 70; camera distance is unchanged");
@@ -409,5 +438,15 @@ public final class CombinedVisualProbe {
 
     private static void require(boolean condition, String message) {
         if (!condition) throw new AssertionError(message);
+    }
+
+    private static boolean isTwoHanded(ItemStack stack) {
+        try {
+            Object attributes = Class.forName("net.bettercombat.logic.WeaponRegistry")
+                    .getMethod("getAttributes", ItemStack.class).invoke(null, stack);
+            return attributes != null && (boolean) attributes.getClass().getMethod("isTwoHanded").invoke(attributes);
+        } catch (ReflectiveOperationException failure) {
+            throw new AssertionError("Cannot inspect the actual Better Combat offhand profile", failure);
+        }
     }
 }

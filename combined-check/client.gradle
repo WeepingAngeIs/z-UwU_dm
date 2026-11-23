@@ -27,6 +27,12 @@ gradle.beforeProject { project ->
             sourceSet = probe
             loadedMods = [probeMod]
             gameDirectory = project.file('build/combined-client-' + mode)
+            if (mode == 'visuals') {
+                programArgument('--width')
+                programArgument('1280')
+                programArgument('--height')
+                programArgument('720')
+            }
             jvmArgument('-Xmx4G')
             jvmArgument('-Duwu.check.candidateJar=' + candidate.absolutePath)
             jvmArgument('-Duwu.check.candidateSha256=' + hash)

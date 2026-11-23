@@ -14,6 +14,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     outputs:
+      mode: ${{ steps.mode.outputs.mode }}
       hash: ${{ steps.seal.outputs.hash }}
       source_commit: ${{ steps.seal.outputs.source_commit }}
       jar_filename: ${{ steps.seal.outputs.jar_filename }}
@@ -30,6 +31,7 @@ jobs:
       - name: Compile the product once
         if: steps.mode.outputs.mode == 'build'
         run: |
+          test ! -e combined-check/reuse-candidate.json
           bash weapon-release/bootstrap.sh
           bash gradlew --no-daemon --max-workers=2 jar
       - name: Reuse the original sealed candidate for a QA-only correction
@@ -106,6 +108,7 @@ jobs:
           if-no-files-found: warn
   village:
     needs: package
+    if: needs.package.outputs.mode == 'build'
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     strategy:
