@@ -13,13 +13,26 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 abstract class SharedAbilityInputMixin {
     @Inject(method = "handleKeybinds", at = @At("HEAD"))
     private void uwu$abilitySelection(CallbackInfo callback) {
-        SharedAbilityHotbar.handleHotbar((Minecraft)(Object)this);
+        Minecraft client = (Minecraft)(Object)this;
+        SharedAbilityHotbar.handleHotbar(client);
+        SharedAbilityHotbar.handleAttack(client);
     }
 
-    // The first call consumes mapped presses. The second is held-key auto-repeat.
     @WrapOperation(method = "handleKeybinds",
-            at = @At(value = "INVOKE", target = "Lnet/minecraft/client/Minecraft;startUseItem()V", ordinal = 0))
-    private void uwu$explicitUse(Minecraft client, Operation<Void> vanilla) {
-        SharedAbilityHotbar.withQueuedUse(() -> vanilla.call(client));
+            at = @At(value = "INVOKE", target = "Lnet/minecraft/client/Minecraft;continueAttack(Z)V"))
+    private void uwu$continueOrdinaryAttack(Minecraft client, boolean attack, Operation<Void> vanilla) {
+        if (!SharedAbilityHotbar.suppressOrdinaryAttack(client)) {
+            vanilla.call(client, attack);
+            return;
+        }
+        // Better Combat's hold handler reads the binding itself rather than this call's flag.
+        var key = client.options.keyAttack;
+        boolean wasDown = key.isDown();
+        key.setDown(false);
+        try {
+            vanilla.call(client, false);
+        } finally {
+            key.setDown(wasDown);
+        }
     }
 }

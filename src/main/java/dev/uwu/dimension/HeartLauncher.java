@@ -79,6 +79,7 @@ final class HeartLauncher {
         }
         @Override public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
             ItemStack held = player.getItemInHand(hand);
+            if (OffhandShieldPriority.defers(player, hand)) return InteractionResultHolder.pass(held);
             if (player.getCooldowns().isOnCooldown(this)) return InteractionResultHolder.fail(held);
             if (level instanceof ServerLevel server) {
                 HeartShot projectile = SHOT.get().create(server);

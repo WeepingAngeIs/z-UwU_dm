@@ -26,6 +26,8 @@
   "uwudimension.ability.cast": "Cast",
   "uwudimension.ability.fire": "Fire",
   "uwudimension.ability.hotbar_hint": "%s · %s",
+  "uwudimension.ability.hotbar_shield_hint": "%s · %s + %s",
+  "uwudimension.ability.attack": "Attack",
   "key.categories.uwudimension.traversal": "UwU traversal",
   "key.uwudimension.traversal.skill": "Use equipped traversal skill",
   "key.uwudimension.traversal.form": "Toggle Snowkiss grapple form",

@@ -1,0 +1,42 @@
+gradle.beforeProject { project ->
+    project.plugins.withId('net.neoforged.moddev') {
+        def path = System.getenv('UWU_JAR')?.trim()
+        def hash = System.getenv('UWU_EXPECTED_JAR_SHA256')?.trim()
+        if (!path || !hash?.matches('(?i)[0-9a-f]{64}'))
+            throw new org.gradle.api.GradleException('Combined QA requires the sealed JAR and SHA-256')
+        def candidate = project.file(path).canonicalFile
+        if (!candidate.isFile()) throw new org.gradle.api.GradleException('Missing sealed JAR ' + candidate)
+        def mode = System.getenv('UWU_COMBINED_MODE') ?: 'gameplay'
+        if (!(mode in ['gameplay', 'visuals'])) throw new org.gradle.api.GradleException('Unknown QA mode')
+        def probe = project.sourceSets.create('combinedCheck')
+        probe.java.srcDirs = [project.file('hotbar-check/java'), project.file('visual-check/java')]
+        probe.java.srcDir(project.file('combined-check/java'))
+        // Older standalone fixtures refer to the previous hotbar observer's private hooks.
+        probe.java.exclude('**/HeartSpinProbe.java', '**/ReturnbloomProbe.java', '**/SpinHeartPacketObserver.java')
+        probe.resources.srcDirs = [project.file('hotbar-check/resources')]
+        // Compile observers against the shipped binary; never main.output/classes.
+        probe.compileClasspath += project.sourceSets.main.compileClasspath + project.files(candidate)
+        project.configurations.getByName(probe.runtimeClasspathConfigurationName)
+                .extendsFrom(project.configurations.getByName(project.sourceSets.main.runtimeClasspathConfigurationName))
+        project.dependencies.add(probe.compileOnlyConfigurationName, project.files('build/combined-deps/spell-engine.jar'))
+        project.dependencies.add(probe.runtimeOnlyConfigurationName, project.files(candidate))
+        project.dependencies.add(probe.runtimeOnlyConfigurationName, project.fileTree('build/combined-deps') { include '*.jar' })
+        def probeMod = project.neoForge.mods.create('uwu_hotbar_check') { sourceSet(probe) }
+        project.neoForge.runs.create('combinedClient') {
+            client()
+            sourceSet = probe
+            loadedMods = [probeMod]
+            gameDirectory = project.file('build/combined-client-' + mode)
+            jvmArgument('-Xmx4G')
+            jvmArgument('-Duwu.check.candidateJar=' + candidate.absolutePath)
+            jvmArgument('-Duwu.check.candidateSha256=' + hash)
+            jvmArgument('-Duwu.check.role=combined-' + mode)
+            jvmArgument('-Duwu.check.mode=' + mode)
+            jvmArgument('-Duwu.check.evidence=' + project.file('build/combined-evidence/' + mode).absolutePath)
+        }
+    }
+}
+gradle.taskGraph.whenReady { graph ->
+    def prohibited = graph.allTasks.findAll { it.path in [':compileJava', ':processResources', ':classes', ':jar'] }
+    if (!prohibited.isEmpty()) throw new org.gradle.api.GradleException('QA must not compile product: ' + prohibited)
+}

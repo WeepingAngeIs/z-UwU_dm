@@ -82,6 +82,7 @@ public final class CounterArsenal {
             return properties;
         }
         @Override public net.minecraft.world.InteractionResult useOn(net.minecraft.world.item.context.UseOnContext context) {
+            if (OffhandShieldPriority.defers(context.getPlayer(), context.getHand())) return InteractionResult.PASS;
             if (entry.shape().equals("axe")) return Items.DIAMOND_AXE.useOn(context);
             if (entry.shape().equals("scythe")) return Items.DIAMOND_HOE.useOn(context);
             return super.useOn(context);
@@ -112,6 +113,7 @@ public final class CounterArsenal {
         }
         @Override public InteractionResultHolder<ItemStack> use(Level world,Player p,InteractionHand hand){
             ItemStack stack=p.getItemInHand(hand);
+            if(OffhandShieldPriority.defers(p, hand))return InteractionResultHolder.pass(stack);
             if(entry.shape().equals("spear") && p.isShiftKeyDown())return SpearFishing.use(world,p,hand);
             if(p.getCooldowns().isOnCooldown(this))return InteractionResultHolder.fail(stack);
             if(entry.shape().equals("scythe")){p.startUsingItem(hand);return InteractionResultHolder.consume(stack);}

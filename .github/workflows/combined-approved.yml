@@ -1,0 +1,147 @@
+name: Combined approved UwU candidate and native acceptance
+on:
+  push:
+    branches: ['codex/combined-approved-20261123']
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: combined-approved-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  package:
+    if: github.repository == 'WeepingAngeIs/z-UwU_dm' && github.event.repository.private == false
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    outputs:
+      hash: ${{ steps.seal.outputs.hash }}
+      source_commit: ${{ steps.seal.outputs.source_commit }}
+      jar_filename: ${{ steps.seal.outputs.jar_filename }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with: {persist-credentials: false, fetch-depth: 0}
+      - uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880
+        with: {distribution: temurin, java-version: '21'}
+      - name: Verify the approved base, ZIP manifest and exact product scope
+        run: python3 combined-check/verify-source.py
+      - name: Select initial build or immutable candidate reuse
+        id: mode
+        run: python3 combined-check/candidate.py mode
+      - name: Compile the product once
+        if: steps.mode.outputs.mode == 'build'
+        run: |
+          bash weapon-release/bootstrap.sh
+          bash gradlew --no-daemon --max-workers=2 jar
+      - name: Reuse the original sealed candidate for a QA-only correction
+        if: steps.mode.outputs.mode == 'reuse'
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
+        with:
+          name: ${{ steps.mode.outputs.artifact_name }}
+          run-id: ${{ steps.mode.outputs.run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: build/combined-candidate
+          digest-mismatch: error
+      - name: Seal the distinct candidate filename and source provenance
+        id: seal
+        run: python3 combined-check/candidate.py '${{ steps.mode.outputs.mode }}'
+      - name: Preserve the installable candidate without publishing a release
+        id: candidate
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: uwu-combined-candidate-${{ github.sha }}
+          path: build/combined-candidate/
+          retention-days: 14
+          compression-level: 0
+          if-no-files-found: error
+      - name: Record exact candidate identity
+        env:
+          CANDIDATE_HASH: ${{ steps.seal.outputs.hash }}
+          CANDIDATE_SOURCE: ${{ steps.seal.outputs.source_commit }}
+          CANDIDATE_URL: ${{ steps.candidate.outputs.artifact-url }}
+        run: |
+          printf 'Candidate source: `%s`\n\nJAR SHA-256: `%s`\n\nArtifact: %s\n\nAcceptance results are reported by the independent gameplay, visual and village jobs.\n' "$CANDIDATE_SOURCE" "$CANDIDATE_HASH" "$CANDIDATE_URL" >> "$GITHUB_STEP_SUMMARY"
+  client:
+    needs: package
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      matrix: {mode: [gameplay, visuals]}
+    env:
+      UWU_EXPECTED_JAR_SHA256: ${{ needs.package.outputs.hash }}
+      UWU_JAR: ${{ github.workspace }}/build/combined-candidate/${{ needs.package.outputs.jar_filename }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with: {persist-credentials: false}
+      - uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880
+        with: {distribution: temurin, java-version: '21'}
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
+        with:
+          name: uwu-combined-candidate-${{ github.sha }}
+          path: build/combined-candidate
+          digest-mismatch: error
+      - name: Verify the frozen candidate and prepare the disposable hosted client
+        run: |
+          python3 combined-check/candidate.py check
+          bash weapon-release/bootstrap.sh
+          if ! command -v xvfb-run >/dev/null || ! command -v xauth >/dev/null || ! dpkg-query -W libgl1-mesa-dri libopenal1 >/dev/null 2>&1; then
+            sudo apt-get update -qq
+            sudo apt-get install -y xvfb xauth libgl1-mesa-dri libopenal1
+          fi
+      - name: Exercise native input or capture the actual packaged models
+        run: bash combined-check/run-client.sh '${{ matrix.mode }}'
+      - name: Recheck candidate bytes after execution
+        if: always()
+        run: python3 combined-check/candidate.py check
+      - if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: uwu-combined-${{ matrix.mode }}-${{ github.sha }}
+          path: |
+            build/combined-evidence/${{ matrix.mode }}/
+            build/combined-candidate/BUILD_PROVENANCE.json
+            build/combined-candidate/SHA256SUMS.txt
+          retention-days: 14
+          compression-level: 1
+          if-no-files-found: warn
+  village:
+    needs: package
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix: {seed: [152045, 20261121]}
+    env:
+      UWU_EXPECTED_JAR_SHA256: ${{ needs.package.outputs.hash }}
+      UWU_JAR: ${{ github.workspace }}/build/combined-candidate/${{ needs.package.outputs.jar_filename }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with: {persist-credentials: false}
+      - uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880
+        with: {distribution: temurin, java-version: '21'}
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
+        with:
+          name: uwu-combined-candidate-${{ github.sha }}
+          path: build/combined-candidate
+          digest-mismatch: error
+      - name: Compile only the existing village observer against the sealed product
+        run: |
+          python3 combined-check/candidate.py check
+          bash weapon-release/bootstrap.sh
+          bash gradlew --no-daemon --max-workers=2 -I combined-check/profession.gradle combinedProfessionProbeJar
+      - name: Preserve villages, recipes, escort endpoints and protected stone on the candidate
+        run: bash combined-check/run-village.sh '${{ matrix.seed }}'
+      - name: Recheck candidate bytes after execution
+        if: always()
+        run: python3 combined-check/candidate.py check
+      - if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: uwu-combined-village-${{ matrix.seed }}-${{ github.sha }}
+          path: |
+            build/combined-evidence/village-${{ matrix.seed }}/
+            build/combined-candidate/BUILD_PROVENANCE.json
+            build/combined-candidate/SHA256SUMS.txt
+          retention-days: 14
+          compression-level: 1
+          if-no-files-found: warn

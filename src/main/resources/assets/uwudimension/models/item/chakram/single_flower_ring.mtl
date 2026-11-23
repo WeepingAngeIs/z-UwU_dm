@@ -1,0 +1,9 @@
+newmtl metal
+Ka 0 0 0
+Kd 1 1 1
+map_Kd #layer0
+
+newmtl timed_sparkle
+Ka 1 1 1
+Kd 1 1 1
+map_Kd #layer1

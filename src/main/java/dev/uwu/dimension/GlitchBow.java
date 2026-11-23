@@ -123,7 +123,9 @@ public final class GlitchBow extends Item {
         text.add(Component.literal("Changes form after the ability, return and cooldown finish.").withStyle(ChatFormatting.AQUA));
     }
     @Override public InteractionResultHolder<ItemStack> use(Level world,Player p,InteractionHand hand){
-        ItemStack s=p.getItemInHand(hand);var c=counter(s);var r=relic(s);
+        ItemStack s=p.getItemInHand(hand);
+        if(OffhandShieldPriority.defers(p, hand))return InteractionResultHolder.pass(s);
+        var c=counter(s);var r=relic(s);
         // Ribbonstep's marked target can be used for its second stage after the
         // regular item cooldown, even while the first ability is still pending.
         if(pending(s)&&r==Arsenal.Relic.RIFT_WHIP&&p.isShiftKeyDown()&&!p.getCooldowns().isOnCooldown(this)){

@@ -1,0 +1,20 @@
+gradle.beforeProject { project ->
+    project.plugins.withId('net.neoforged.moddev') {
+        def path = System.getenv('UWU_JAR')?.trim()
+        if (!path || !project.file(path).isFile()) throw new org.gradle.api.GradleException('Sealed UWU_JAR required')
+        def probe = project.sourceSets.create('combinedProfessionCheck')
+        probe.java.srcDirs = [project.file('village-profession-check/java'), project.file('combined-check/java')]
+        probe.resources.srcDirs = [project.file('village-profession-check/resources')]
+        probe.compileClasspath += project.sourceSets.main.compileClasspath + project.files(path)
+        project.tasks.register('combinedProfessionProbeJar', Jar) {
+            archiveFileName.set('profession-probe.jar')
+            destinationDirectory.set(project.layout.buildDirectory.dir('combined-profession-check'))
+            from(probe.output)
+            from(project.file('village-size-check/resources/village-sites.csv'))
+        }
+    }
+}
+gradle.taskGraph.whenReady { graph ->
+    def prohibited = graph.allTasks.findAll { it.path in [':compileJava', ':processResources', ':classes', ':jar'] }
+    if (!prohibited.isEmpty()) throw new org.gradle.api.GradleException('QA must not compile product: ' + prohibited)
+}

@@ -434,6 +434,7 @@ public final class BlossomArts {
     /** Vanilla cooldowns are per item type. Opening one stack's credit cannot open a second copy. */
     @SubscribeEvent public static void use(net.neoforged.neoforge.event.entity.player.PlayerInteractEvent.RightClickItem event) {
         Player owner = event.getEntity();
+        if (OffhandShieldPriority.defers(owner, event.getHand())) return;
         if (owner.level().isClientSide || !GlitchBow.isRelic(event.getItemStack(), Arsenal.Relic.VESPER_SCYTHE)) return;
         if (!mayThrow(owner, event.getItemStack())) event.setCanceled(true);
     }

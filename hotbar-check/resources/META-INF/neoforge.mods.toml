@@ -4,6 +4,6 @@ license="All Rights Reserved"
 [[mods]]
 modId="uwu_hotbar_check"
 version="1.0"
-displayName="Disposable shared ability hotbar check"
+displayName="Disposable combined candidate acceptance observer"
 [[mixins]]
 config="uwu_hotbar_check.mixins.json"

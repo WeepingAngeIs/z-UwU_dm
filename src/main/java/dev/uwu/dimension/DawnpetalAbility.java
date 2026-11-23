@@ -15,6 +15,16 @@ public enum DawnpetalAbility {
         return index >= 0 && index < POPULATED.size() ? POPULATED.get(index) : null;
     }
 
+    /** Cell 1 is a normal attack; keep existing packet IDs stable while moving Spin to cell 4. */
+    public static DawnpetalAbility forSkillCell(Player player, int cell) {
+        return switch (cell) {
+            case 1 -> at(player, THROW.index);
+            case 2 -> at(player, HEART_SPIN.index);
+            case 3 -> at(player, SPIN.index);
+            default -> null;
+        };
+    }
+
     public static DawnpetalAbility at(Player player, int index) {
         var held = player.getMainHandItem();
         if (held.is(RevivalBlossoms.AXE.get())) return at(index);

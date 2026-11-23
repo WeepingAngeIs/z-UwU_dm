@@ -160,6 +160,7 @@ public final class Arsenal {
         }
         @Override public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
             ItemStack stack = player.getItemInHand(hand);
+            if (OffhandShieldPriority.defers(player, hand)) return InteractionResultHolder.pass(stack);
             if ((relic == Relic.LANTERN_SPEAR || relic == Relic.TIDELACE_TRIDENT) && player.isShiftKeyDown())
                 return SpearFishing.use(level, player, hand);
             if (player.getCooldowns().isOnCooldown(this)) return InteractionResultHolder.fail(stack);
@@ -177,6 +178,8 @@ public final class Arsenal {
             return InteractionResultHolder.sidedSuccess(stack, level.isClientSide);
         }
         @Override public net.minecraft.world.InteractionResult useOn(net.minecraft.world.item.context.UseOnContext context) {
+            if (OffhandShieldPriority.defers(context.getPlayer(), context.getHand()))
+                return net.minecraft.world.InteractionResult.PASS;
             // Let the native axe handle stripping, scraping, and removing wax with this stack.
             if (relic.axe()) return Items.DIAMOND_AXE.useOn(context);
             if (relic == Relic.VESPER_SCYTHE) return Items.DIAMOND_HOE.useOn(context);

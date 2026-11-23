@@ -8,12 +8,10 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.network.chat.Component;
-import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.api.distmarker.Dist;
-import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
@@ -42,7 +40,7 @@ public final class SharedAbilityHotbar {
     private static UUID equippedId;
     private static int equippedSlot = -1;
     private static int selectedCell;
-    private static boolean explicitUse;
+    private static LocalPlayer attackCapturedFor;
     private static long sequence;
 
     private SharedAbilityHotbar() {}
@@ -111,7 +109,7 @@ public final class SharedAbilityHotbar {
             while (client.options.keyHotbarSlots[index].consumeClick()) pressed = true;
             if (!pressed) continue;
             if (index < SKILL_CELLS) {
-                selectedCell = action == Action.CONTEXTUAL && DawnpetalAbility.at(client.player, index) != null ? index : 0;
+                selectedCell = action == Action.CONTEXTUAL && DawnpetalAbility.forSkillCell(client.player, index) != null ? index : 0;
             } else {
                 inventorySelection = index;
             }
@@ -126,6 +124,7 @@ public final class SharedAbilityHotbar {
         Minecraft client = Minecraft.getInstance();
         if (!visibleFor(client.player) || creativeSave(client)) return false;
         if (mapping == client.options.keyUse) return true;
+        if (mapping == client.options.keyAttack && suppressOrdinaryAttack(client)) return true;
         for (KeyMapping hotbar : client.options.keyHotbarSlots) {
             if (mapping == hotbar) return true;
         }
@@ -136,7 +135,10 @@ public final class SharedAbilityHotbar {
     public static void tick(ClientTickEvent.Post event) {
         Minecraft client = Minecraft.getInstance();
         refresh(client);
-        if (!client.isWindowActive()) selectedCell = 0;
+        if (!client.isWindowActive()) {
+            selectedCell = 0;
+            attackCapturedFor = null;
+        }
     }
 
     @SubscribeEvent
@@ -144,32 +146,32 @@ public final class SharedAbilityHotbar {
         if (event.getScrollDeltaY() != 0) selectedCell = 0;
     }
 
-    public static void withQueuedUse(Runnable use) {
-        boolean previous = explicitUse;
-        explicitUse = true;
-        try {
-            use.run();
-        } finally {
-            explicitUse = previous;
-        }
+    private static DawnpetalAbility selectedSkill(Minecraft client) {
+        return refresh(client) == Action.CONTEXTUAL && !creativeSave(client)
+                && client.getCameraEntity() == client.player
+                ? DawnpetalAbility.forSkillCell(client.player, selectedCell) : null;
     }
 
-    @SubscribeEvent(priority = EventPriority.LOWEST)
-    public static void use(InputEvent.InteractionKeyMappingTriggered event) {
-        Minecraft client = Minecraft.getInstance();
-        if (!event.isUseItem() || refresh(client) != Action.CONTEXTUAL) return;
-        if (client.player.isShiftKeyDown()) {
-            selectedCell = 0;
-            return;
-        }
-        event.setCanceled(true);
-        event.setSwingHand(false);
-        if (!explicitUse || event.getHand() != InteractionHand.MAIN_HAND || equippedId == null
-                || !DawnpetalAbilities.hasHotbar(client.player)) return;
-        DawnpetalAbility move = DawnpetalAbility.at(client.player, selectedCell);
+    // Only the actual queued Attack press may cast, before any vanilla/combat-mod attack hook.
+    public static void handleAttack(Minecraft client) {
+        LocalPlayer player = client.player;
+        if (attackCapturedFor != player || !client.options.keyAttack.isDown()) attackCapturedFor = null;
+        DawnpetalAbility move = selectedSkill(client);
+        if (move == null && attackCapturedFor == null) return;
+        boolean pressed = false;
+        while (client.options.keyAttack.consumeClick()) pressed = true;
+        if (!pressed || move == null || player == null) return;
+        if (client.options.keyAttack.isDown()) attackCapturedFor = player;
+        if (equippedId == null || !DawnpetalAbilities.hasHotbar(player)
+                || player.isUsingItem() || player.isHandsBusy() || player.isShiftKeyDown()
+                || onCooldown(player, move)) return;
         if (move == DawnpetalAbility.THROW) selectedCell = 0;
-        if (move == null || client.player.isUsingItem() || onCooldown(client.player, move)) return;
-        DawnpetalAbilities.send(client.player, ++sequence, equippedId, move);
+        DawnpetalAbilities.send(player, ++sequence, equippedId, move);
+    }
+
+    public static boolean suppressOrdinaryAttack(Minecraft client) {
+        return selectedSkill(client) != null
+                || (attackCapturedFor != null && attackCapturedFor == client.player && client.options.keyAttack.isDown());
     }
 
     private static boolean onCooldown(Player player, DawnpetalAbility ability) {
@@ -182,15 +184,16 @@ public final class SharedAbilityHotbar {
         Minecraft client = Minecraft.getInstance();
         Action action = refresh(client);
         if (action == null || player != client.player) return false;
-        var ability = action == Action.CONTEXTUAL ? DawnpetalAbility.at(player, index) : null;
-        boolean filled = action == Action.CONTEXTUAL ? ability != null : index == 0;
-        boolean cooldown = filled && onCooldown(player, ability);
+        var ability = action == Action.CONTEXTUAL ? DawnpetalAbility.forSkillCell(player, index) : null;
+        boolean normalAttack = action == Action.CONTEXTUAL && index == 0;
+        boolean filled = action == Action.CONTEXTUAL ? normalAttack || ability != null : index == 0;
+        boolean cooldown = filled && !normalAttack && onCooldown(player, ability);
         boolean selected = filled && selectedCell == index;
         int x = iconX - 2, y = iconY - 2;
         gui.fill(x, y, x + 20, y + 20, selected ? 0xfff597c4 : 0xff745269);
         gui.fill(x + 1, y + 1, x + 19, y + 19, cooldown || !filled ? 0xff29232a : 0xff38243c);
         if (filled) {
-            String icon = ability == null ? action.icon : switch (ability) {
+            String icon = normalAttack ? "•" : ability == null ? action.icon : switch (ability) {
                 case SPIN -> "↻";
                 case THROW -> "➶";
                 case HEART_SPIN -> "♥";
@@ -224,13 +227,16 @@ public final class SharedAbilityHotbar {
         if (action == null || player != client.player) return;
         Component label = action.label;
         if (action == Action.CONTEXTUAL) {
-            var ability = DawnpetalAbility.at(player, selectedCell);
-            if (ability == null) return;
-            label = Component.translatable("uwudimension.ability." + ability.name().toLowerCase(Locale.ROOT));
+            var ability = DawnpetalAbility.forSkillCell(player, selectedCell);
+            label = ability == null ? Component.translatable("uwudimension.ability.attack")
+                    : Component.translatable("uwudimension.ability." + ability.name().toLowerCase(Locale.ROOT));
         }
         // Place the action label over the ability cells, above the XP and health rows.
-        Component use = Component.translatable("uwudimension.ability.hotbar_hint", label,
-                client.options.keyUse.getTranslatedKeyMessage());
+        var useKey = action == Action.CONTEXTUAL ? client.options.keyAttack : client.options.keyUse;
+        Component use = action != Action.CONTEXTUAL && OffhandShieldPriority.equipped(player)
+                ? Component.translatable("uwudimension.ability.hotbar_shield_hint", label,
+                        client.options.keyShift.getTranslatedKeyMessage(), useKey.getTranslatedKeyMessage())
+                : Component.translatable("uwudimension.ability.hotbar_hint", label, useKey.getTranslatedKeyMessage());
         gui.drawCenteredString(client.font, use, gui.guiWidth() / 2 - 50, gui.guiHeight() - 70, 0xffffdbf0);
     }
 }

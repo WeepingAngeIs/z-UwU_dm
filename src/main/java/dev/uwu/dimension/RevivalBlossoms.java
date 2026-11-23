@@ -151,6 +151,13 @@ public final class RevivalBlossoms {
         @Override public void appendHoverText(ItemStack s, Item.TooltipContext c, List<Component> tips, TooltipFlag f) { super.appendHoverText(s,c,tips,f); tooltip(s,tips); }
     }
     private static final class FlowerAxe extends AxeItem {
+        @Override
+        public net.minecraft.world.InteractionResult useOn(net.minecraft.world.item.context.UseOnContext context) {
+            if (OffhandShieldPriority.defers(context.getPlayer(), context.getHand()))
+                return net.minecraft.world.InteractionResult.PASS;
+            return super.useOn(context);
+        }
+
         FlowerAxe() { super(Tiers.NETHERITE, new Item.Properties().rarity(Rarity.EPIC).attributes(AxeItem.createAttributes(Tiers.NETHERITE, 17, -3.05F))); }
         @Override public boolean shouldCauseReequipAnimation(ItemStack before,ItemStack after,boolean slotChanged) { return slotChanged || before.getItem()!=after.getItem(); }
         @Override public void inventoryTick(ItemStack s, Level l, Entity e, int slot, boolean selected) { super.inventoryTick(s,l,e,slot,selected); inventory(s,l,e); }
