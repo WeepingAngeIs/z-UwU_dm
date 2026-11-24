@@ -30,13 +30,14 @@ jobs:
           digest-mismatch: error
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
         with:
-          artifact-ids: '14959428551'
-          run-id: '45477296955'
+          artifact-ids: '14959712538'
+          run-id: '45478463477'
           github-token: ${{ github.token }}
           path: build/shader
           merge-multiple: true
           digest-mismatch: error
       - name: Check the two frozen artifacts in Minecraft on this runner
+        id: pair
         run: |
           bash weapon-release/bootstrap.sh
           if ! command -v xvfb-run >/dev/null || ! command -v xauth >/dev/null || ! dpkg-query -W libgl1-mesa-dri libopenal1 >/dev/null 2>&1; then
@@ -44,6 +45,13 @@ jobs:
             sudo apt-get install -y xvfb xauth libgl1-mesa-dri libopenal1
           fi
           bash chicken-check/run.sh
+      - name: Isolate a graphics-loader failure by running the same JAR without rendering mods
+        if: failure() && steps.pair.outcome == 'failure'
+        run: |
+          if ! grep -Eiq 'NoClassDefFoundError.*(sodium|iris)|wrong shader pipeline|failed to create shader rendering pipeline|ShaderCompileException' build/chickens/*.log; then exit 0; fi
+          mv build/chickens build/chickens-with-renderer
+          mv build/chicken-deps build/chicken-renderer-deps
+          env -u UWU_SHADER_ZIP bash chicken-check/run.sh
       - if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
@@ -53,5 +61,7 @@ jobs:
             build/chickens/evidence/
             build/chickens/*.log
             build/chickens/*/crash-reports/
+            build/chickens-with-renderer/*.log
+            build/chickens-with-renderer/evidence/
           if-no-files-found: warn
           retention-days: 7

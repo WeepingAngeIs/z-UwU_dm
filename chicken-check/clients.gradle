@@ -11,7 +11,11 @@ gradle.beforeProject { project ->
         project.configurations.getByName(fixture.runtimeClasspathConfigurationName)
                 .extendsFrom(project.configurations.getByName(project.sourceSets.main.runtimeClasspathConfigurationName))
         project.dependencies.add(fixture.runtimeOnlyConfigurationName, project.files(candidate))
-        project.dependencies.add(fixture.runtimeOnlyConfigurationName, project.fileTree('build/chicken-deps') { include '*.jar' })
+        // The packaged Sodium wrapper discovers its own nested mod via the game's mods directory.
+        project.dependencies.add(fixture.runtimeOnlyConfigurationName, project.fileTree('build/chicken-deps') {
+            include '*.jar'
+            exclude 'sodium.jar'
+        })
         def mod = project.neoForge.mods.create('uwu_chicken_check') { sourceSet(fixture) }
         ['host', 'observer'].each { role ->
             project.neoForge.runs.create('chicken' + role.capitalize()) {

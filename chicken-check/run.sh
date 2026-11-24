@@ -9,7 +9,7 @@ curl --retry 3 --retry-all-errors --fail --silent --show-error --location --max-
   'https://cdn.modrinth.com/data/EltpO5cN/versions/ST5FHZnD/lootr-neoforge-1.21.1-1.11.38.125.jar' -o build/chicken-deps/lootr.jar
 printf '091878598fa5cb51cd304bf9324afe46420d328b6f77a9ba38acc15e26945e9e  build/chicken-deps/lootr.jar\n' | sha256sum --check
 if [[ -n "${UWU_SHADER_ZIP:-}" ]]; then
-  printf '33210b0b796a3558e71e37864e2397c86dd1af2b1f474a8578f3a8987106654c  %s\n' "$UWU_SHADER_ZIP" | sha256sum --check
+  printf 'fb7f6d0a5b86026b3377fdaddf1327ccafe5422d3ba9148d1e83ec8ca682ed6a  %s\n' "$UWU_SHADER_ZIP" | sha256sum --check
   for dep in iris sodium; do
     if [[ "$dep" = iris ]]; then
       url='https://cdn.modrinth.com/data/YL57xq9U/versions/KduFYu4t/iris-neoforge-1.8.14-beta.1%2Bmc1.21.1.jar'
@@ -25,6 +25,10 @@ fi
 for role in host observer; do
   dir="build/chickens/$role"
   mkdir -p "$dir/config" "$dir/tmp" "$dir/lwjgl"
+  if [[ -n "${UWU_SHADER_ZIP:-}" ]]; then
+    mkdir -p "$dir/mods"
+    cp build/chicken-deps/sodium.jar "$dir/mods/sodium-neoforge-0.8.13+mc1.21.1.jar"
+  fi
   test ! -d "$dir/saves"
   printf 'version:3955\nonboardAccessibility:false\ntutorialStep:none\nrenderDistance:3\nsimulationDistance:5\nmaxFps:35\nenableVsync:false\npauseOnLostFocus:false\nbobView:false\nentityShadows:true\n' > "$dir/options.txt"
   printf 'earlyWindowControl = false\n' > "$dir/config/fml.toml"
