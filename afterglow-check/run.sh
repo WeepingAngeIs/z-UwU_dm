@@ -3,7 +3,7 @@ set -euo pipefail
 test "${GITHUB_ACTIONS:-}" = true
 test "${GITHUB_REPOSITORY:-}" = WeepingAngeIs/z-UwU_dm
 game=build/afterglow/client
-mkdir -p "$game/config" "$game/shaderpacks" build/afterglow/{evidence,deps}
+mkdir -p "$game/config" "$game/mods" "$game/shaderpacks" build/afterglow/{evidence,deps}
 test ! -d "$game/saves"
 fetch() {
     curl --retry 3 --retry-all-errors --fail --silent --show-error --location --max-time 140 "$1" -o "build/afterglow/deps/$2.jar"
@@ -11,6 +11,9 @@ fetch() {
 }
 fetch 'https://cdn.modrinth.com/data/YL57xq9U/versions/KduFYu4t/iris-neoforge-1.8.14-beta.1%2Bmc1.21.1.jar' iris 60d5f8bf52f25e9986440f4a4270a6bd986d9cff994510e1108ac1547063b314
 fetch 'https://cdn.modrinth.com/data/AANobbMI/versions/uMOpc5uV/sodium-neoforge-0.8.13%2Bmc1.21.1.jar' sodium 575d187b15328d7bddd8a9b1bee64333c22c14735f5780ec49eac0cd5503c08d
+# Sodium's distribution is an early service that discovers its immutable nested mod.
+# Putting the wrapper on ModDev's runtime classpath selects it as the mod instead.
+mv build/afterglow/deps/sodium.jar "$game/mods/sodium-neoforge-0.8.13+mc1.21.1.jar"
 fetch 'https://cdn.modrinth.com/data/EltpO5cN/versions/ST5FHZnD/lootr-neoforge-1.21.1-1.11.38.125.jar' lootr 091878598fa5cb51cd304bf9324afe46420d328b6f77a9ba38acc15e26945e9e
 cp 'build/afterglow/dist/UwU Afterglow.zip' "$game/shaderpacks/"
 (cd "$game/shaderpacks" && sha256sum -c ../../dist/'UwU Afterglow.sha256')
