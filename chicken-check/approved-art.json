@@ -1,0 +1,17 @@
+{
+  "assets/uwudimension/models/item/native_coats/chicken_blossoms.json": "fc9098cea70602e59ee71109cd69a59f589a87f5744ea79cd9941512b59c10f0",
+  "assets/uwudimension/models/item/native_coats/chicken_blossoms.obj": "8f2b3aa7223706f91ef4f2318ae7163a568185c5bad96499f83b6045c6f5c22f",
+  "assets/uwudimension/models/item/native_coats/chicken_crest.json": "6815ecf87e9d7e0b04528b42702f068d37940df23fb29739248581a34c442e1e",
+  "assets/uwudimension/models/item/native_coats/chicken_crest.obj": "3ff47b39f66fc870fa6c3f4766bc00634945913a73fab32ca1a6f2dd597c10bf",
+  "assets/uwudimension/models/item/native_coats/chicken_fringe.json": "741663058b9dd1822f7b10a82afe6ac74faa188f4b61b7ebe73ce7cef5371066",
+  "assets/uwudimension/models/item/native_coats/chicken_fringe.obj": "00305af5d3a28cad867fb245bce05d2ae6868f963bb17a724cfb2be98ea641e2",
+  "assets/uwudimension/models/item/native_coats/dusk_wing.json": "06e40e8f3e70e883bd9d6551a7f45005c946ebaea63f2d5eb7ebdcac4c4ea398",
+  "assets/uwudimension/models/item/native_coats/head_finery.mtl": "8c30e7c409d37e25d5b55df501ea89cf7db65fb127c0da2399f617bfec5b43cd",
+  "assets/uwudimension/models/item/native_coats/petal_wing.json": "375f5776f3b2aff719d13332614cc76f55efdf58ee127033a943b69a41469750",
+  "assets/uwudimension/textures/entity/native_coats/dusk_chicken.png": "88a19faf94ff93ec014a564035772a2acf87452d2190f8a642c903ebbc13d795",
+  "assets/uwudimension/textures/entity/native_coats/petal_chicken.png": "3b79c4460d5a000d01e0c7ed07b3f5775c96ab68becb28d858ed58fc68c2b3b4",
+  "assets/uwudimension/textures/item/native_coats/chicken_blossoms.png": "f0358b12b75fd004b41060cd04e566392bc4c10f37f69eb36969b247e9e4e34a",
+  "assets/uwudimension/textures/item/native_coats/chicken_fringe.png": "f0358b12b75fd004b41060cd04e566392bc4c10f37f69eb36969b247e9e4e34a",
+  "assets/uwudimension/textures/item/native_coats/dusk_wing.png": "6e0c01bb711f54b09f3a2bdf7f52afb316b65e1666b12678fbc1f9b16166878f",
+  "assets/uwudimension/textures/item/native_coats/petal_wing.png": "82be871c9ecef5bdb11d7694f355e193b4bc442b6749cadf3e274901ec448b8b"
+}

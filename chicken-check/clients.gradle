@@ -1,0 +1,41 @@
+gradle.beforeProject { project ->
+    project.plugins.withId('net.neoforged.moddev') {
+        def candidate = project.file(System.getenv('UWU_JAR')).canonicalFile
+        def digest = System.getenv('UWU_EXPECTED_JAR_SHA256')
+        if (!candidate.isFile() || !digest?.matches('[0-9a-f]{64}')) throw new GradleException('Expected a sealed candidate')
+        def fixture = project.sourceSets.create('chickenCheck')
+        fixture.java.srcDirs = [project.file('chicken-check/java'), project.file('weapon-check/java')]
+        fixture.java.include('**/ChickenGallery.java', '**/ChickenWorld.java', '**/ChickenDrawProbe.java', '**/CandidateJarProbe.java', '**/Evidence.java')
+        fixture.resources.srcDir(project.file('chicken-check/resources'))
+        fixture.compileClasspath += project.sourceSets.main.compileClasspath + project.files(candidate)
+        project.configurations.getByName(fixture.runtimeClasspathConfigurationName)
+                .extendsFrom(project.configurations.getByName(project.sourceSets.main.runtimeClasspathConfigurationName))
+        project.dependencies.add(fixture.runtimeOnlyConfigurationName, project.files(candidate))
+        project.dependencies.add(fixture.runtimeOnlyConfigurationName, project.fileTree('build/chicken-deps') { include '*.jar' })
+        def mod = project.neoForge.mods.create('uwu_chicken_check') { sourceSet(fixture) }
+        ['host', 'observer'].each { role ->
+            project.neoForge.runs.create('chicken' + role.capitalize()) {
+                client()
+                sourceSet = fixture
+                loadedMods = [mod]
+                gameDirectory = project.file('build/chickens/' + role)
+                jvmArgument(role == 'host' ? '-Xmx3G' : '-Xmx1536M')
+                jvmArgument('-XX:+ExitOnOutOfMemoryError')
+                jvmArgument('-Djava.io.tmpdir=' + project.file('build/chickens/' + role + '/tmp').absolutePath)
+                jvmArgument('-Dorg.lwjgl.system.SharedLibraryExtractPath=' + project.file('build/chickens/' + role + '/lwjgl').absolutePath)
+                jvmArgument('-Duwu.check.role=' + role)
+                jvmArgument('-Duwu.check.candidateJar=' + candidate.absolutePath)
+                jvmArgument('-Duwu.check.candidateSha256=' + digest)
+                jvmArgument('-Duwu.check.evidence=' + project.file('build/chickens/evidence/' + role).absolutePath)
+                jvmArgument('-Duwu.check.control=' + project.file('build/chickens/control').absolutePath)
+                programArgument('--width'); programArgument('960')
+                programArgument('--height'); programArgument('640')
+                programArgument('--username'); programArgument(role == 'host' ? 'UwuPastureHost' : 'UwuPastureGuest')
+            }
+        }
+    }
+}
+gradle.taskGraph.whenReady { graph ->
+    if (graph.allTasks.any { it.path in [':compileJava', ':processResources', ':classes', ':jar'] })
+        throw new GradleException('The gameplay check loads its product only from the packaged JAR')
+}

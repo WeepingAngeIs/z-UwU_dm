@@ -1,0 +1,9 @@
+modLoader="javafml"
+loaderVersion="[4,)"
+license="All Rights Reserved"
+[[mods]]
+modId="uwu_chicken_check"
+version="1"
+displayName="Hosted native chicken checks"
+[[mixins]]
+config="uwu.chicken.check.mixins.json"

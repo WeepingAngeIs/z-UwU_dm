@@ -1,0 +1,6 @@
+{
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "uwudimension:item/native_coats/petal_wing"
+  }
+}

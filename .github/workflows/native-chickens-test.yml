@@ -1,0 +1,60 @@
+name: Cumulative TEST – native Sakura Reach chickens
+on:
+  push:
+    branches: ['codex/test-native-chickens-20261124']
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: native-chickens-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  candidate:
+    if: github.repository == 'WeepingAngeIs/z-UwU_dm' && github.event.repository.private == false && github.ref == 'refs/heads/codex/test-native-chickens-20261124'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 55
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with: {persist-credentials: false}
+      - uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880
+        with: {distribution: temurin, java-version: '21'}
+      - name: Fetch the accepted TEST binary for an entry-by-entry comparison
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
+        with:
+          artifact-ids: '14845843192'
+          run-id: '45231580480'
+          github-token: ${{ github.token }}
+          path: build/accepted
+          merge-multiple: true
+          digest-mismatch: error
+      - name: Build and seal the combined chicken candidate
+        run: |
+          bash weapon-release/bootstrap.sh
+          bash gradlew --no-daemon --max-workers=2 jar
+          python3 chicken-check/seal.py
+      - name: Preserve the sealed candidate for the exact-byte check
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: uwu-native-chickens-test-${{ github.sha }}
+          path: build/chicken-candidate/
+          retention-days: 7
+          compression-level: 0
+          if-no-files-found: error
+      - name: Run two real Minecraft clients with a saved-world restart
+        run: |
+          if ! command -v xvfb-run >/dev/null || ! command -v xauth >/dev/null || ! dpkg-query -W libgl1-mesa-dri libopenal1 >/dev/null 2>&1; then
+            sudo apt-get update -qq
+            sudo apt-get install -y xvfb xauth libgl1-mesa-dri libopenal1
+          fi
+          bash chicken-check/run.sh
+      - if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: uwu-native-chickens-evidence-${{ github.sha }}
+          path: |
+            build/chickens/control/
+            build/chickens/evidence/
+            build/chickens/*.log
+            build/chickens/*/crash-reports/
+          if-no-files-found: warn
+          retention-days: 7

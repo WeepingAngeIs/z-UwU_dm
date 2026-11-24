@@ -4,6 +4,8 @@
   "package": "dev.uwu.dimension.mixin",
   "compatibilityLevel": "JAVA_21",
   "mixins": [
+    "ChickenBirthCoatMixin",
+    "NativeFarmGenerationMixin",
     "ForestFluidPickerAccessor",
     "CaveVinesHarvestMixin",
     "LushGeodeConfiguredMixin",
@@ -48,6 +50,8 @@
     "defaultRequire": 1
   },
   "client": [
+    "FarmHeadPartsAccessor",
+    "ChickenNativeCoatMixin",
     "TimePocketParticleHistory",
     "TimePocketEntityRenderMixin",
     "TimePocketEmitterMixin",

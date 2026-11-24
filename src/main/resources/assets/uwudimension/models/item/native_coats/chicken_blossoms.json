@@ -1,0 +1,12 @@
+{
+  "loader": "neoforge:obj",
+  "model": "uwudimension:models/item/native_coats/chicken_blossoms.obj",
+  "automatic_culling": false,
+  "shade_quads": true,
+  "emissive_ambient": false,
+  "flip_v": false,
+  "textures": {
+    "trim": "uwudimension:item/native_coats/chicken_blossoms",
+    "particle": "#trim"
+  }
+}
