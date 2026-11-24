@@ -53,8 +53,12 @@ public final class AfterglowProbe {
                 views.add(new View("bench-"+round+"-"+quality,REACH,quality,0,90,180,14,true));
             }
         } else {
-            for(var dim:List.of(Level.OVERWORLD,Level.NETHER))
-                for(int q:List.of(0,2)) views.add(new View(dim.location().getPath()+"-"+q,dim,q,0,90,180,5,false));
+            for(String label:List.of("0","off-repeat","neutral","previous","2"))
+                views.add(new View("overworld-"+label,Level.OVERWORLD,
+                    label.equals("0")||label.equals("off-repeat")?0:2,0,90,180,5,false));
+            for(int q:List.of(0,2)) views.add(new View("the_nether-"+q,Level.NETHER,q,0,90,180,5,false));
+            for(int q:List.of(0,2)) views.add(new View("overworld-night-"+q,Level.OVERWORLD,q,0,90,180,-48,false));
+            for(int q:List.of(0,2)) views.add(new View("overworld-rain-"+q,Level.OVERWORLD,q,0,90,180,4,true));
             views.add(new View("end-off",Level.END,0,0,90,180,0,false));
             views.add(new View("end-north",Level.END,2,0,90,180,0,false));
             views.add(new View("end-north-later",Level.END,2,0,90,180,0,false));
@@ -62,7 +66,9 @@ public final class AfterglowProbe {
             views.add(new View("end-up",Level.END,2,0,90,180,-58,false));
             views.add(new View("end-down",Level.END,2,0,90,180,55,false));
             views.add(new View("end-off-return",Level.END,0,0,90,180,0,false));
+            views.add(new View("moon-off",REACH,0,0,90,180,-89,false));
             for(int moon:List.of(0,1,2)) views.add(new View("moon-"+moon,REACH,2,moon,90,180,-89,false));
+            views.add(new View("moon-off-return",REACH,0,0,90,180,-89,false));
             for(int b:List.of(100,55)) views.add(new View("liquids-"+b,REACH,2,0,b,180,18,false));
             for(int q:List.of(0,1,2)) views.add(new View("rain-"+q,REACH,q,0,90,180,14,true));
         }
@@ -106,7 +112,7 @@ public final class AfterglowProbe {
                         var player=Objects.requireNonNull(server.getPlayerList().getPlayer(id));
                         for(var rule:List.of(GameRules.RULE_DAYLIGHT,GameRules.RULE_WEATHER_CYCLE,GameRules.RULE_DOMOBSPAWNING))
                             level.getGameRules().getRule(rule).set(false,server);
-                        long time=v.name.startsWith("moon")?18000L:6000L;
+                        long time=v.name.startsWith("moon")||v.name.startsWith("overworld-night")?18000L:6000L;
                         server.overworld().setDayTime(time);level.setDayTime(time);
                         server.overworld().setWeatherParameters(v.rain?0:100000,v.rain?100000:0,v.rain,false);
                         level.setRainLevel(v.rain?1f:0f);
@@ -148,14 +154,19 @@ public final class AfterglowProbe {
     }
     private static Class<?> iris() throws Exception { return Class.forName("net.irisshaders.iris.Iris"); }
     private static void apply(View v) throws Exception {
-        String key=v.quality+"/"+v.moon+"/"+v.liquid;
+        String pack=switch(v.name) {
+            case "overworld-neutral" -> "Neutral Iris control";
+            case "overworld-previous" -> "Afterglow d227 diagnostic.zip";
+            default -> PACK;
+        };
+        String key=pack+"/"+v.quality+"/"+v.moon+"/"+v.liquid;
         if(key.equals(optionsKey))return;
         optionsKey=key;
         var iris=iris();var cfg=iris.getMethod("getIrisConfig").invoke(null);
-        cfg.getClass().getMethod("setShaderPackName",String.class).invoke(cfg,PACK);
+        cfg.getClass().getMethod("setShaderPackName",String.class).invoke(cfg,pack);
         cfg.getClass().getMethod("setShadersEnabled",boolean.class).invoke(cfg,v.quality!=0);
         cfg.getClass().getMethod("save").invoke(cfg);
-        if(v.quality!=0) {
+        if(v.quality!=0 && pack.equals(PACK)) {
             Properties p=new Properties();
             p.setProperty("REACH_MOON",Integer.toString(v.moon));
             p.setProperty("AFTERGLOW_QUALITY",Integer.toString(v.quality));
@@ -192,9 +203,8 @@ public final class AfterglowProbe {
             Object pipe=manager.getClass().getMethod("getPipelineNullable").invoke(manager);
             String path=pipe==null?"none":pipe.getClass().getName();
             boolean active=(boolean)iris.getMethod("isPackInUseQuick").invoke(null);
-            boolean themed=v.dim.equals(REACH)||v.dim.equals(Level.END);
-            if((v.quality==0 && active)||(v.quality!=0 && themed && !active)) throw new IllegalStateException("Wrong Iris pack state for "+v.name+" "+path+" active="+active);
-            if(v.quality!=0 && themed && !path.contains("IrisRenderingPipeline"))
+            if((v.quality!=0)!=active) throw new IllegalStateException("Wrong Iris pack state for "+v.name+" "+path+" active="+active);
+            if(v.quality!=0 && !path.contains("IrisRenderingPipeline"))
                 throw new IllegalStateException("Iris fell back in "+v.name+": "+path);
             try(NativeImage shot=Screenshot.takeScreenshot(mc.getMainRenderTarget())) { shot.writeToFile(OUT.resolve(v.name+".png")); }
             var camera=mc.gameRenderer.getMainCamera();

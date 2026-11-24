@@ -51,6 +51,6 @@ jobs:
     uses: ./.github/workflows/afterglow-runtime.yml
     with: {benchmark: false}
   benchmark:
-    needs: smoke
+    needs: [package, end-gpu]
     uses: ./.github/workflows/afterglow-runtime.yml
     with: {benchmark: true}

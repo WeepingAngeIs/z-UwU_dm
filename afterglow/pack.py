@@ -10,7 +10,7 @@ from zipfile import ZipFile, ZipInfo, ZIP_STORED
 
 ROOT = Path(__file__).resolve().parent
 SHADERS = ROOT / "shaders"
-EXPECTED_DIMS = {"end": "minecraft:the_end", "reach": "uwudimension:sakura_reach"}
+EXPECTED_DIMS = {"end": "minecraft:the_end", "reach": "uwudimension:sakura_reach", "ordinary": "minecraft:overworld"}
 SHADER_TYPES = {".vsh", ".fsh", ".glsl"}
 
 def digest(data):
@@ -44,7 +44,7 @@ def create(output_dir, compiler=None):
         data[name]=content
     dimensions=dict(re.findall(r'^dimension\.(\w+)\s*=\s*(\S+)\s*$',data["shaders/dimension.properties"].decode(),re.M))
     assert dimensions==EXPECTED_DIMS
-    assert sum(len(list((SHADERS/dim).glob("*.fsh"))) for dim in dimensions)==5
+    assert sum(len(list((SHADERS/dim).glob("*.fsh"))) for dim in dimensions)==7
     assert len({x for x in data if x.endswith(".png")})==6
     shaders_props=data["shaders/shaders.properties"].decode()
     for ref in re.findall(r'^customTexture\.\w+\s*=\s*(\S+)',shaders_props,re.M):
@@ -65,7 +65,7 @@ def create(output_dir, compiler=None):
                     for quality in (1,2) if vert.parent.name=="reach" else (2,):
                         inputs=[]
                         for p,ext in [(vert,"vert"),(vert.with_suffix(".fsh"),"frag")]:
-                            src=expand(p).replace("#version 330 compatibility","#version 330 compatibility\n#define MC_RENDER_STAGE_MOON 4",1)
+                            src=expand(p).replace("#version 330 compatibility","#version 330 compatibility\n#define MC_RENDER_STAGE_MOON 4\n#define MC_RENDER_STAGE_SKY 1",1)
                             src=re.sub(r'#define REACH_MOON \d',f'#define REACH_MOON {moon}',src)
                             src=re.sub(r'#define AFTERGLOW_QUALITY \d',f'#define AFTERGLOW_QUALITY {quality}',src)
                             dest=Path(temp)/("stage."+ext)

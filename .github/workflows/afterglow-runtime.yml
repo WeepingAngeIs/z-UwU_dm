@@ -27,6 +27,14 @@ jobs:
           path: build/afterglow/dist
           digest-mismatch: error
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
+        if: inputs.benchmark == false
+        with:
+          artifact-ids: '14961057991'
+          run-id: 45479381005
+          github-token: ${{ github.token }}
+          path: build/afterglow/control
+          digest-mismatch: error
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
         with:
           artifact-ids: '14959587709'
           run-id: 45477138893

@@ -17,6 +17,12 @@ mv build/afterglow/deps/sodium.jar "$game/mods/sodium-neoforge-0.8.13+mc1.21.1.j
 fetch 'https://cdn.modrinth.com/data/EltpO5cN/versions/ST5FHZnD/lootr-neoforge-1.21.1-1.11.38.125.jar' lootr 091878598fa5cb51cd304bf9324afe46420d328b6f77a9ba38acc15e26945e9e
 cp 'build/afterglow/dist/UwU Afterglow.zip' "$game/shaderpacks/"
 (cd "$game/shaderpacks" && sha256sum -c ../../dist/'UwU Afterglow.sha256')
+if [[ "${AFTERGLOW_BENCH:-}" != true ]]; then
+    mkdir -p "$game/shaderpacks/Neutral Iris control/shaders"
+    printf '# Empty Iris control for the ordinary Overworld pipeline.\n' > "$game/shaderpacks/Neutral Iris control/shaders/shaders.properties"
+    printf '%s  %s\n' d2272b550125731fd4a736d4d67b7cc5f39c1e798757d6e536a265b82acf39fa 'build/afterglow/control/UwU Afterglow.zip' | sha256sum -c
+    cp 'build/afterglow/control/UwU Afterglow.zip' "$game/shaderpacks/Afterglow d227 diagnostic.zip"
+fi
 printf 'enableShaders=false\nshaderPack=UwU Afterglow.zip\n' > "$game/config/iris.properties"
 printf 'earlyWindowControl = false\n' > "$game/config/fml.toml"
 printf 'version:3955\nonboardAccessibility:false\ntutorialStep:none\nrenderDistance:4\nsimulationDistance:5\nmaxFps:260\nenableVsync:false\npauseOnLostFocus:false\nfov:0.0\nbobView:false\nrenderClouds:false\ngamma:0.5\n' > "$game/options.txt"
