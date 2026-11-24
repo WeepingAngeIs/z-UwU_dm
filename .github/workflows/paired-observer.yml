@@ -1,0 +1,58 @@
+name: Paired Velvetguard observer evidence
+on:
+  push:
+    branches: ['qa/velvetguard-paired-observer-502d']
+permissions:
+  contents: read
+  actions: read
+jobs:
+  paired:
+    if: github.repository == 'WeepingAngeIs/z-UwU_dm' && github.event.repository.private == false
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    env:
+      UWU_EXPECTED_JAR_SHA256: 21f6780d5f2cf0176716828116abbbd530563b7dbfecd3db7e5feac7cd39ef41
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with: {persist-credentials: false, fetch-depth: 2}
+      - name: Verify test-only scope
+        run: |
+          test "$(git rev-parse HEAD^)" = 502d123b419fd5c05e77d202f8eb17d16a687794
+          git diff --exit-code HEAD^ HEAD -- . ':(exclude)paired-check' ':(exclude).github/workflows/paired-observer.yml'
+      - uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880
+        with: {distribution: temurin, java-version: '21'}
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
+        with:
+          artifact-ids: '14845843192'
+          run-id: 45231580480
+          github-token: ${{ github.token }}
+          path: build/sealed
+          digest-mismatch: error
+      - name: Verify sealed bytes and bootstrap the two-client fixture
+        shell: bash
+        run: |
+          set -euo pipefail
+          mapfile -t jars < <(find build/sealed -type f -name '*.jar')
+          test "${#jars[@]}" = 1
+          printf '%s  %s\n' "$UWU_EXPECTED_JAR_SHA256" "${jars[0]}" | sha256sum --check
+          echo "UWU_JAR=$(realpath "${jars[0]}")" >> "$GITHUB_ENV"
+          bash weapon-release/bootstrap.sh
+          if ! command -v xvfb-run >/dev/null || ! command -v xauth >/dev/null || ! dpkg-query -W libgl1-mesa-dri libopenal1 >/dev/null 2>&1; then
+            sudo apt-get update -qq
+            sudo apt-get install -y xvfb xauth libgl1-mesa-dri libopenal1
+          fi
+      - name: Observe the same attacks on two native clients
+        run: bash paired-check/run.sh
+      - if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: paired-velvetguard-${{ github.sha }}
+          retention-days: 7
+          path: |
+            build/weapon-check/paired/
+            build/weapon-check/*.log
+            build/weapon-check/control/
+            build/weapon-check/evidence/**/*.tsv
+            build/weapon-check/evidence/**/*.json
+            build/weapon-check/evidence/**/paired-0-*.png
+            build/weapon-check/evidence/**/paired-1-*.png

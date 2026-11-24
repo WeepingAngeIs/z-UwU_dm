@@ -1,0 +1,1 @@
+{"required":true,"package":"dev.uwu.weaponcheck.mixin","compatibilityLevel":"JAVA_21","client":["PairedAnimation","PairedMouse"],"injectors":{"defaultRequire":1}}
