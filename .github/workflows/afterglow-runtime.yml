@@ -5,6 +5,9 @@ on:
       benchmark:
         required: true
         type: boolean
+      nether_only:
+        default: false
+        type: boolean
 permissions:
   contents: read
   actions: read
@@ -16,6 +19,7 @@ jobs:
     env:
       UWU_EXPECTED_JAR_SHA256: 2384b5e7edc6e2f992c851f0b4b5a82a5581e6dbe502c5d522d973302252c83f
       AFTERGLOW_BENCH: ${{ inputs.benchmark }}
+      AFTERGLOW_NETHER_ONLY: ${{ inputs.nether_only }}
       AFTERGLOW_END_ONLY: ${{ contains(github.event.head_commit.message, '[End sky only]') }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
@@ -23,10 +27,17 @@ jobs:
       - uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880
         with: {distribution: temurin, java-version: '21'}
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
+        if: inputs.nether_only == false
         with:
           name: UwU-Afterglow-shader-test
           path: build/afterglow/dist
           digest-mismatch: error
+      - if: inputs.nether_only
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
+        with: {artifact-ids: '14967403447', run-id: 45494994379, github-token: '${{ github.token }}', path: build/afterglow/dist, digest-mismatch: error}
+      - if: inputs.nether_only
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
+        with: {artifact-ids: '14967993764', run-id: 45494994379, github-token: '${{ github.token }}', path: build/afterglow/previous, digest-mismatch: error}
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
         if: inputs.benchmark == false
         with:

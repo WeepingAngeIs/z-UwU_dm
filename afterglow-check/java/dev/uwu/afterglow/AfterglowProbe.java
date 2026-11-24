@@ -57,6 +57,8 @@ public final class AfterglowProbe {
                 views.add(new View("overworld-"+label,Level.OVERWORLD,
                     label.equals("0")||label.equals("off-repeat")?0:2,0,90,180,5,false));
             for(int q:List.of(0,2)) views.add(new View("the_nether-"+q,Level.NETHER,q,0,90,180,5,false));
+            if(Boolean.parseBoolean(System.getenv("AFTERGLOW_NETHER_ONLY")))
+                views.add(new View("the_nether-off-repeat",Level.NETHER,0,0,90,180,5,false));
             for(int q:List.of(0,2)) views.add(new View("overworld-night-"+q,Level.OVERWORLD,q,0,90,180,-48,false));
             for(int q:List.of(0,2)) views.add(new View("overworld-rain-"+q,Level.OVERWORLD,q,0,90,180,4,true));
             views.add(new View("end-off",Level.END,0,0,90,180,0,false));
@@ -76,6 +78,8 @@ public final class AfterglowProbe {
             for(int q:List.of(0,1,2)) views.add(new View("rain-"+q,REACH,q,0,90,180,14,true));
             if(Boolean.parseBoolean(System.getenv("AFTERGLOW_END_ONLY")))
                 views.removeIf(view->!view.dim.equals(Level.END));
+            if(Boolean.parseBoolean(System.getenv("AFTERGLOW_NETHER_ONLY")))
+                views.removeIf(view->!view.dim.equals(Level.NETHER));
         }
         NeoForge.EVENT_BUS.addListener(AfterglowProbe::tick);
         NeoForge.EVENT_BUS.addListener(AfterglowProbe::beforeFrame);
@@ -212,7 +216,18 @@ public final class AfterglowProbe {
             if((v.quality!=0)!=active) throw new IllegalStateException("Wrong Iris pack state for "+v.name+" "+path+" active="+active);
             if(v.quality!=0 && !path.contains("IrisRenderingPipeline"))
                 throw new IllegalStateException("Iris fell back in "+v.name+": "+path);
-            try(NativeImage shot=Screenshot.takeScreenshot(mc.getMainRenderTarget())) { shot.writeToFile(OUT.resolve(v.name+".png")); }
+            try(NativeImage shot=Screenshot.takeScreenshot(mc.getMainRenderTarget())) {
+                if(v.dim.equals(Level.NETHER)){
+                    // The sky clears before Sodium uploads the new dimension's platform mesh.
+                    int y=shot.getHeight()*9/10, x=shot.getWidth()/2;
+                    boolean visible=false;
+                    for(int dx=-25;dx<=25;dx++)
+                        visible|=shot.getPixelRGBA(x+dx,y)!=shot.getPixelRGBA(x+dx,shot.getHeight()/8);
+                    if(!visible && now-start<60_000_000_000L)return;
+                    if(!visible)throw new IllegalStateException("Nether comparison platform never became visible");
+                }
+                shot.writeToFile(OUT.resolve(v.name+".png"));
+            }
             var camera=mc.gameRenderer.getMainCamera();
             var eye=camera.getPosition();
             String info=v.name+"\t"+v.dim.location()+"\t"+path+"\t"+GL11.glGetString(GL11.GL_RENDERER)+"\t"+

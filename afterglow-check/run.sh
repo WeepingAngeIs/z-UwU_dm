@@ -33,4 +33,10 @@ timeout --kill-after=30s 33m xvfb-run -a -s "-screen 0 $screen" bash gradlew --n
 grep -F 'UWU PACKAGED CANDIDATE PASS' build/afterglow/launch.log
 grep -F 'AFTERGLOW CLIENT FINISHED' build/afterglow/launch.log
 if grep -Ei 'AFTERGLOW CHECK FAILED|shader compilation failed|failed to create shader rendering pipeline|OutOfMemoryError' build/afterglow/launch.log; then exit 1; fi
-/usr/bin/python3 afterglow-check/analyze.py build/afterglow/evidence
+if [[ "${AFTERGLOW_NETHER_ONLY:-}" == true ]]; then
+    /usr/bin/python3 afterglow-check/recheck_nether.py build/afterglow
+    /usr/bin/python3 afterglow-check/analyze.py build/afterglow/combined
+    cp build/afterglow/combined/capture-checks.json build/afterglow/evidence/combined-capture-checks.json
+else
+    /usr/bin/python3 afterglow-check/analyze.py build/afterglow/evidence
+fi

@@ -7,7 +7,7 @@ permissions:
   actions: read
 jobs:
   package:
-    if: github.repository == 'WeepingAngeIs/z-UwU_dm' && github.event.repository.private == false
+    if: github.repository == 'WeepingAngeIs/z-UwU_dm' && github.event.repository.private == false && !contains(github.event.head_commit.message, '[Nether control only]')
     runs-on: ubuntu-24.04
     timeout-minutes: 8
     steps:
@@ -50,6 +50,10 @@ jobs:
     needs: package
     uses: ./.github/workflows/afterglow-runtime.yml
     with: {benchmark: false}
+  nether-control:
+    if: contains(github.event.head_commit.message, '[Nether control only]')
+    uses: ./.github/workflows/afterglow-runtime.yml
+    with: {benchmark: false, nether_only: true}
   benchmark:
     needs: [package, end-gpu]
     if: "!contains(github.event.head_commit.message, '[End sky only]')"
