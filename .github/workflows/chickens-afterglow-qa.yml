@@ -1,4 +1,4 @@
-name: Frozen chicken JAR – two players, shader comparison and reload
+name: Final Afterglow ZIP on three moving native chicken looks
 on:
   push:
     branches: ['qa/chickens-afterglow-20261124']
@@ -10,6 +10,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 48
     env:
+      UWU_QA_SHADER_SPOT: 'true'
       UWU_EXPECTED_JAR_SHA256: 2384b5e7edc6e2f992c851f0b4b5a82a5581e6dbe502c5d522d973302252c83f
       UWU_JAR: ${{ github.workspace }}/build/chicken-candidate/UwU-Dimension-1.21.1-TEST-native-chickens-c71c9afe351d.jar
       UWU_SHADER_ZIP: ${{ github.workspace }}/build/shader/UwU Afterglow.zip
@@ -30,8 +31,8 @@ jobs:
           digest-mismatch: error
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
         with:
-          artifact-ids: '14960409941'
-          run-id: '45482284709'
+          artifact-ids: '14967403447'
+          run-id: '45494994379'
           github-token: ${{ github.token }}
           path: build/shader
           merge-multiple: true
@@ -46,7 +47,7 @@ jobs:
           fi
           bash chicken-check/run.sh
       - name: Isolate a graphics-loader failure by running the same JAR without rendering mods
-        if: failure() && steps.pair.outcome == 'failure'
+        if: failure() && steps.pair.outcome == 'failure' && env.UWU_QA_SHADER_SPOT != 'true'
         run: |
           if ! grep -Eiq 'NoClassDefFoundError.*(sodium|iris)|wrong shader pipeline|failed to create shader rendering pipeline|ShaderCompileException|Failed to process ConstDirective' build/chickens/*.log; then exit 0; fi
           mv build/chickens build/chickens-with-renderer

@@ -9,7 +9,7 @@ curl --retry 3 --retry-all-errors --fail --silent --show-error --location --max-
   'https://cdn.modrinth.com/data/EltpO5cN/versions/ST5FHZnD/lootr-neoforge-1.21.1-1.11.38.125.jar' -o build/chicken-deps/lootr.jar
 printf '091878598fa5cb51cd304bf9324afe46420d328b6f77a9ba38acc15e26945e9e  build/chicken-deps/lootr.jar\n' | sha256sum --check
 if [[ -n "${UWU_SHADER_ZIP:-}" ]]; then
-  printf '120edd7bdb18294e8f0e7e07e366dc5694057aa06091cd8fb3e5baf18a3e4c06  %s\n' "$UWU_SHADER_ZIP" | sha256sum --check
+  printf '6a1d871c75ff62f1f70127f102f4df7cf2be1325343596d5434e9308c85dacb0  %s\n' "$UWU_SHADER_ZIP" | sha256sum --check
   for dep in iris sodium; do
     if [[ "$dep" = iris ]]; then
       url='https://cdn.modrinth.com/data/YL57xq9U/versions/KduFYu4t/iris-neoforge-1.8.14-beta.1%2Bmc1.21.1.jar'
@@ -38,7 +38,9 @@ export LIBGL_ALWAYS_SOFTWARE=1 ALSOFT_DRIVERS=null LP_NUM_THREADS=2
 pids=()
 cleanup() { for pid in "${pids[@]}"; do kill "$pid" 2>/dev/null || true; done; }
 trap cleanup EXIT
-for UWU_QA_PASS in fresh reload; do
+phases=(fresh reload)
+if [[ "${UWU_QA_SHADER_SPOT:-false}" == true ]]; then phases=(fresh); fi
+for UWU_QA_PASS in "${phases[@]}"; do
   export UWU_QA_PASS
   for role in host observer; do
     if [[ -n "${UWU_SHADER_ZIP:-}" ]]; then

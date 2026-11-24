@@ -30,6 +30,7 @@ public final class ChickenGallery {
     private static final String WORLD="ChickenPasturesQA";
     private static final boolean RESTART=System.getenv("UWU_QA_PASS").equals("reload");
     private static final String PASS=RESTART?"reload":"fresh";
+    private static final boolean SHADER_SPOT=Boolean.parseBoolean(System.getenv("UWU_QA_SHADER_SPOT"));
     private static final Set<String> parts=new HashSet<>();
     private static Chicken rendering;
     private static Scene scene;
@@ -126,12 +127,12 @@ public final class ChickenGallery {
                     } else found=ChickenWorld.findWild(ChickenWorld.reach(server));
                 }); return;
             }
-            int count=RESTART?3:20;
+            int count=SHADER_SPOT?6:RESTART?3:20;
             if(index==count) {
                 if(!Evidence.OBSERVER && !startedFinish) {
                     startedFinish=true;
                     serverWork=submit(server,()->{
-                        if(!RESTART) {
+                        if(!RESTART && !SHADER_SPOT) {
                             var ids=Arrays.stream(ChickenWorld.STYLES).map(s->ChickenWorld.birds.get(s).toString()).toArray(String[]::new);
                             server.saveEverything(true,true,false);
                             Evidence.signal("saved.json",new Saved(ids));
@@ -150,7 +151,9 @@ public final class ChickenGallery {
             if(scene==null) {
                 if(!Evidence.OBSERVER && !Files.exists(control("scene"+index))) {
                     int i=index;
-                    serverWork=submit(server,()->signal("scene"+i,ChickenWorld.scene(ChickenWorld.reach(server),i,RESTART)));
+                    // Two angles for each look suffice when only the shader ZIP changed.
+                    int camera=SHADER_SPOT?(i/2)*6+i%2:i;
+                    serverWork=submit(server,()->signal("scene"+i,ChickenWorld.scene(ChickenWorld.reach(server),camera,RESTART)));
                     return;
                 }
                 scene=Evidence.read(PASS+"-scene"+index+".json",Scene.class);
