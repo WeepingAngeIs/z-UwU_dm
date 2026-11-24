@@ -30,8 +30,8 @@ jobs:
           digest-mismatch: error
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
         with:
-          artifact-ids: '14959712538'
-          run-id: '45478463477'
+          artifact-ids: '14961057991'
+          run-id: '45479381005'
           github-token: ${{ github.token }}
           path: build/shader
           merge-multiple: true
@@ -48,7 +48,7 @@ jobs:
       - name: Isolate a graphics-loader failure by running the same JAR without rendering mods
         if: failure() && steps.pair.outcome == 'failure'
         run: |
-          if ! grep -Eiq 'NoClassDefFoundError.*(sodium|iris)|wrong shader pipeline|failed to create shader rendering pipeline|ShaderCompileException' build/chickens/*.log; then exit 0; fi
+          if ! grep -Eiq 'NoClassDefFoundError.*(sodium|iris)|wrong shader pipeline|failed to create shader rendering pipeline|ShaderCompileException|Failed to process ConstDirective' build/chickens/*.log; then exit 0; fi
           mv build/chickens build/chickens-with-renderer
           mv build/chicken-deps build/chicken-renderer-deps
           env -u UWU_SHADER_ZIP bash chicken-check/run.sh

@@ -1,4 +1,4 @@
 {
   "required": true, "minVersion": "0.8", "compatibilityLevel": "JAVA_21",
-  "package": "dev.uwu.weaponcheck", "client": ["ChickenDrawProbe"], "injectors": {"defaultRequire": 1}
+  "package": "dev.uwu.weaponcheck.mixin", "client": ["ChickenDrawProbe"], "injectors": {"defaultRequire": 1}
 }

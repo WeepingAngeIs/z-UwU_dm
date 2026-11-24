@@ -141,6 +141,7 @@ final class ChickenWorld {
         var chicken=bird(l,style);
         Evidence.require(chicken!=null,"saved bird unavailable "+STYLES[style]);
         double x=hidden?64:HOME[style];
+        chicken.setNoAi(true);
         move(chicken,x,8);
         byte visible=NativeChickens.visibleCoat(chicken);
         Evidence.require(visible==(hidden?0:style==0?1:2),"wrong coat after boundary/reload");
@@ -162,6 +163,12 @@ final class ChickenWorld {
         // Real native movement/leg interpolation over a small visible step.
         c.setYHeadRot((float)(Math.sin(n*.11)*32));
         c.setXRot((float)(Math.cos(n*.08)*9));
-        if(n>=15 && n<30) c.setDeltaMovement(0,c.getDeltaMovement().y,0.035);
+        if(n==13) {
+            c.setNoAi(false);
+            c.getNavigation().moveTo(scene.targetX(),Y,scene.targetZ()+1.3,1.2);
+        } else if(n==39) {
+            c.getNavigation().stop();
+            c.setNoAi(true);
+        }
     }
 }

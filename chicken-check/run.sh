@@ -9,7 +9,7 @@ curl --retry 3 --retry-all-errors --fail --silent --show-error --location --max-
   'https://cdn.modrinth.com/data/EltpO5cN/versions/ST5FHZnD/lootr-neoforge-1.21.1-1.11.38.125.jar' -o build/chicken-deps/lootr.jar
 printf '091878598fa5cb51cd304bf9324afe46420d328b6f77a9ba38acc15e26945e9e  build/chicken-deps/lootr.jar\n' | sha256sum --check
 if [[ -n "${UWU_SHADER_ZIP:-}" ]]; then
-  printf 'fb7f6d0a5b86026b3377fdaddf1327ccafe5422d3ba9148d1e83ec8ca682ed6a  %s\n' "$UWU_SHADER_ZIP" | sha256sum --check
+  printf 'd2272b550125731fd4a736d4d67b7cc5f39c1e798757d6e536a265b82acf39fa  %s\n' "$UWU_SHADER_ZIP" | sha256sum --check
   for dep in iris sodium; do
     if [[ "$dep" = iris ]]; then
       url='https://cdn.modrinth.com/data/YL57xq9U/versions/KduFYu4t/iris-neoforge-1.8.14-beta.1%2Bmc1.21.1.jar'
@@ -54,7 +54,17 @@ for UWU_QA_PASS in fresh reload; do
     pids+=("$!")
   done
   failed=0
-  for pid in "${pids[@]}"; do wait "$pid" || failed=1; done
+  first=
+  wait -n -p first "${pids[@]}" || failed=1
+  first_role=host
+  if [[ "$first" = "${pids[1]}" ]]; then first_role=observer; fi
+  if [[ "$failed" != 0 ]] || ! grep -q "NATIVE CHICKEN GALLERY PASS $UWU_QA_PASS $first_role" "build/chickens/$UWU_QA_PASS-$first_role.log"; then
+    failed=1
+    cleanup
+  fi
+  for pid in "${pids[@]}"; do
+    if [[ "$pid" != "$first" ]]; then wait "$pid" || failed=1; fi
+  done
   pids=()
   for role in host observer; do
     log="build/chickens/$UWU_QA_PASS-$role.log"

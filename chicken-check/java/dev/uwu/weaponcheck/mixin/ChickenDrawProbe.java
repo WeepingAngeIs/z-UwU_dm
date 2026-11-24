@@ -1,4 +1,6 @@
-package dev.uwu.weaponcheck;
+package dev.uwu.weaponcheck.mixin;
+
+import dev.uwu.weaponcheck.ChickenGallery;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.renderer.MultiBufferSource;
