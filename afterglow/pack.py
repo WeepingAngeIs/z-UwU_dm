@@ -54,7 +54,10 @@ def create(output_dir, compiler=None):
     assert all(p.with_suffix(".fsh").is_file() for p in pairs)
     for vert in pairs:
         for p in [vert,vert.with_suffix(".fsh")]:
-            assert expand(p).startswith("#version 330 compatibility\n")
+            src=expand(p)
+            assert src.startswith("#version 330 compatibility\n")
+            for operands in re.findall(r"const vec4 colortex\d+ClearColor\s*=\s*vec4\(([^)]*)\)",src):
+                assert len(operands.split(","))==4,"Iris 1.8.14 requires four explicit clear-color values"
     if compiler:
         with tempfile.TemporaryDirectory() as temp:
             for vert in pairs:

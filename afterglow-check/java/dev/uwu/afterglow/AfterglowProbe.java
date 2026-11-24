@@ -197,8 +197,11 @@ public final class AfterglowProbe {
             if(v.quality!=0 && themed && !path.contains("IrisRenderingPipeline"))
                 throw new IllegalStateException("Iris fell back in "+v.name+": "+path);
             try(NativeImage shot=Screenshot.takeScreenshot(mc.getMainRenderTarget())) { shot.writeToFile(OUT.resolve(v.name+".png")); }
+            var camera=mc.gameRenderer.getMainCamera();
+            var eye=camera.getPosition();
             String info=v.name+"\t"+v.dim.location()+"\t"+path+"\t"+GL11.glGetString(GL11.GL_RENDERER)+"\t"+
-                mc.getWindow().getWidth()+"x"+mc.getWindow().getHeight()+"\t"+v.quality+"\t"+mc.level.getRainLevel(1)+"\t"+mc.level.getDayTime()+"\n";
+                mc.getWindow().getWidth()+"x"+mc.getWindow().getHeight()+"\t"+v.quality+"\t"+mc.level.getRainLevel(1)+"\t"+mc.level.getDayTime()+
+                "\t"+eye.x+"\t"+eye.y+"\t"+eye.z+"\t"+camera.getYRot()+"\t"+camera.getXRot()+"\t"+mc.options.fov().get()+"\n";
             Files.writeString(OUT.resolve("views.tsv"),info,StandardOpenOption.CREATE,StandardOpenOption.APPEND);
             System.out.println("AFTERGLOW VIEW PASS "+info.trim());
             if(++index==views.size()) {

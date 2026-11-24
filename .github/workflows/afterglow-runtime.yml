@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     env:
-      UWU_EXPECTED_JAR_SHA256: 21f6780d5f2cf0176716828116abbbd530563b7dbfecd3db7e5feac7cd39ef41
+      UWU_EXPECTED_JAR_SHA256: 2384b5e7edc6e2f992c851f0b4b5a82a5581e6dbe502c5d522d973302252c83f
       AFTERGLOW_BENCH: ${{ inputs.benchmark }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
@@ -28,8 +28,8 @@ jobs:
           digest-mismatch: error
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
         with:
-          artifact-ids: '14845843192'
-          run-id: 45231580480
+          artifact-ids: '14959587709'
+          run-id: 45477138893
           github-token: ${{ github.token }}
           path: build/afterglow/sealed
           digest-mismatch: error

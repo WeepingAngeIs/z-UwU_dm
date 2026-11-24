@@ -7,7 +7,7 @@ uniform sampler2D colortex0,colortex1,depthtex0;
 uniform float near,far,viewWidth,viewHeight,rainStrength;
 uniform vec3 fogColor;
 const bool colortex1Clear=true;
-const vec4 colortex1ClearColor=vec4(0.0);
+const vec4 colortex1ClearColor=vec4(0.0,0.0,0.0,0.0);
 const bool colortex1MipmapEnabled=true;
 float zMeters(float d) { return (near*far)/(far-d*(far-near)); }
 void main() {
