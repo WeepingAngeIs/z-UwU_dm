@@ -62,6 +62,9 @@ public final class AfterglowProbe {
             views.add(new View("end-off",Level.END,0,0,90,180,0,false));
             views.add(new View("end-north",Level.END,2,0,90,180,0,false));
             views.add(new View("end-north-later",Level.END,2,0,90,180,0,false));
+            for(int yaw:List.of(155,180,215))
+                for(int brightness:List.of(50,100))
+                    views.add(new View("end-pan-"+yaw+"-"+brightness,Level.END,2,0,90,yaw,0,false));
             views.add(new View("end-south",Level.END,2,0,90,0,0,false));
             views.add(new View("end-up",Level.END,2,0,90,180,-58,false));
             views.add(new View("end-down",Level.END,2,0,90,180,55,false));
@@ -71,6 +74,8 @@ public final class AfterglowProbe {
             views.add(new View("moon-off-return",REACH,0,0,90,180,-89,false));
             for(int b:List.of(100,55)) views.add(new View("liquids-"+b,REACH,2,0,b,180,18,false));
             for(int q:List.of(0,1,2)) views.add(new View("rain-"+q,REACH,q,0,90,180,14,true));
+            if(Boolean.parseBoolean(System.getenv("AFTERGLOW_END_ONLY")))
+                views.removeIf(view->!view.dim.equals(Level.END));
         }
         NeoForge.EVENT_BUS.addListener(AfterglowProbe::tick);
         NeoForge.EVENT_BUS.addListener(AfterglowProbe::beforeFrame);
@@ -125,6 +130,7 @@ public final class AfterglowProbe {
             }
             if(!ready || mc.screen!=null || !mc.level.dimension().equals(v.dim) || mc.player.distanceToSqr(32.5,216,32.5)>0.02) return;
             mc.options.hideGui=true;
+            mc.options.gamma().set(v.name.startsWith("end-pan-") && v.name.endsWith("-100")?1.0:0.5);
             mc.player.setDeltaMovement(Vec3.ZERO);
             mc.level.setRainLevel(v.rain?1f:0f);
             if(!running) {

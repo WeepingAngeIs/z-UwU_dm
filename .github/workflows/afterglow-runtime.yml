@@ -16,6 +16,7 @@ jobs:
     env:
       UWU_EXPECTED_JAR_SHA256: 2384b5e7edc6e2f992c851f0b4b5a82a5581e6dbe502c5d522d973302252c83f
       AFTERGLOW_BENCH: ${{ inputs.benchmark }}
+      AFTERGLOW_END_ONLY: ${{ contains(github.event.head_commit.message, '[End sky only]') }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with: {persist-credentials: false}

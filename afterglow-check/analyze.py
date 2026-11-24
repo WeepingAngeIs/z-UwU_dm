@@ -62,6 +62,14 @@ else:
     checks["sky_motion_pixels_above_noise"]=int((diff("end-north","end-north-later").max(axis=2)[gas]>2).sum())
     checks["south_center_black_fraction"]=float(np.mean(image("end-south")[core].max(axis=1)<=5))
     checks["end_off_recovery"]=summarize(diff("end-off","end-off-return"))
+    if not (p/"overworld-0.png").exists():
+        assert len(rows)==13 and len(list(p.glob("end-pan-*.png")))==6
+        assert checks["core_black_fraction"]>.97 and checks["blue_violet_rim_fraction"]>.20
+        assert checks["south_center_black_fraction"]<.70 and checks["sky_motion_pixels_above_noise"]>60
+        assert checks["end_off_recovery"]["changed_over_8"]<.015
+        (p/"end-pan-checks.json").write_text(json.dumps(checks,indent=2))
+        print(json.dumps(checks,indent=2))
+        sys.exit(0)
     for dim in ["overworld","the_nether","overworld-night","overworld-rain"]:
         checks[dim+"_control"]=summarize(diff(dim+"-0",dim+"-2"))
     for a,b in [("0","off-repeat"),("0","neutral"),("neutral","previous"),("neutral","2"),("previous","2")]:
@@ -107,7 +115,7 @@ else:
     checks["renderer"]=rows[0].split("\t")[3]
     (p/"capture-checks.json").write_text(json.dumps(checks,indent=2))
     print(json.dumps(checks,indent=2),flush=True)
-    assert len(rows)==28
+    assert len(rows)==34
     assert checks["core_black_fraction"]>.97 and checks["blue_violet_rim_fraction"]>.20, "Northern disc or rim missing"
     assert checks["south_center_black_fraction"]<.70, "Southern sky duplicated the black disc"
     assert checks["sky_motion_pixels_above_noise"]>60,"Outer sky does not move"

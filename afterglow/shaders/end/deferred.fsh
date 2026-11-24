@@ -31,10 +31,12 @@ vec3 endColor(vec3 ray) {
     if(ray.z>=-0.001) return skyTex(around,phase);
     // North is -Z. The approved framing used a 70-degree vertical field of view.
     vec2 pixel=vec2(centerPx.x,361.5)+vec2(ray.x,-ray.y)*517.0/(-ray.z);
-    vec2 margin=min(pixel+0.5,sourceSize-0.5-pixel);
-    float front=smoothstep(0.0,48.0,min(margin.x,margin.y));
-    if(front<=0.0) return skyTex(around,phase);
     float radius=length(pixel-centerPx);
+    // End the northern overlay inside every edge of its source image.
+    // The complete local spiral is retained before the broad feather begins.
+    float fade=clamp((radius-180.0)/130.0,0.0,1.0);
+    float front=1.0-fade*fade*fade*(fade*(fade*6.0-15.0)+10.0);
+    if(front<=0.0) return skyTex(around,phase);
     if(radius<70.5) return vec3(0.0);
     vec3 north=skyTex((clamp(pixel,vec2(0.0),sourceSize-1.0)+0.5)/1024.0,phase);
     if(radius<180.0) {
