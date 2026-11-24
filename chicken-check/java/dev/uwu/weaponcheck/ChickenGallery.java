@@ -72,7 +72,13 @@ public final class ChickenGallery {
         var mc=Minecraft.getInstance();
         try {
             if (closed) { mc.stop(); return; }
-            Evidence.require(++ticks<14000,"pasture fixture timed out "+PASS+" phase="+index);
+            if (++ticks%600==0) {
+                System.out.println("Chicken camera " + PASS + " role=" + System.getProperty("uwu.check.role")
+                        + " index=" + index + " shots=" + shots + " frames=" + cameraTicks
+                        + " joined=" + joined + " found=" + found + " screen=" + mc.screen
+                        + " position=" + (mc.player==null ? "no player" : mc.player.position()));
+            }
+            Evidence.require(ticks<14000,"pasture fixture timed out "+PASS+" phase="+index);
             Evidence.require(!Files.exists(control("failed")),"peer failed");
             if (serverWork!=null) { if(!serverWork.isDone()) return; serverWork.join(); serverWork=null; }
             if (!started && mc.screen instanceof TitleScreen title) {
@@ -151,6 +157,11 @@ public final class ChickenGallery {
                 if(scene==null)return;
                 cameraTicks=0;shots=0;animationTicks=0;
             }
+            // Either client can see both receipts first. Advance even if the server
+            // has already moved the observer away from the preceding camera.
+            if(shots==3 && Files.exists(control("host"+index)) && Files.exists(control("observer"+index))) {
+                scene=null; index++; return;
+            }
             if(!Evidence.OBSERVER && animationTicks++%2==0) {
                 var s=scene;int n=animationTicks;
                 server.execute(()->ChickenWorld.animate(ChickenWorld.reach(server),s,n));
@@ -162,7 +173,6 @@ public final class ChickenGallery {
             float pitch=(float)-Math.toDegrees(Math.atan2(scene.targetY-mc.player.getEyeY(),Math.hypot(dx,dz)));
             mc.player.setYRot(yaw); mc.player.yRotO=yaw; mc.player.setXRot(pitch); mc.player.xRotO=pitch;
             cameraTicks++;
-            if(shots==3 && Files.exists(control("host"+index)) && Files.exists(control("observer"+index))) { scene=null; index++; }
         } catch(Throwable t){fail(t);}
     }
 

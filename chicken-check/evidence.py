@@ -17,7 +17,8 @@ for role in ('host', 'observer'):
         if speed > .01: moving.append(key)
         if label.startswith('crossed-'):
             assert skin=='minecraft:textures/entity/chicken.png' and parts=='[]'
-    assert moving, 'no native walk interpolation recorded for '+role
+    for style in ('blossoms','crest','fringe'):
+        assert any(key.startswith('fresh-'+style+'-') for key in moving), ('no movement recorded',role,style)
     identities.append(state)
     (folder/'summary.json').write_text(json.dumps({'captures':len(rows),'movement_samples':moving,'client':role},indent=2))
 assert identities[0] == identities[1], 'observers disagree on actual rendered entity, head or wings'

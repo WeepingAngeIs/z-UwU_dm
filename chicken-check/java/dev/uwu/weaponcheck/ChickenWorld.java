@@ -158,17 +158,13 @@ final class ChickenWorld {
                 px,Y-.46,pz,x+.5,Y+.48,8.5);
     }
     static void animate(ServerLevel l,ChickenGallery.Scene scene,int n) {
-        if (n>90 || scene.expected().equals("vanilla")) return;
+        if (scene.expected().equals("vanilla")) return;
         var c=(Chicken)l.getEntity(UUID.fromString(scene.uuid()));
-        // Real native movement/leg interpolation over a small visible step.
+        // Drive a short, bounded step on the server while the two renderers sample it.
+        // The normal tracker and client walk interpolation supply the displayed leg phase.
+        double nextZ=scene.targetZ()+.32*Math.sin(n*.12);
+        c.move(MoverType.SELF,new net.minecraft.world.phys.Vec3(0,0,nextZ-c.getZ()));
         c.setYHeadRot((float)(Math.sin(n*.11)*32));
         c.setXRot((float)(Math.cos(n*.08)*9));
-        if(n==13) {
-            c.setNoAi(false);
-            c.getNavigation().moveTo(scene.targetX(),Y,scene.targetZ()+1.3,1.2);
-        } else if(n==39) {
-            c.getNavigation().stop();
-            c.setNoAi(true);
-        }
     }
 }
