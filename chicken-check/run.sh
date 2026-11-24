@@ -8,6 +8,20 @@ mkdir -p build/chicken-deps build/chickens/control
 curl --retry 3 --retry-all-errors --fail --silent --show-error --location --max-time 120 \
   'https://cdn.modrinth.com/data/EltpO5cN/versions/ST5FHZnD/lootr-neoforge-1.21.1-1.11.38.125.jar' -o build/chicken-deps/lootr.jar
 printf '091878598fa5cb51cd304bf9324afe46420d328b6f77a9ba38acc15e26945e9e  build/chicken-deps/lootr.jar\n' | sha256sum --check
+if [[ -n "${UWU_SHADER_ZIP:-}" ]]; then
+  printf '33210b0b796a3558e71e37864e2397c86dd1af2b1f474a8578f3a8987106654c  %s\n' "$UWU_SHADER_ZIP" | sha256sum --check
+  for dep in iris sodium; do
+    if [[ "$dep" = iris ]]; then
+      url='https://cdn.modrinth.com/data/YL57xq9U/versions/KduFYu4t/iris-neoforge-1.8.14-beta.1%2Bmc1.21.1.jar'
+      hash='60d5f8bf52f25e9986440f4a4270a6bd986d9cff994510e1108ac1547063b314'
+    else
+      url='https://cdn.modrinth.com/data/AANobbMI/versions/uMOpc5uV/sodium-neoforge-0.8.13%2Bmc1.21.1.jar'
+      hash='575d187b15328d7bddd8a9b1bee64333c22c14735f5780ec49eac0cd5503c08d'
+    fi
+    curl --retry 3 --retry-all-errors --fail --silent --show-error --location --max-time 140 "$url" -o "build/chicken-deps/$dep.jar"
+    printf '%s  %s\n' "$hash" "build/chicken-deps/$dep.jar" | sha256sum --check
+  done
+fi
 for role in host observer; do
   dir="build/chickens/$role"
   mkdir -p "$dir/config" "$dir/tmp" "$dir/lwjgl"
@@ -23,6 +37,14 @@ trap cleanup EXIT
 for UWU_QA_PASS in fresh reload; do
   export UWU_QA_PASS
   for role in host observer; do
+    if [[ -n "${UWU_SHADER_ZIP:-}" ]]; then
+      dir="build/chickens/$role"
+      mkdir -p "$dir/shaderpacks"
+      cp "$UWU_SHADER_ZIP" "$dir/shaderpacks/UwU Afterglow.zip"
+      active=false
+      if [[ "$role:$UWU_QA_PASS" = observer:fresh || "$role:$UWU_QA_PASS" = host:reload ]]; then active=true; fi
+      printf 'enableShaders=%s\nshaderPack=UwU Afterglow.zip\n' "$active" > "$dir/config/iris.properties"
+    fi
     timeout --kill-after=10s 13m xvfb-run -a -s '-screen 0 1024x768x24' \
       bash "$root/build/moddev/runChicken${role^}.sh" > "build/chickens/$UWU_QA_PASS-$role.log" 2>&1 &
     pids+=("$!")

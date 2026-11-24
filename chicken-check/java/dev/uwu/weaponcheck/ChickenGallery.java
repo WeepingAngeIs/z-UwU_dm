@@ -51,7 +51,7 @@ public final class ChickenGallery {
     }
 
     static boolean target() {return rendering!=null && scene!=null && rendering.getUUID().toString().equals(scene.uuid);}
-    static void drawn(ModelResourceLocation id) {
+    public static void drawn(ModelResourceLocation id) {
         if (!target()) return;
         var manager=Minecraft.getInstance().getModelManager();
         Evidence.require(manager.getModel(id)!=manager.getMissingModel(),"unbaked chicken part "+id);
@@ -59,6 +59,14 @@ public final class ChickenGallery {
     }
     private static Path control(String name) {return Evidence.CONTROL.resolve(PASS+"-"+name+".json");}
     private static void signal(String name,Object data) throws Exception { Evidence.signal(PASS+"-"+name+".json",data); }
+
+    @FunctionalInterface private interface ServerTask { void run() throws Exception; }
+    private static CompletableFuture<Void> submit(MinecraftServer server, ServerTask task) {
+        return server.submit(() -> {
+            try { task.run(); }
+            catch (Exception e) { throw new java.util.concurrent.CompletionException(e); }
+        });
+    }
 
     private void tick(ClientTickEvent.Post event) {
         var mc=Minecraft.getInstance();
@@ -89,7 +97,7 @@ public final class ChickenGallery {
             var server=mc.getSingleplayerServer();
             if(!joined) {
                 if(Evidence.OBSERVER) {
-                    Evidence.require(server==null && mc.getConnection()!=null && !mc.getConnection().isMemoryConnection(),"observer needs independent TCP client");
+                    Evidence.require(server==null && mc.getConnection()!=null && !mc.getConnection().getConnection().isMemoryConnection(),"observer needs independent TCP client");
                     signal("guest",mc.player.getUUID().toString());
                 } else {
                     server.setUsesAuthentication(false);
@@ -101,7 +109,7 @@ public final class ChickenGallery {
             if(!Files.exists(control("guest")))return;
             if(!Evidence.OBSERVER && !prepared) {
                 if(server.getPlayerList().getPlayerCount()!=2)return;
-                serverWork=server.submit(()->{ ChickenWorld.prepare(server,RESTART);return true; });
+                serverWork=submit(server,()->ChickenWorld.prepare(server,RESTART));
                 prepared=true; return;
             }
             if(!Evidence.OBSERVER && !found) {
@@ -116,13 +124,13 @@ public final class ChickenGallery {
             if(index==count) {
                 if(!Evidence.OBSERVER && !startedFinish) {
                     startedFinish=true;
-                    serverWork=server.submit(()->{
+                    serverWork=submit(server,()->{
                         if(!RESTART) {
                             var ids=Arrays.stream(ChickenWorld.STYLES).map(s->ChickenWorld.birds.get(s).toString()).toArray(String[]::new);
                             server.saveEverything(true,true,false);
                             Evidence.signal("saved.json",new Saved(ids));
                         }
-                        signal("finished",true);return true;
+                        signal("finished",true);
                     }); return;
                 }
                 if(Files.exists(control("finished"))) {
@@ -136,7 +144,7 @@ public final class ChickenGallery {
             if(scene==null) {
                 if(!Evidence.OBSERVER && !Files.exists(control("scene"+index))) {
                     int i=index;
-                    serverWork=server.submit(()->{ signal("scene"+i,ChickenWorld.scene(ChickenWorld.reach(server),i,RESTART)); return true; });
+                    serverWork=submit(server,()->signal("scene"+i,ChickenWorld.scene(ChickenWorld.reach(server),i,RESTART)));
                     return;
                 }
                 scene=Evidence.read(PASS+"-scene"+index+".json",Scene.class);
@@ -172,6 +180,16 @@ public final class ChickenGallery {
             Evidence.require(skin.equals(expectedSkin),"body skin "+skin+" for "+scene.label);
             Set<String> expectedParts=vanilla?Set.of():Set.of("chicken_"+scene.expected,petal?"petal_wing":"dusk_wing");
             Evidence.require(parts.equals(expectedParts),"actual accessories "+parts+" expected "+expectedParts+" in "+scene.label);
+            if (System.getenv("UWU_SHADER_ZIP")!=null && shots==0) {
+                var iris=Class.forName("net.irisshaders.iris.Iris");
+                var manager=iris.getMethod("getPipelineManager").invoke(null);
+                var pipe=manager.getClass().getMethod("getPipelineNullable").invoke(manager);
+                String name=pipe==null?"none":pipe.getClass().getName();
+                boolean enabled=(boolean)iris.getMethod("isPackInUseQuick").invoke(null);
+                Evidence.require(enabled==(Evidence.OBSERVER!=RESTART) && (!enabled || name.contains("IrisRenderingPipeline")),
+                        "wrong shader pipeline: "+name+" enabled="+enabled);
+                Evidence.line("shader.tsv",PASS+"\t"+scene.label+"\t"+enabled+"\t"+name);
+            }
             String key=PASS+"-"+scene.label+"-"+shots;
             Evidence.screenshot(key);
             Evidence.line("chickens.tsv",key+"\t"+scene.uuid+"\t"+skin+"\t"+parts+"\t"+chicken.walkAnimation.speed());

@@ -35,7 +35,7 @@ final class ChickenWorld {
         l.setWeatherParameters(24000, 0, false, false);
         l.getGameRules().getRule(GameRules.RULE_DAYLIGHT).set(false, server);
         l.getGameRules().getRule(GameRules.RULE_DOMOBSPAWNING).set(false, server);
-        for (int x = -1; x <= 4; x++) for (int z = -1; z <= 1; z++) l.getChunk(x,z);
+        for (int x = -1; x <= 4; x++) for (int z = -1; z <= 2; z++) l.getChunk(x,z);
         if (restart) {
             ChickenGallery.Saved saved = Evidence.read("saved.json", ChickenGallery.Saved.class);
             for (int i=0; i<3; i++) birds.put(STYLES[i], UUID.fromString(saved.ids()[i]));
