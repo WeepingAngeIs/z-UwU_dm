@@ -6,6 +6,13 @@ layout(location=0) out vec4 outColor;
 uniform sampler2D colortex0,colortex1,depthtex0;
 uniform float near,far,viewWidth,viewHeight,rainStrength;
 uniform vec3 fogColor;
+#if REACH_MOON != 0
+uniform sampler2D petalMoon,duskMoon;
+uniform vec3 moonPosition;
+uniform mat4 gbufferProjection,gbufferModelViewInverse;
+uniform int isEyeInWater;
+uniform float blindness,darknessFactor;
+#endif
 const bool colortex1Clear=true;
 const vec4 colortex1ClearColor=vec4(0.0,0.0,0.0,0.0);
 const bool colortex1MipmapEnabled=true;
@@ -13,6 +20,24 @@ float zMeters(float d) { return (near*far)/(far-d*(far-near)); }
 void main() {
     vec4 base=texture(colortex0,uv);
     outColor=base;
+#if REACH_MOON != 0
+    if(isEyeInWater==0 && moonPosition.z<0.0 && texture(depthtex0,uv).r>=1.0) {
+        vec3 direction=normalize(moonPosition);
+        vec4 clip=gbufferProjection*vec4(direction,0.0);
+        float altitude=(mat3(gbufferModelViewInverse)*direction).y;
+        vec2 offset=(uv-(0.5+0.5*clip.xy/clip.w))*vec2(viewWidth/viewHeight,-1.0);
+        vec2 artUV=0.5+offset*(2.0*clip.w/(0.77*gbufferProjection[1][1]));
+        if(altitude>0.0 && all(greaterThanEqual(artUV,vec2(0))) && all(lessThanEqual(artUV,vec2(1)))) {
+#if REACH_MOON == 1
+            vec4 moon=texture(petalMoon,artUV);
+#else
+            vec4 moon=texture(duskMoon,artUV);
+#endif
+            float visibility=(1.0-rainStrength)*(1.0-max(blindness,darknessFactor))*smoothstep(0.0,0.12,altitude);
+            outColor.rgb=mix(base.rgb,moon.rgb,moon.a*visibility);
+        }
+    }
+#endif
     vec2 screen=uv-0.5;
     float aspect=viewWidth/viewHeight;
     float center=length(screen*vec2(aspect,1.0));

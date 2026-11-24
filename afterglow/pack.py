@@ -61,7 +61,7 @@ def create(output_dir, compiler=None):
     if compiler:
         with tempfile.TemporaryDirectory() as temp:
             for vert in pairs:
-                for moon in (0,1,2) if "skytextured" in vert.name else (0,):
+                for moon in (0,1,2) if vert.stem in {"gbuffers_skytextured","composite"} else (0,):
                     for quality in (1,2) if vert.parent.name=="reach" else (2,):
                         inputs=[]
                         for p,ext in [(vert,"vert"),(vert.with_suffix(".fsh"),"frag")]:
