@@ -1,0 +1,57 @@
+name: Disposable UwU Afterglow Iris client
+on:
+  workflow_call:
+    inputs:
+      benchmark:
+        required: true
+        type: boolean
+permissions:
+  contents: read
+  actions: read
+jobs:
+  minecraft:
+    if: github.repository == 'WeepingAngeIs/z-UwU_dm' && github.ref == 'refs/heads/qa/uwu-afterglow-502d' && github.event.repository.private == false
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    env:
+      UWU_EXPECTED_JAR_SHA256: 21f6780d5f2cf0176716828116abbbd530563b7dbfecd3db7e5feac7cd39ef41
+      AFTERGLOW_BENCH: ${{ inputs.benchmark }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with: {persist-credentials: false}
+      - uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880
+        with: {distribution: temurin, java-version: '21'}
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
+        with:
+          name: UwU-Afterglow-shader-test
+          path: build/afterglow/dist
+          digest-mismatch: error
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
+        with:
+          artifact-ids: '14845843192'
+          run-id: 45231580480
+          github-token: ${{ github.token }}
+          path: build/afterglow/sealed
+          digest-mismatch: error
+      - name: Check packaged JAR and prepare disposable client
+        run: |
+          set -euo pipefail
+          mapfile -t jars < <(find build/afterglow/sealed -type f -name '*.jar')
+          test "${#jars[@]}" = 1
+          printf '%s  %s\n' "$UWU_EXPECTED_JAR_SHA256" "${jars[0]}" | sha256sum --check
+          echo "UWU_JAR=$(realpath "${jars[0]}")" >> "$GITHUB_ENV"
+          bash weapon-release/bootstrap.sh
+          sudo apt-get update -qq
+          sudo apt-get install -y xvfb xauth libgl1-mesa-dri libopenal1 python3-numpy python3-pil
+      - name: Load exact ZIP in Iris on the sealed UwU JAR
+        run: bash afterglow-check/run.sh
+      - if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: Afterglow-${{ inputs.benchmark && 'benchmark' || 'smoke' }}-evidence
+          path: |
+            build/afterglow/evidence/
+            build/afterglow/launch.log
+            build/afterglow/client/logs/latest.log
+          if-no-files-found: warn
+          retention-days: 3

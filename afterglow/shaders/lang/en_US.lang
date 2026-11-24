@@ -1,0 +1,11 @@
+profile.Low=Low
+profile.Default=Default
+option.AFTERGLOW_QUALITY=UwU Afterglow quality
+option.REACH_MOON=Sakura Reach moon
+option.REACH_MOON.comment=Keep the game's moon or preview an approved moon in Sakura Reach.
+value.REACH_MOON.0=Game sky
+value.REACH_MOON.1=Petal Moon
+value.REACH_MOON.2=Dusk Moon
+option.LIQUID_BRIGHTNESS=Liquid Brightness
+suffix.LIQUID_BRIGHTNESS=%
+option.LIQUID_BRIGHTNESS.comment=Changes water and lava surfaces in Sakura Reach. Lamp halos use an independent light mask.

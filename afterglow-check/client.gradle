@@ -1,0 +1,30 @@
+gradle.beforeProject { project ->
+    project.plugins.withId('net.neoforged.moddev') {
+        def set = project.sourceSets.create('afterglowCheck')
+        set.java.srcDirs = [project.file('afterglow-check/java'), project.file('lotus-client-check/java')]
+        set.java.include('**/AfterglowProbe.java', '**/CandidateJarProbe.java')
+        set.resources.srcDirs = [project.file('afterglow-check/resources')]
+        def candidate = project.file(System.getenv('UWU_JAR')).canonicalFile
+        def expected = System.getenv('UWU_EXPECTED_JAR_SHA256')
+        if (!candidate.isFile() || !expected.matches('[a-f0-9]{64}')) throw new GradleException('Missing sealed candidate')
+        set.compileClasspath += project.sourceSets.main.compileClasspath
+        project.configurations.getByName(set.runtimeClasspathConfigurationName)
+            .extendsFrom(project.configurations.getByName(project.sourceSets.main.runtimeClasspathConfigurationName))
+        project.dependencies.add(set.runtimeOnlyConfigurationName, project.files(candidate))
+        project.dependencies.add(set.runtimeOnlyConfigurationName, project.fileTree('build/afterglow/deps') { include '*.jar' })
+        def fixture = project.neoForge.mods.create('uwu_afterglow_check') { sourceSet(set) }
+        project.neoForge.runs.create('afterglowClient') {
+            client()
+            sourceSet = set
+            loadedMods = [fixture]
+            gameDirectory = project.file('build/afterglow/client')
+            jvmArgument('-Xmx3G')
+            jvmArgument('-Duwu.check.candidateJar=' + candidate.absolutePath)
+            jvmArgument('-Duwu.check.candidateSha256=' + expected)
+            jvmArgument('-Duwu.afterglow.evidence=' + project.file('build/afterglow/evidence').absolutePath)
+            def bench = System.getenv('AFTERGLOW_BENCH') == 'true'
+            jvmArgument('-Duwu.afterglow.bench=' + bench)
+            ['--width',bench ? '1920' : '960','--height',bench ? '1080' : '540'].each { programArgument(it) }
+        }
+    }
+}

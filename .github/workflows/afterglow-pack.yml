@@ -1,0 +1,39 @@
+name: UwU Afterglow ZIP and native Iris validation
+on:
+  push:
+    branches: ['qa/uwu-afterglow-502d']
+permissions:
+  contents: read
+  actions: read
+jobs:
+  package:
+    if: github.repository == 'WeepingAngeIs/z-UwU_dm' && github.event.repository.private == false
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with: {persist-credentials: false, fetch-depth: 0}
+      - name: Check isolation and link all shader programs
+        run: |
+          set -euo pipefail
+          git diff --exit-code 502d123b419fd5c05e77d202f8eb17d16a687794 HEAD -- . ':(exclude)afterglow' ':(exclude)afterglow-check' ':(exclude).github/workflows/afterglow-*.yml'
+          if ! command -v glslangValidator >/dev/null; then
+            sudo apt-get update -qq && sudo apt-get install -y glslang-tools
+          fi
+          python3 afterglow/pack.py build/afterglow/dist --compiler glslangValidator
+          (cd build/afterglow/dist && sha256sum -c ../../../afterglow-check/expected.sha256)
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: UwU-Afterglow-shader-test
+          path: build/afterglow/dist/
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 3
+  smoke:
+    needs: package
+    uses: ./.github/workflows/afterglow-runtime.yml
+    with: {benchmark: false}
+  benchmark:
+    needs: smoke
+    uses: ./.github/workflows/afterglow-runtime.yml
+    with: {benchmark: true}

@@ -1,0 +1,3 @@
+#define AFTERGLOW_QUALITY 2 // [1 2]
+#define REACH_MOON 0 // [0 1 2]
+#define LIQUID_BRIGHTNESS 90 // [40 45 50 55 60 65 70 75 80 85 90 95 100]
